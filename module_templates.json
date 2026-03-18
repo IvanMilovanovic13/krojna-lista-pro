@@ -1,0 +1,1254 @@
+{
+  "_comment": "Katalog modula za Krojna lista PRO. Svaki modul ima: id, label, defaults (w/h/d mm), zone, type, features, visual (boje/teksture/ikone za 2D/3D prikaz).",
+  "_version": "1.0",
+  "BASE_1DOOR": {
+    "id": "BASE_1DOOR",
+    "label": "Donji (1 vrata)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "doors": true,
+      "num_doors": 1
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🚪"
+    }
+  },
+  "BASE_2DOOR": {
+    "id": "BASE_2DOOR",
+    "label": "Donji (2 vrata)",
+    "defaults": {
+      "w_mm": 800,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "doors": true,
+      "num_doors": 2
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🚪"
+    }
+  },
+  "BASE_DRAWERS": {
+    "id": "BASE_DRAWERS",
+    "label": "Donji (fioke 2-4)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "drawers": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": ""
+    }
+  },
+  "BASE_DRAWERS_3": {
+    "id": "BASE_DRAWERS_3",
+    "label": "Donji (fioke)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "drawers": true,
+      "n_drawers": 3
+    },
+    "visual": {
+      "icon": ""
+    }
+  },
+  "BASE_DOOR_DRAWER": {
+    "id": "BASE_DOOR_DRAWER",
+    "label": "Donji (vrata + fioka)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "doors": true,
+      "drawers": true,
+      "num_doors": 2,
+      "n_drawers": 1
+    },
+    "visual": {
+      "icon": ""
+    }
+  },
+  "BASE_OVEN": {
+    "id": "BASE_OVEN",
+    "label": "Donji (ugradna rerna + fioka) [HIDDEN]",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "oven": true,
+      "drawers": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "⬛"
+    },
+    "enabled": false,
+    "deprecated": true
+  },
+  "BASE_DISHWASHER": {
+    "id": "BASE_DISHWASHER",
+    "label": "Donji (masina za sudove)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "independent_depth": true,
+    "features": {
+      "dishwasher": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🍽️"
+    }
+  },
+  "BASE_DISHWASHER_FREESTANDING": {
+    "id": "BASE_DISHWASHER_FREESTANDING",
+    "label": "Donji (masina za sudove - samostojeca)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 850,
+      "d_mm": 600
+    },
+    "zone": "base",
+    "type": "APPLIANCE",
+    "independent_depth": true,
+    "features": {
+      "dishwasher": true,
+      "freestanding": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "ðŸ½ï¸"
+    }
+  },
+  "BASE_COOKING_UNIT": {
+    "id": "BASE_COOKING_UNIT",
+    "label": "Donji (kuhinjska jedinica: rerna + ploca za kuvanje)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "independent_depth": true,
+    "features": {
+      "oven": true,
+      "hob": true,
+      "cooking_unit": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🔥"
+    }
+  },
+  "BASE_OVEN_HOB_FREESTANDING": {
+    "id": "BASE_OVEN_HOB_FREESTANDING",
+    "label": "Donji (sporet - samostojeci)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 850,
+      "d_mm": 600
+    },
+    "zone": "base",
+    "type": "APPLIANCE",
+    "independent_depth": true,
+    "features": {
+      "oven": true,
+      "hob": true,
+      "freestanding": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "ðŸ”¥"
+    }
+  },
+  "SINK_BASE": {
+    "id": "SINK_BASE",
+    "label": "Donji (sudopera)",
+    "defaults": {
+      "w_mm": 800,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "sink": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🚿"
+    }
+  },
+  "BASE_NARROW": {
+    "id": "BASE_NARROW",
+    "label": "Donji uski (flase/ulja/zacini)",
+    "defaults": {
+      "w_mm": 200,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "narrow": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "▌"
+    }
+  },
+  "BASE_CORNER": {
+    "id": "BASE_CORNER",
+    "label": "Donji coskasti (L-oblik)",
+    "defaults": {
+      "w_mm": 900,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "corner": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "↩️"
+    }
+  },
+  "BASE_CORNER_DIAGONAL": {
+    "id": "BASE_CORNER_DIAGONAL",
+    "label": "Donji coskasti (dijagonalni front)",
+    "defaults": {
+      "w_mm": 900,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "corner": true,
+      "diagonal": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "◪"
+    }
+  },
+  "BASE_OPEN": {
+    "id": "BASE_OPEN",
+    "label": "Donji otvoreni (bez vrata)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "open": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "📂"
+    }
+  },
+  "BASE_DOORS": {
+    "id": "BASE_DOORS",
+    "label": "Donji (vrata)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "doors": true
+    },
+    "_note": "Backward-compat alias za BASE_1DOOR",
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🚪"
+    }
+  },
+  "WALL_1DOOR": {
+    "id": "WALL_1DOOR",
+    "label": "Gornji (1 vrata)",
+    "defaults": {
+      "w_mm": 400,
+      "h_mm": 720,
+      "d_mm": 350
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "features": {
+      "doors": true,
+      "num_doors": 1
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🚪"
+    }
+  },
+  "WALL_2DOOR": {
+    "id": "WALL_2DOOR",
+    "label": "Gornji (2 vrata)",
+    "defaults": {
+      "w_mm": 800,
+      "h_mm": 720,
+      "d_mm": 350
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "features": {
+      "doors": true,
+      "num_doors": 2
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🚪"
+    }
+  },
+  "WALL_GLASS": {
+    "id": "WALL_GLASS",
+    "label": "Gornji (staklena vrata)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 350
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "features": {
+      "glass_doors": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🔲"
+    }
+  },
+  "WALL_OPEN": {
+    "id": "WALL_OPEN",
+    "label": "Gornji otvoreni (police)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 400,
+      "d_mm": 350
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "features": {
+      "open": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "📂"
+    }
+  },
+  "WALL_LIFTUP": {
+    "id": "WALL_LIFTUP",
+    "label": "Gornji (podizna vrata / klapna)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 400,
+      "d_mm": 350
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "features": {
+      "liftup": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "⬆️"
+    }
+  },
+  "WALL_CORNER": {
+    "id": "WALL_CORNER",
+    "label": "Gornji coskasti",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 350
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "features": {
+      "corner": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "↩️"
+    }
+  },
+  "WALL_CORNER_DIAGONAL": {
+    "id": "WALL_CORNER_DIAGONAL",
+    "label": "Gornji coskasti (dijagonalni front)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 350
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "features": {
+      "corner": true,
+      "diagonal": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "◪"
+    }
+  },
+  "WALL_NARROW": {
+    "id": "WALL_NARROW",
+    "label": "Gornji uski (zacini)",
+    "defaults": {
+      "w_mm": 200,
+      "h_mm": 720,
+      "d_mm": 350
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "features": {
+      "narrow": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "▌"
+    }
+  },
+  "WALL_HOOD": {
+    "id": "WALL_HOOD",
+    "label": "Gornji (aspirator / napa)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 400,
+      "d_mm": 350
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "independent_depth": true,
+    "features": {
+      "hood": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "💨"
+    }
+  },
+  "WALL_MICRO": {
+    "id": "WALL_MICRO",
+    "label": "Gornji (mikrotalasna)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 500,
+      "d_mm": 350
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "independent_depth": true,
+    "features": {
+      "microwave": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "📡"
+    }
+  },
+  "WALL_DOORS": {
+    "id": "WALL_DOORS",
+    "label": "Gornji (vrata)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 350
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "features": {
+      "doors": true
+    },
+    "_note": "Backward-compat alias",
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🚪"
+    }
+  },
+  "TALL_FRIDGE": {
+    "id": "TALL_FRIDGE",
+    "label": "Visoki (frizider integrisani)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 2100,
+      "d_mm": 560
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "independent_depth": true,
+    "features": {
+      "fridge": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "❄️"
+    }
+  },
+  "TALL_FRIDGE_FREESTANDING": {
+    "id": "TALL_FRIDGE_FREESTANDING",
+    "label": "Visoki (frizider - samostojeci)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 2000,
+      "d_mm": 650
+    },
+    "zone": "tall",
+    "type": "APPLIANCE",
+    "independent_depth": true,
+    "features": {
+      "fridge": true,
+      "freestanding": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "â„ï¸"
+    }
+  },
+  "TALL_FRIDGE_FREEZER": {
+    "id": "TALL_FRIDGE_FREEZER",
+    "label": "Visoki (frizider + zamrzivac)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 2100,
+      "d_mm": 560
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "independent_depth": true,
+    "features": {
+      "fridge": true,
+      "freezer": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "❄️"
+    }
+  },
+  "TALL_OVEN_MICRO": {
+    "id": "TALL_OVEN_MICRO",
+    "label": "Visoki kolona (rerna + mikrotalasna)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 2100,
+      "d_mm": 560
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "independent_depth": true,
+    "features": {
+      "oven": true,
+      "microwave": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "⬛"
+    }
+  },
+  "TALL_PANTRY": {
+    "id": "TALL_PANTRY",
+    "label": "Visoki ostava / spajz (police)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 2100,
+      "d_mm": 560
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "pantry": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🏪"
+    }
+  },
+  "TALL_DOORS": {
+    "id": "TALL_DOORS",
+    "label": "Visoki (vrata)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 2100,
+      "d_mm": 560
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "doors": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🚪"
+    }
+  },
+  "TALL_OVEN": {
+    "id": "TALL_OVEN",
+    "label": "Visoki (ugradna rerna)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 2100,
+      "d_mm": 560
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "independent_depth": true,
+    "features": {
+      "oven": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "⬛"
+    }
+  },
+  "TALL_OPEN": {
+    "id": "TALL_OPEN",
+    "label": "Visoki otvoreni (police)",
+    "defaults": {
+      "w_mm": 400,
+      "h_mm": 2100,
+      "d_mm": 400
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "open": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "📂"
+    }
+  },
+  "TALL_TOP_DOORS": {
+    "id": "TALL_TOP_DOORS",
+    "label": "Popuna iznad visokog (vrata)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 400,
+      "d_mm": 560
+    },
+    "zone": "tall_top",
+    "type": "TALL_TOP",
+    "features": {
+      "doors": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🚪"
+    }
+  },
+  "TALL_TOP_OPEN": {
+    "id": "TALL_TOP_OPEN",
+    "label": "Popuna iznad visokog (otvoreno)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 400,
+      "d_mm": 560
+    },
+    "zone": "tall_top",
+    "type": "TALL_TOP",
+    "features": {
+      "open": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "📂"
+    }
+  },
+  "WALL_UPPER_1DOOR": {
+    "id": "WALL_UPPER_1DOOR",
+    "label": "Gornji 2. red (1 vrata)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 400,
+      "d_mm": 350
+    },
+    "zone": "wall_upper",
+    "type": "WALL_UPPER",
+    "features": {
+      "doors": true,
+      "num_doors": 1
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🚪"
+    }
+  },
+  "WALL_UPPER_2DOOR": {
+    "id": "WALL_UPPER_2DOOR",
+    "label": "Gornji 2. red (2 vrata)",
+    "defaults": {
+      "w_mm": 800,
+      "h_mm": 400,
+      "d_mm": 350
+    },
+    "zone": "wall_upper",
+    "type": "WALL_UPPER",
+    "features": {
+      "doors": true,
+      "num_doors": 2
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🚪"
+    }
+  },
+  "WALL_UPPER_OPEN": {
+    "id": "WALL_UPPER_OPEN",
+    "label": "Gornji 2. red (otvoreno / police)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 400,
+      "d_mm": 350
+    },
+    "zone": "wall_upper",
+    "type": "WALL_UPPER",
+    "features": {
+      "open": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "📂"
+    }
+  },
+  "TALL_GLASS": {
+    "id": "TALL_GLASS",
+    "label": "Visoki (staklena vrata - vitrina)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 2100,
+      "d_mm": 560
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "glass_doors": true,
+      "num_doors": 2
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🔲"
+    }
+  },
+  "BASE_TRASH": {
+    "id": "BASE_TRASH",
+    "label": "Donji (sortirnik / kante za otpad)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "trash": true,
+      "pullout": true,
+      "num_doors": 2
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🗑️"
+    }
+  },
+  "BASE_HOB": {
+    "id": "BASE_HOB",
+    "label": "Donji (ploča za kuvanje - samostalna)",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "independent_depth": true,
+    "features": {
+      "hob": true,
+      "num_doors": 2
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "🔥"
+    }
+  },
+  "FILLER_PANEL": {
+    "id": "FILLER_PANEL",
+    "label": "Filer panel (popunjač prostora)",
+    "defaults": {
+      "w_mm": 100,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "filler": true,
+      "no_carcass": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "▌"
+    }
+  },
+  "BASE_TV_2DOOR": {
+    "id": "BASE_TV_2DOOR",
+    "label": "TV komoda (vrata)",
+    "defaults": {
+      "w_mm": 1800,
+      "h_mm": 500,
+      "d_mm": 450
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "doors": true,
+      "num_doors": 3,
+      "tv_zone": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "TV"
+    }
+  },
+  "BASE_TV_DRAWERS": {
+    "id": "BASE_TV_DRAWERS",
+    "label": "TV komoda (fioke)",
+    "defaults": {
+      "w_mm": 1600,
+      "h_mm": 500,
+      "d_mm": 450
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "drawers": true,
+      "n_drawers": 4,
+      "tv_zone": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "TV"
+    }
+  },
+  "WALL_TV_OPEN": {
+    "id": "WALL_TV_OPEN",
+    "label": "TV zidna polica (otvorena)",
+    "defaults": {
+      "w_mm": 1200,
+      "h_mm": 350,
+      "d_mm": 300
+    },
+    "zone": "wall",
+    "type": "WALL",
+    "features": {
+      "open": true,
+      "tv_zone": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "TV"
+    }
+  },
+  "TALL_WARDROBE_2DOOR": {
+    "id": "TALL_WARDROBE_2DOOR",
+    "label": "Orman visoki (vrata)",
+    "defaults": {
+      "w_mm": 1200,
+      "h_mm": 2300,
+      "d_mm": 600
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "doors": true,
+      "num_doors": 2,
+      "wardrobe": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "WARD"
+    }
+  },
+  "TALL_WARDROBE_DRAWERS": {
+    "id": "TALL_WARDROBE_DRAWERS",
+    "label": "Orman visoki (fioke)",
+    "defaults": {
+      "w_mm": 1000,
+      "h_mm": 2300,
+      "d_mm": 600
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "drawers": true,
+      "n_drawers": 3,
+      "wardrobe": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "WARD"
+    }
+  },
+  "TALL_WARDROBE_2DOOR_SLIDING": {
+    "id": "TALL_WARDROBE_2DOOR_SLIDING",
+    "label": "Orman visoki (klizna 2 vrata)",
+    "defaults": {
+      "w_mm": 1800,
+      "h_mm": 2400,
+      "d_mm": 620
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "doors": true,
+      "num_doors": 2,
+      "sliding": true,
+      "wardrobe": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "WARD"
+    }
+  },
+  "BASE_TV_OPEN": {
+    "id": "BASE_TV_OPEN",
+    "label": "TV komoda (otvorena polica)",
+    "defaults": {
+      "w_mm": 1400,
+      "h_mm": 500,
+      "d_mm": 420
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "open": true,
+      "tv_zone": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "TV"
+    }
+  },
+  "END_PANEL": {
+    "id": "END_PANEL",
+    "label": "Zavrsna bocna ploca",
+    "defaults": {
+      "w_mm": 600,
+      "h_mm": 720,
+      "d_mm": 560
+    },
+    "zone": "base",
+    "type": "BASE",
+    "features": {
+      "end_panel": true,
+      "no_carcass": true
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "▌"
+    }
+  },
+  "TALL_WARDROBE_AMERICAN": {
+    "id": "TALL_WARDROBE_AMERICAN",
+    "label": "Americki plakar (klizna vrata)",
+    "defaults": {
+      "w_mm": 2400,
+      "h_mm": 2500,
+      "d_mm": 650
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "doors": true,
+      "num_doors": 3,
+      "sliding": true,
+      "wardrobe": true,
+      "configurable_storage": true,
+      "n_shelves": 5,
+      "n_drawers": 3,
+      "hanger_sections": 2
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "WARD"
+    }
+  },
+  "TALL_WARDROBE_CORNER": {
+    "id": "TALL_WARDROBE_CORNER",
+    "label": "Ugaoni ormar (krilna vrata)",
+    "defaults": {
+      "w_mm": 1200,
+      "h_mm": 2400,
+      "d_mm": 620
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "doors": true,
+      "corner": true,
+      "num_doors": 2,
+      "wardrobe": true,
+      "configurable_storage": true,
+      "n_shelves": 4,
+      "n_drawers": 2,
+      "hanger_sections": 1
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "WARD"
+    }
+  },
+  "TALL_WARDROBE_CORNER_SLIDING": {
+    "id": "TALL_WARDROBE_CORNER_SLIDING",
+    "label": "Ugaoni ormar (klizna vrata)",
+    "defaults": {
+      "w_mm": 1400,
+      "h_mm": 2450,
+      "d_mm": 650
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "doors": true,
+      "corner": true,
+      "num_doors": 2,
+      "sliding": true,
+      "wardrobe": true,
+      "configurable_storage": true,
+      "n_shelves": 4,
+      "n_drawers": 2,
+      "hanger_sections": 1
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "WARD"
+    }
+  },
+  "TALL_WARDROBE_INT_SHELVES": {
+    "id": "TALL_WARDROBE_INT_SHELVES",
+    "label": "Sekcija: police",
+    "defaults": {
+      "w_mm": 800,
+      "h_mm": 2400,
+      "d_mm": 620
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "wardrobe": true,
+      "open": true,
+      "interior_only": true,
+      "configurable_storage": true,
+      "n_shelves": 6,
+      "n_drawers": 0,
+      "hanger_sections": 0
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "WARD"
+    }
+  },
+  "TALL_WARDROBE_INT_DRAWERS": {
+    "id": "TALL_WARDROBE_INT_DRAWERS",
+    "label": "Sekcija: fioke",
+    "defaults": {
+      "w_mm": 800,
+      "h_mm": 2400,
+      "d_mm": 620
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "wardrobe": true,
+      "open": true,
+      "interior_only": true,
+      "configurable_storage": true,
+      "n_shelves": 3,
+      "n_drawers": 5,
+      "hanger_sections": 0
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "WARD"
+    }
+  },
+  "TALL_WARDROBE_INT_HANG": {
+    "id": "TALL_WARDROBE_INT_HANG",
+    "label": "Sekcija: vjesalica",
+    "defaults": {
+      "w_mm": 800,
+      "h_mm": 2400,
+      "d_mm": 620
+    },
+    "zone": "tall",
+    "type": "TALL",
+    "features": {
+      "wardrobe": true,
+      "open": true,
+      "interior_only": true,
+      "configurable_storage": true,
+      "n_shelves": 1,
+      "n_drawers": 1,
+      "hanger_sections": 2
+    },
+    "visual": {
+      "face_color": null,
+      "accent_color": null,
+      "texture": null,
+      "icon": "WARD"
+    }
+  }
+}
