@@ -2380,6 +2380,35 @@ def _draw_feet(ax, x: int, w: int, foot_mm: int, technical: bool) -> None:
         ))
 
 
+def _draw_fridge_vent_plinth(ax, x: int, w: int, foot_mm: int, technical: bool) -> None:
+    """Integrated tall fridge sits on a ventilated plinth, not directly on the floor."""
+    if foot_mm <= 0 or w <= 0:
+        return
+    inset = int(max(8, min(28, w * 0.045)))
+    h = int(foot_mm)
+    px = x + inset
+    pw = max(8, w - 2 * inset)
+    ax.add_patch(plt.Rectangle(
+        (px, 0), pw, h,
+        facecolor="none" if technical else "#4A4A4A",
+        edgecolor="#333333" if technical else "#222222",
+        linewidth=0.9, zorder=9, alpha=0.95
+    ))
+    grille_w = max(40, min(int(pw * 0.62), pw - 16))
+    grille_x = px + (pw - grille_w) / 2
+    slat_count = 4
+    for i in range(slat_count):
+        gy = h * (0.32 + i * 0.11)
+        ax.plot(
+            [grille_x, grille_x + grille_w],
+            [gy, gy],
+            color="#D8D8D8" if not technical else "#777777",
+            linewidth=1.0 if not technical else 0.8,
+            zorder=10,
+            alpha=0.95,
+        )
+
+
 def _base_span(mods: List[Dict[str, Any]], zones: Tuple[str, ...]) -> Optional[Tuple[int, int]]:
     xs = []
     for m in mods:
@@ -3200,11 +3229,15 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
             y0, zone_h = _zone_baseline_and_height(kitchen, zone)
             if h <= 0:
                 h = zone_h
-            _NO_FEET_KW = ("FRIDGE", "FREESTANDING")
-            _skip_feet = any(kw in str(m.get("template_id", "")).upper() for kw in _NO_FEET_KW)
+            _tid = str(m.get("template_id", "")).upper()
+            _skip_feet = "FREESTANDING" in _tid
+            _integrated_tall_fridge = zone == "tall" and _tid in {"TALL_FRIDGE", "TALL_FRIDGE_FREEZER"}
             if zone in ("base", "tall") and not _skip_feet:
-                _draw_feet(ax, x, w, foot_mm, technical=technical)
-            # Frižider i samostojeći uređaji: crtaju se od poda (y0=0), bez stopica i bez praznine
+                if _integrated_tall_fridge:
+                    _draw_fridge_vent_plinth(ax, x, w, foot_mm, technical=technical)
+                else:
+                    _draw_feet(ax, x, w, foot_mm, technical=technical)
+            # Samostojeći uređaji: crtaju se od poda (y0=0), bez stopica i bez praznine.
             if _skip_feet and zone in ("base", "tall"):
                 y0 = 0
             _draw_module(ax, m, x, y0, w, h, zone=zone, technical=technical,
