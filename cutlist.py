@@ -150,7 +150,7 @@ HARDWARE_BRAND_CATALOGS: Dict[str, Dict[str, str]] = {
         "sliding_track":   "Hafele Slido / Accuride klizni sistem vrata (set)",
         "hanging_rod":     "Okrugla šipka za vešanje O25mm + par nosača",
         "hinge_plate":     "Blum CLIP-top Montageplatte 175H71 / 175L71",
-        "handle_screw":    "M4 x 50mm vijak za rucku",
+        "handle_screw":    "M4 x 50mm vijak za ručku",
     },
     "HETTICH": {
         "hinge": "Hettich Sensys 110°",
@@ -176,7 +176,7 @@ HARDWARE_BRAND_CATALOGS: Dict[str, Dict[str, str]] = {
         "sliding_track":   "Hettich EKU Porta 50 klizni sistem vrata (set)",
         "hanging_rod":     "Okrugla šipka za vešanje O25mm + par nosača",
         "hinge_plate":     "",
-        "handle_screw":    "M4 x 50mm vijak za rucku",
+        "handle_screw":    "M4 x 50mm vijak za ručku",
     },
     "GTV": {
         "hinge": "GTV zglobna sarka 110°",
@@ -202,7 +202,7 @@ HARDWARE_BRAND_CATALOGS: Dict[str, Dict[str, str]] = {
         "sliding_track":   "GTV klizni sistem kliznih vrata (set)",
         "hanging_rod":     "Okrugla šipka za vešanje O25mm + par nosača",
         "hinge_plate":     "GTV montažna ploča za šarku",
-        "handle_screw":    "M4 x 50mm vijak za rucku",
+        "handle_screw":    "M4 x 50mm vijak za ručku",
     },
 }
 
@@ -2659,7 +2659,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
             "Zaptivna lajsna / silikon uz zid",
             "Zidna lajsna ili sanitarni silikon",
             1,
-            "Zavrsno zaptivanje spoja radne ploce prema zidu po izboru korisnika",
+            "Završno zaptivanje spoja radne ploče prema zidu po izboru korisnika",
             kategorija="potrosni",
         ))
 
@@ -2671,10 +2671,10 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
     if _total_hinge_units > 0:
         rows_hardware.append(_hw(
             0, "project", "Projekat",
-            "Vijak za sarku",
+            "Vijak za šarku",
             hwc.get("hinge_screw", "3.5x16 mm"),
             _total_hinge_units * 8,
-            "Osnovno 8 vijaka po sarki ako nisu ukljuceni u set",
+            "Osnovno 8 vijaka po sarki ako nisu uključeni u set",
             kategorija="potrosni",
         ))
 
@@ -2754,10 +2754,10 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
     if _total_handles_proj > 0:
         rows_hardware.append(_hw(
             0, "project", "Projekat",
-            "Vijak za rucku",
-            hwc.get("handle_screw", "M4 x 50mm vijak za rucku"),
+            "Vijak za ručku",
+            hwc.get("handle_screw", "M4 x 50mm vijak za ručku"),
             _total_handles_proj * 2,
-            "2 vijka M4 po rucki; duzinu vijka prilagoditi debljini fronta",
+            "2 vijka M4 po ručki; dužinu vijka prilagoditi debljini fronta",
             kategorija="potrosni",
         ))
 
@@ -2978,7 +2978,7 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
             ("Radna ploča", "Worktop"),
             ("Nosač radne ploče", "Worktop support"),
             ("Nosač radne ploce", "Worktop support"),
-            ("Ledja / prolaz", "Back panel / opening"),
+            ("Leđa / prolaz", "Back panel / opening"),
             ("Zona prikljucka", "Connection zone"),
             ("Ventilacija kolone", "Tall-unit ventilation"),
             ("Drvena tipla", "Wooden dowel"),
@@ -2996,7 +2996,7 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
             ("Vijak / ekser za leđa", "Screw / pin for back panel"),
             ("Vijak / ugaonik za radnu ploču", "Screw / bracket for worktop"),
             ("Vijak za klizač", "Screw for drawer slide"),
-            ("Vijak za rucku", "Handle screw"),
+            ("Vijak za ručku", "Handle screw"),
             ("Zaptivna lajsna / silikon uz zid", "Sealing trim / silicone along wall"),
             ("Po izboru korisnika", "Selected by the customer"),
             ("Podesiva h=100 mm", "Adjustable h=100 mm"),
@@ -3020,18 +3020,18 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
             ("Zidna lajsna ili sanitarni silikon", "Wall trim or sanitary silicone"),
             ("Spojnica korpusa + vijak", "Cabinet connector + screw"),
             ("Vijak / ugaonik za radnu ploču", "Screw / bracket for worktop"),
-            ("M4 x 50mm vijak za rucku", "M4 x 50 mm handle screw"),
+            ("M4 x 50mm vijak za ručku", "M4 x 50 mm handle screw"),
             ("Tipl + vijak 8x80 mm", "Wall plug + screw 8x80 mm"),
             ("Nosač + šina za viseće elemente", "Bracket + rail for wall units"),
             ("Blum CLIP-top 110° (71B...)", "Blum CLIP-top 110° (71B...)"),
             ("Kupuje se kao gotov kupovni izvlačni program", "Purchased as a ready-made pull-out system"),
             ("Osnovno pričvršćenje leđa", "Basic back-panel fixing"),
             ("Osnovni set", "Basic set"),
-            ("Zavrsno zaptivanje", "Final sealing"),
+            ("Završno zaptivanje", "Final sealing"),
             ("Ledjna ploca", "Leđna ploča"),
             ("Nosač radne ploce", "Nosač radne ploče"),
-            ("Vijak za rucku", "Vijak za ručku"),
-            ("M4 x 50mm vijak za rucku", "M4 x 50mm vijak za ručku"),
+            ("Vijak za ručku", "Vijak za ručku"),
+            ("M4 x 50mm vijak za ručku", "M4 x 50mm vijak za ručku"),
             ("Zastita", "Zaštita"),
             ("iskljucivo", "isključivo"),
             ("pricvrscenje", "pričvršćenje"),
@@ -3044,7 +3044,7 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
             ("montazna ploca", "montažna ploča"),
             ("radne ploce", "radne ploče"),
             ("ploce na nosace", "ploče na nosače"),
-            ("po rucki", "po ručki"),
+            ("po ručki", "po ručki"),
             ("sinu ili", "šinu ili"),
             ("za pricvrscenje", "za pričvršćenje"),
             ("duzina", "dužina"),
@@ -3583,7 +3583,7 @@ def build_service_packet(
                 ))
             elif _tid == "WALL_HOOD":
                 proc_rows.append(_proc_row(
-                    f"M{_mid:02d}", _zid, _lbl, _t("Ledja / prolaz", "Back panel / opening"), "-", "-", 1,
+                    f"M{_mid:02d}", _zid, _lbl, _t("Leđa / prolaz", "Back panel / opening"), "-", "-", 1,
                     _t("Ventilacija / otvor", "Ventilation / opening"), _t("Servis", "Workshop"), _t("Po šablonu proizvođača", "According to the manufacturer's template"),
                     _t("Obezbediti otvor i prolaz za odvod nape prema modelu i osi instalacije.", "Provide the opening and duct path for the hood according to the model and the installation axis."),
                 ))
@@ -3601,7 +3601,7 @@ def build_service_packet(
                 ))
             elif _tid == "WALL_MICRO":
                 proc_rows.append(_proc_row(
-                    f"M{_mid:02d}", _zid, _lbl, _t("Ledja / prolaz", "Back panel / opening"), "-", "-", 1,
+                    f"M{_mid:02d}", _zid, _lbl, _t("Leđa / prolaz", "Back panel / opening"), "-", "-", 1,
                     _t("Prolaz za kabl", "Cable pass-through"), _t("Kuća / lice mesta", "On site"), _t("Po šablonu proizvođača", "According to the manufacturer's template"),
                     _t("Obezbediti prolaz za kabl i ventilacioni razmak za ugradnu mikrotalasnu.", "Provide a cable pass-through and the required ventilation gap for the built-in microwave."),
                 ))

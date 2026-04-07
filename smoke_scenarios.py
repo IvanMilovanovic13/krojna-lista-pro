@@ -1040,7 +1040,7 @@ def smoke_fastener_and_grouping_hardware() -> tuple[bool, str]:
         return False, "FAIL_no_hardware_rows_fasteners"
     names = set(hw["Naziv"].astype(str).tolist())
     expected = {
-        "Vijak za sarku",
+        "Vijak za šarku",
         "Vijak za klizač",
         "Vijak / ekser za leđa",
         "Vijak za zidni nosač / šinu",
