@@ -713,14 +713,14 @@ def assembly_instructions(
             ]
         else:
             steps += [
-                "  Montiraj sarnire, okaci vrata i podesi male razmake tako da se vrata lako otvaraju i ne zapinju.",
+                "  Montiraj šarke, okači vrata i podesi male razmake tako da se vrata lako otvaraju i ne zapinju.",
             ]
         steps += [
             "",
-            _line("KORAK 3 - MONTAZA NA ZID"),
-            "  Obelezi tacnu visinu na zidu, montiraj zidni nosac ili sinu i tek onda okaci element.",
-            "  Pre zavrsnog stezanja proveri libelom da je element potpuno ravan levo-desno i napred-nazad.",
-            "  Tek kada je element ravan i cvrsto vezan, nastavi na sledeci zidni element ili front.",
+            _line("KORAK 3 - MONTAŽA NA ZID"),
+            "  Obeleži tačnu visinu na zidu, montiraj zidni nosač ili šinu i tek onda okači element.",
+            "  Pre završnog stezanja proveri libelom da je element potpuno ravan levo-desno i napred-nazad.",
+            "  Tek kada je element ravan i čvrsto vezan, nastavi na sledeći zidni element ili front.",
         ]
         return [_render_instruction_line(line, lang) for line in steps]
 

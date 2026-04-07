@@ -3534,7 +3534,7 @@ def build_service_packet(
                 _izv = _t("Servis", "Workshop")
                 _osnov = _t("Po meri iz projekta", "According to project dimensions")
                 if "utor" in _nap_l:
-                    _tip = _t("Utor za ledja", "Back panel groove")
+                    _tip = _t("Utor za leđa", "Back panel groove")
                 elif "sudoper" in _nap_l:
                     _tip = _t("Otvor za sudoperu", "Sink cut-out")
                     _osnov = _t("Po šablonu proizvođača", "According to the manufacturer's template")
@@ -3684,7 +3684,7 @@ def build_service_packet(
             _kat = str(_row.get("Kategorija", "")).lower()
             _mod = str(_row.get("Modul", ""))
             if any(_kw in _naziv for _kw in ("zidni nosac", "anker za zid", "anti-tip", "zidni ")):
-                return _t("Montaza na zid", "Wall installation")
+                return _t("Montaža na zid", "Wall installation")
             if _mod == "Projekat":
                 return _t("Projektni potrosni materijal", "Project consumables")
             if _kat == "okov":

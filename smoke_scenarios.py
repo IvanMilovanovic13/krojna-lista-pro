@@ -1056,7 +1056,7 @@ def smoke_fastener_and_grouping_hardware() -> tuple[bool, str]:
     groups = set(shop["Grupa"].astype(str).tolist())
     expected_groups = {
         "Projektni potrosni materijal",
-        "Montaza na zid",
+        "Montaža na zid",
         "Okovi i mehanizmi po elementu",
     }
     missing_groups = sorted(expected_groups - groups)
