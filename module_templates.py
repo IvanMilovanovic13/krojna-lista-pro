@@ -57,6 +57,7 @@ def get_templates() -> Dict[str, Dict[str, Any]]:
             "zone":         tpl.get("zone", "base"),
             "type":         tpl.get("type", ""),
             "features":     tpl.get("features") or {},
+            "params":       tpl.get("params") or {},
             "w_mm":         int(d.get("w_mm", 600)),
             "h_mm":         int(d.get("h_mm", 720)),
             "d_mm":         int(d.get("d_mm", 560)),

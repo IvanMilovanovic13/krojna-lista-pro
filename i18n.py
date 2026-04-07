@@ -6507,42 +6507,77 @@ _TRANSLATIONS["sr"].update({
     "sidebar.collapse": "Sklopi panel",
     "sidebar.expand": "Otvori panel",
     "sidebar.collapsed_label": "Panel",
+    "elements.drawer_h_label": "Fioka [mm]",
+    "elements.door_drawer_total_h": "Ukupna visina fronta: {h:.0f} mm",
+    "elements.door_drawer_sum_ok": "Vrata + fioka: {total:.0f} mm (rezerva {reserve:.0f} mm)",
+    "elements.door_drawer_sum_too_high": "Vrata + fioka su {total:.0f} mm, više od visine modula {h:.0f} mm.",
+    "edit.drawer_height": "Fioka [mm]",
 })
 
 _TRANSLATIONS["en"].update({
     "sidebar.collapse": "Collapse panel",
     "sidebar.expand": "Expand panel",
     "sidebar.collapsed_label": "Panel",
+    "elements.drawer_h_label": "Drawer [mm]",
+    "elements.door_drawer_total_h": "Total front height: {h:.0f} mm",
+    "elements.door_drawer_sum_ok": "Door + drawer: {total:.0f} mm (reserve {reserve:.0f} mm)",
+    "elements.door_drawer_sum_too_high": "Door + drawer total is {total:.0f} mm, above unit height {h:.0f} mm.",
+    "edit.drawer_height": "Drawer [mm]",
 })
 
 _TRANSLATIONS.setdefault("es", {}).update({
     "sidebar.collapse": "Contraer panel",
     "sidebar.expand": "Abrir panel",
     "sidebar.collapsed_label": "Panel",
+    "elements.drawer_h_label": "Cajón [mm]",
+    "elements.door_drawer_total_h": "Altura total del frente: {h:.0f} mm",
+    "elements.door_drawer_sum_ok": "Puerta + cajón: {total:.0f} mm (reserva {reserve:.0f} mm)",
+    "elements.door_drawer_sum_too_high": "Puerta + cajón suman {total:.0f} mm, más que la altura del módulo {h:.0f} mm.",
+    "edit.drawer_height": "Cajón [mm]",
 })
 
 _TRANSLATIONS.setdefault("pt-br", {}).update({
     "sidebar.collapse": "Recolher painel",
     "sidebar.expand": "Abrir painel",
     "sidebar.collapsed_label": "Painel",
+    "elements.drawer_h_label": "Gaveta [mm]",
+    "elements.door_drawer_total_h": "Altura total da frente: {h:.0f} mm",
+    "elements.door_drawer_sum_ok": "Porta + gaveta: {total:.0f} mm (reserva {reserve:.0f} mm)",
+    "elements.door_drawer_sum_too_high": "Porta + gaveta somam {total:.0f} mm, acima da altura do módulo {h:.0f} mm.",
+    "edit.drawer_height": "Gaveta [mm]",
 })
 
 _TRANSLATIONS.setdefault("ru", {}).update({
     "sidebar.collapse": "Свернуть панель",
     "sidebar.expand": "Открыть панель",
     "sidebar.collapsed_label": "Панель",
+    "elements.drawer_h_label": "Ящик [мм]",
+    "elements.door_drawer_total_h": "Общая высота фасада: {h:.0f} мм",
+    "elements.door_drawer_sum_ok": "Дверца + ящик: {total:.0f} мм (запас {reserve:.0f} мм)",
+    "elements.door_drawer_sum_too_high": "Дверца + ящик составляют {total:.0f} мм, больше высоты модуля {h:.0f} мм.",
+    "edit.drawer_height": "Ящик [мм]",
 })
 
 _TRANSLATIONS.setdefault("zh-cn", {}).update({
     "sidebar.collapse": "收起面板",
     "sidebar.expand": "打开面板",
     "sidebar.collapsed_label": "面板",
+    "elements.drawer_h_label": "抽屉 [mm]",
+    "elements.door_drawer_total_h": "门板总高度：{h:.0f} mm",
+    "elements.door_drawer_sum_ok": "门 + 抽屉：{total:.0f} mm（余量 {reserve:.0f} mm）",
+    "elements.door_drawer_sum_too_high": "门 + 抽屉合计 {total:.0f} mm，超过模块高度 {h:.0f} mm。",
+    "edit.drawer_height": "抽屉 [mm]",
 })
 
 _TRANSLATIONS.setdefault("hi", {}).update({
     "sidebar.collapse": "पैनल समेटें",
     "sidebar.expand": "पैनल खोलें",
     "sidebar.collapsed_label": "पैनल",
+    "elements.drawer_h_label": "दराज़ [mm]",
+    "elements.door_drawer_total_h": "कुल फ्रंट ऊँचाई: {h:.0f} mm",
+    "elements.door_drawer_sum_ok": "दरवाज़ा + दराज़: {total:.0f} mm (रिज़र्व {reserve:.0f} mm)",
+    "elements.door_drawer_sum_too_high": "दरवाज़ा + दराज़ कुल {total:.0f} mm है, मॉड्यूल ऊँचाई {h:.0f} mm से अधिक।",
+    "edit.drawer_height": "दराज़ [mm]",
 })
 
 def get_language_options() -> dict[str, str]:

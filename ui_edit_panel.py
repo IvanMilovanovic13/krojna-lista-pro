@@ -183,7 +183,7 @@ def render_edit_panel(
 
         handle_side_sel = None
         _no_handle_side = any(k in cur_tid for k in (
-            '2DOOR', 'DRAWERS', 'OPEN', 'SINK', 'FRIDGE', 'FREEZER', 'OVEN', 'HOB', 'COOKING_UNIT',
+            '2DOOR', 'DRAWERS', 'DOOR_DRAWER', 'OPEN', 'SINK', 'FRIDGE', 'FREEZER', 'OVEN', 'HOB', 'COOKING_UNIT',
             'DISHWASHER', 'LIFTUP', 'CORNER', 'GLASS',
         ))
         _has_handle_side = (
@@ -232,6 +232,7 @@ def render_edit_panel(
 
         drawer_heights_state = None
         door_h_inp = None
+        drawer_h_inp = None
         sink_cutout_x = None
         sink_cutout_w = None
         sink_cutout_d = None
@@ -550,15 +551,40 @@ def render_edit_panel(
             _e_update_prop_bars()  # initial render
         elif has_door_and_drawer:
             corp_h = float(h.value) if hasattr(h, 'value') else int(m.get('h_mm', 720))
-            inner = _inner_h(corp_h)
-            default_drawer_h = min(200.0, inner * 0.28)
-            default_door_h = inner - default_drawer_h
+            _params_dd = dict(m.get("params", {}) or {})
+            _drawer_list_dd = list(_params_dd.get("drawer_heights", []) or [])
+            default_drawer_h = float(_drawer_list_dd[0]) if _drawer_list_dd else 170.0
+            default_door_h = float(_params_dd.get("door_height", corp_h - default_drawer_h) or (corp_h - default_drawer_h))
+            default_drawer_h = max(float(MIN_DRAWER_H), min(default_drawer_h, corp_h - 180.0))
+            default_door_h = max(180.0, min(default_door_h, corp_h - float(MIN_DRAWER_H)))
             ui.separator().classes('mt-1 mb-0.5')
             with ui.row().classes('w-full items-center gap-1 py-0.5'):
                 ui.label(_t('edit.door_height')).classes('text-xs text-gray-500 w-14 shrink-0')
                 door_h_inp = ui.number(value=round(default_door_h, 1), min=100,
-                                       max=int(inner - MIN_DRAWER_H), step=1).props(
+                                       max=int(corp_h - MIN_DRAWER_H), step=1).props(
                     'dense outlined suffix=mm').classes('flex-1')
+            with ui.row().classes('w-full items-center gap-1 py-0.5'):
+                ui.label(_t('edit.drawer_height')).classes('text-xs text-gray-500 w-14 shrink-0')
+                drawer_h_inp = ui.number(value=round(default_drawer_h, 1), min=MIN_DRAWER_H,
+                                         max=int(corp_h - 180), step=1).props(
+                    'dense outlined suffix=mm').classes('flex-1')
+            _dd_sum_lbl = ui.label('').classes('text-xs text-gray-600')
+
+            def _update_dd_sum_hint(e=None):
+                try:
+                    door_val = float(door_h_inp.value or 0)
+                    drawer_val = float(drawer_h_inp.value or 0)
+                    remaining = corp_h - door_val - drawer_val
+                    if remaining < 0:
+                        _dd_sum_lbl.set_text(_t('elements.door_drawer_sum_too_high', total=door_val + drawer_val, h=corp_h))
+                    else:
+                        _dd_sum_lbl.set_text(_t('elements.door_drawer_sum_ok', total=door_val + drawer_val, reserve=remaining))
+                except Exception:
+                    pass
+
+            door_h_inp.on('change', _update_dd_sum_hint)
+            drawer_h_inp.on('change', _update_dd_sum_hint)
+            _update_dd_sum_hint()
         # ── Police (n_shelves) za zatvorene elemente s vratima ──────────────
         n_shelves_inp = None
         if has_shelves_edit:
@@ -719,7 +745,11 @@ def render_edit_panel(
                         p['n_drawers'] = n_cur_e
                     if door_h_inp is not None:
                         dh_e = float(door_h_inp.value)
-                        fioka_e = (new_h - 2 * carcass_thk) - dh_e
+                        fioka_e = float(drawer_h_inp.value) if drawer_h_inp is not None else (new_h - dh_e)
+                        if dh_e + fioka_e > float(new_h):
+                            raise ValueError(
+                                _t('elements.door_drawer_sum_too_high', total=dh_e + fioka_e, h=float(new_h))
+                            )
                         p['door_height'] = dh_e
                         p['drawer_heights'] = [int(round(fioka_e))]
                         p['n_drawers'] = 1

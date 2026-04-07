@@ -1689,11 +1689,12 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
         # Kombi: vrata + fioka (BASE_DOOR_DRAWER) — i vrata i fioka front
         # MORA biti PRIJE opšteg "DRAWER" check-a jer TID sadrži "DRAWER"!
         elif "DOOR_DRAWER" in tid:
-            _raw_door_h = float(params.get("door_height", h * 0.72))
+            _default_door_h = min(550.0, max(180.0, h - 170.0))
+            _raw_door_h = float(params.get("door_height", _default_door_h))
             # Validacija: door_height ne sme biti veci od h - 80mm (minimum za fioku)
             _min_drawer_h = 80.0
             if _raw_door_h > h - _min_drawer_h:
-                _raw_door_h = h * 0.72  # fallback na default proporciju
+                _raw_door_h = _default_door_h
             _door_h_dd = _raw_door_h - 2 * front_gap
             rows_fronts.append(fr("Vrata", fw, max(1.0, _door_h_dd)))
             _dh_list_dd = params.get("drawer_heights")

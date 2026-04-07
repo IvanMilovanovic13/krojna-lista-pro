@@ -250,6 +250,7 @@ def render_params_panel(
         # state holders for dodaj()
         drawer_heights_state = None
         door_h_inp = None
+        drawer_h_inp = None
         n_shelves = None
         fioka_h = None
         sink_cutout_x = None
@@ -710,30 +711,48 @@ def render_params_panel(
         elif has_door_and_drawer:
             # Vrata + fioka kombinovano
             corp_h = float(_dim['h'])
-            inner = _inner_h(corp_h)
-            default_drawer_h = min(200.0, inner * 0.28)
-            default_door_h = inner - default_drawer_h
+            template_params = dict(tmpl.get("params") or {})
+            template_drawers = list(template_params.get("drawer_heights") or [])
+            default_drawer_h = float(template_drawers[0]) if template_drawers else 170.0
+            default_door_h = float(template_params.get("door_height", corp_h - default_drawer_h) or (corp_h - default_drawer_h))
+            default_drawer_h = max(float(MIN_DRAWER_H), min(default_drawer_h, corp_h - 180.0))
+            default_door_h = max(180.0, min(default_door_h, corp_h - float(MIN_DRAWER_H)))
 
             with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
                 ui.label(_t('elements.door_drawer')).classes('font-bold text-xs mb-0')
-                ui.label(_t('elements.inner_h', h=inner)).classes('text-xs text-gray-500')
+                ui.label(_t('elements.door_drawer_total_h', h=corp_h)).classes('text-xs text-gray-500')
 
-                door_h_inp = ui.number(
-                    label=_t('elements.door_h_label'),
-                    value=round(default_door_h, 1),
-                    min=100, max=int(inner - MIN_DRAWER_H), step=1
-                ).props('dense').classes('w-full')
+                with ui.row().classes('w-full gap-1'):
+                    door_h_inp = ui.number(
+                        label=_t('elements.door_h_label'),
+                        value=round(default_door_h, 1),
+                        min=180, max=int(corp_h - MIN_DRAWER_H), step=1
+                    ).props('dense').classes('flex-1 min-w-0')
+                    drawer_h_inp = ui.number(
+                        label=_t('elements.drawer_h_label'),
+                        value=round(default_drawer_h, 1),
+                        min=MIN_DRAWER_H, max=int(corp_h - 180), step=1
+                    ).props('dense').classes('flex-1 min-w-0')
 
-                drawer_h_lbl = ui.label(_t('elements.drawer_h', h=default_drawer_h)).classes('text-xs text-gray-700 font-bold mt-1')
+                drawer_h_lbl = ui.label('').classes('text-xs text-gray-700 font-bold mt-1')
 
-                def _on_door_change(e):
-                    dh = inner - float(e.value)
-                    if dh < MIN_DRAWER_H:
-                        drawer_h_lbl.set_text(_t('elements.drawer_too_small', h=dh, min_h=MIN_DRAWER_H))
-                    else:
-                        drawer_h_lbl.set_text(_t('elements.drawer_ok', h=dh))
+                def _update_door_drawer_hint(e=None):
+                    try:
+                        door_val = float(door_h_inp.value or 0)
+                        drawer_val = float(drawer_h_inp.value or 0)
+                        remaining = corp_h - door_val - drawer_val
+                        if drawer_val < MIN_DRAWER_H:
+                            drawer_h_lbl.set_text(_t('elements.drawer_too_small', h=drawer_val, min_h=MIN_DRAWER_H))
+                        elif remaining < 0:
+                            drawer_h_lbl.set_text(_t('elements.door_drawer_sum_too_high', total=door_val + drawer_val, h=corp_h))
+                        else:
+                            drawer_h_lbl.set_text(_t('elements.door_drawer_sum_ok', total=door_val + drawer_val, reserve=remaining))
+                    except Exception:
+                        pass
 
-                door_h_inp.on('change', _on_door_change)
+                door_h_inp.on('change', _update_door_drawer_hint)
+                drawer_h_inp.on('change', _update_door_drawer_hint)
+                _update_door_drawer_hint()
 
         elif has_shelves:
             # Police
@@ -884,7 +903,11 @@ def render_params_panel(
                         _extra_params['n_drawers'] = n_cur
                     if has_door_and_drawer and door_h_inp is not None:
                         _door_h = float(door_h_inp.value)
-                        _drawer_h = _inner_h(float(_dim['h'])) - _door_h
+                        _drawer_h = float(drawer_h_inp.value) if drawer_h_inp is not None else float(_dim['h']) - _door_h
+                        if _door_h + _drawer_h > float(_dim['h']):
+                            raise ValueError(
+                                _t('elements.door_drawer_sum_too_high', total=_door_h + _drawer_h, h=float(_dim['h']))
+                            )
                         _extra_params['door_height'] = _door_h
                         _extra_params['drawer_heights'] = [_drawer_h]
                         _extra_params['n_drawers'] = 1

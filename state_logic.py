@@ -643,11 +643,17 @@ def _validate_blocking_design_rules(
             )
 
     if "DOOR_DRAWER" in tid:
-        door_h = float(p.get("door_height", h_mm * 0.72) or (h_mm * 0.72))
+        _default_door_h = min(550.0, max(180.0, h_mm - 170.0))
+        door_h = float(p.get("door_height", _default_door_h) or _default_door_h)
         if door_h < 180:
             _fail("Vrata kod kombinacije vrata + fioka moraju imati najmanje 180mm visine.")
         if door_h > (h_mm - 120):
             _fail("Vrata kod kombinacije vrata + fioka su previsoka; ostavi najmanje 120mm za fioku i fuge.")
+        drawer_sum = sum(float(x) for x in (p.get("drawer_heights") or []))
+        if drawer_sum > 0 and (door_h + drawer_sum) > h_mm:
+            _fail(
+                f"Zbir vrata i fioke ({door_h + drawer_sum:.0f}mm) je veci od visine modula {h_mm}mm."
+            )
 
     if ("1DOOR" in tid or tid in {"BASE_1DOOR", "WALL_1DOOR", "WALL_NARROW", "BASE_NARROW"}) and w_mm > 600:
         _fail(
@@ -756,6 +762,10 @@ def add_module_instance_local(
         if not _wall_candidates:
             raise ValueError("Drugi red gornjih elemenata moze da se doda tek kada postoji gornji element ispod njega.")
 
+    _params_for_validation = dict(tpl.get("params") or {})
+    if params:
+        _params_for_validation.update(dict(params or {}))
+
     _validate_blocking_design_rules(
         kitchen=k,
         template_id=template_id,
@@ -764,7 +774,7 @@ def add_module_instance_local(
         w_mm=int(w_mm),
         h_mm=int(h_mm),
         d_mm=int(d_mm),
-        params=params,
+        params=_params_for_validation,
         wall_key=_wk,
     )
 
@@ -861,6 +871,10 @@ def add_module_instance_local(
         except Exception as _rc_err:
             _LOG.debug("room_constraints check greška: %s", _rc_err)
 
+    _params_final = dict(tpl.get("params") or {})
+    if params:
+        _params_final.update(dict(params or {}))
+
     mod = {
         "id": nid,
         "template_id": template_id,
@@ -871,7 +885,7 @@ def add_module_instance_local(
         "h_mm": int(h_mm),
         "d_mm": int(d_mm),
         "gap_after_mm": int(gap_after_mm),
-        "params": params or {},
+        "params": _params_final,
         "depth_mode": _depth_mode,
         "wall_key": _wk,
     }

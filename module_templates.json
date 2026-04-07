@@ -133,6 +133,13 @@
       "num_doors": 2,
       "n_drawers": 1
     },
+    "params": {
+      "door_height": 550,
+      "drawer_heights": [
+        170
+      ],
+      "n_drawers": 1
+    },
     "visual": {
       "icon": ""
     },
