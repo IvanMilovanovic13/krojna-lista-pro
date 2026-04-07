@@ -55,7 +55,9 @@ def _translate_instruction_line(line: str, lang: str = "sr") -> str:
         "-- KORAK 3 - POLICA --": "-- STEP 3 - SHELF --",
         "-- KORAK 2 - LEDJA --": "-- STEP 2 - BACK PANEL --",
         "-- KORAK 3 - FRIŽIDER + ZAMRZIVAC --": "-- STEP 3 - FRIDGE + FREEZER --",
+        "-- KORAK 3 - FRIŽIDER + ZAMRZIVAČ --": "-- STEP 3 - FRIDGE + FREEZER --",
         "-- KORAK 3 - UGRADNI FRIZIDER --": "-- STEP 3 - BUILT-IN REFRIGERATOR --",
+        "-- KORAK 3 - UGRADNI FRIŽIDER --": "-- STEP 3 - BUILT-IN REFRIGERATOR --",
         "-- KORAK 3 - RERNA + MIKROTALASNA --": "-- STEP 3 - OVEN + MICROWAVE --",
         "-- KORAK 3 - KOLONA ZA RERNU --": "-- STEP 3 - OVEN TOWER --",
         "-- KORAK 3 - STAKLENA VRATA --": "-- STEP 3 - GLASS DOORS --",
@@ -833,26 +835,26 @@ def assembly_instructions(
             if "FREEZER" in tid:
                 steps += [
                     "",
-                    _line("KORAK 3 - FRIŽIDER + ZAMRZIVAC"),
-                    "  Uvuci uredjaj u gotov korpus tek kada je kolona potpuno ravna i stabilna.",
-                    "  Proveri obavezne ventilacione zazore pre konacnog pricvrscivanja uredjaja.",
-                    "  Gornji i donji front montiraj pomocu fabrickog seta za vezu vrata.",
+                    _line("KORAK 3 - FRIŽIDER + ZAMRZIVAČ"),
+                    "  Uvucite uređaj u gotov korpus tek kada je kolona potpuno ravna i stabilna.",
+                    "  Proverite obavezne ventilacione zazore pre konačnog pričvršćivanja uređaja.",
+                    "  Gornji i donji front montirajte pomoću fabričkog seta za vezu vrata.",
                 ]
             else:
                 steps += [
                     "",
-                    _line("KORAK 3 - UGRADNI FRIZIDER"),
-                    "  Uvuci uredjaj u gotov korpus tek nakon nivelacije kolone.",
-                    "  Proveri ventilacione zazore i probu otvaranja vrata pre montaze fronta.",
-                    "  Front uredjaja montiraj tek kada si siguran da vrata uredjaja rade bez zapinjanja.",
+                    _line("KORAK 3 - UGRADNI FRIŽIDER"),
+                    "  Uvucite uređaj u gotov korpus tek nakon nivelacije kolone.",
+                    "  Proverite ventilacione zazore i probu otvaranja vrata pre montaže fronta.",
+                    "  Front uređaja montirajte tek kada ste sigurni da vrata uređaja rade bez zapinjanja.",
                 ]
         elif "OVEN_MICRO" in tid:
             steps += [
                 "",
                 _line("KORAK 3 - RERNA + MIKROTALASNA"),
-                "  Pre unosenja uredjaja proveri obe zone i obaveznu ventilaciju.",
+                "  Pre unošenja uređaja proverite obe zone i obaveznu ventilaciju.",
                 "  Prvo ugradi mikrotalasnu, zatim rernu u donju zonu.",
-                "  Donji servisni front montiraj tek nakon probe otvaranja i provere zazora oko oba uredjaja.",
+                "  Donji servisni front montirajte tek nakon probe otvaranja i provere zazora oko oba uređaja.",
             ]
         elif "OVEN" in tid:
             steps += [
