@@ -276,6 +276,8 @@ _TEMPLATE_LABELS_EN = {
     "Donji (fioke)": "Base (drawers)",
     "Donji (vrata + fioka)": "Base (doors + drawer)",
     "Donji (ugradna rerna + fioka) [HIDDEN]": "Base (built-in oven + drawer) [HIDDEN]",
+    "Donji (mašina za sudove)": "Base (dishwasher)",
+    "Donji (mašina za sudove - samostojeća)": "Base (dishwasher - freestanding)",
     "Donji (masina za sudove)": "Base (dishwasher)",
     "Donji (masina za sudove - samostojeca)": "Base (dishwasher - freestanding)",
     "Donji (kuhinjska jedinica: rerna + ploca za kuvanje)": "Built-in oven + hob + drawer",

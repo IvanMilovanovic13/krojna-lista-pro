@@ -180,7 +180,7 @@
   },
   "BASE_DISHWASHER": {
     "id": "BASE_DISHWASHER",
-    "label": "Donji (masina za sudove)",
+    "label": "Donji (mašina za sudove)",
     "defaults": {
       "w_mm": 600,
       "h_mm": 720,
@@ -199,7 +199,7 @@
       "icon": "🍽️"
     },
     "label_i18n": {
-      "sr": "Donji (masina za sudove)",
+      "sr": "Donji (mašina za sudove)",
       "en": "Base (dishwasher)",
       "ru": "Нижний (посудомоечная машина)",
       "es": "Bajo (lavavajillas)",
@@ -210,7 +210,7 @@
   },
   "BASE_DISHWASHER_FREESTANDING": {
     "id": "BASE_DISHWASHER_FREESTANDING",
-    "label": "Donji (masina za sudove - samostojeca)",
+    "label": "Donji (mašina za sudove - samostojeća)",
     "defaults": {
       "w_mm": 600,
       "h_mm": 850,
@@ -230,7 +230,7 @@
       "icon": "ðŸ½ï¸"
     },
     "label_i18n": {
-      "sr": "Donji (masina za sudove - samostojeca)",
+      "sr": "Donji (mašina za sudove - samostojeća)",
       "en": "Base (dishwasher - freestanding)",
       "ru": "Нижний (посудомоечная машина - отдельно стоящая)",
       "es": "Bajo (lavavajillas independiente)",

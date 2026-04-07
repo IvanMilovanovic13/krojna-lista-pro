@@ -179,7 +179,7 @@ HARDWARE_BRAND_CATALOGS: Dict[str, Dict[str, str]] = {
         "handle_screw":    "M4 x 50mm vijak za ručku",
     },
     "GTV": {
-        "hinge": "GTV zglobna sarka 110°",
+        "hinge": "GTV zglobna šarka 110°",
         "slide": "GTV klizač fioke (par)",
         "liftup": "GTV lift-up mehanizam (par)",
         "dish_hinge": "GTV set za front MZS",
@@ -2674,7 +2674,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
             "Vijak za šarku",
             hwc.get("hinge_screw", "3.5x16 mm"),
             _total_hinge_units * 8,
-            "Osnovno 8 vijaka po sarki ako nisu uključeni u set",
+            "Osnovno 8 vijaka po šarki ako nisu uključeni u set",
             kategorija="potrosni",
         ))
 
@@ -2838,6 +2838,8 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
         replacements = {
             "ploca za kuvanje": "ploča za kuvanje",
             "plocu za kuvanje": "ploču za kuvanje",
+            "masina za sudove": "mašina za sudove",
+            "samostojeca": "samostojeća",
             "Otvor za plocu": "Otvor za ploču",
             "sarke": "šarke",
             "sarki": "šarki",
