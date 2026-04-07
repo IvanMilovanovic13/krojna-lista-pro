@@ -1,4 +1,4 @@
-# QA Launch 5 - rucna provera pre v1
+# QA Launch 4 - rucna provera pre v1
 
 Ovaj dokument je minimalni QA blok za v1 launch. Cilj nije da proveri sve moguce kuhinje, nego da potvrdi da najvazniji korisnicki tokovi daju tacan PDF i Excel pre naplate.
 
@@ -16,8 +16,7 @@ Pravila:
 | 1 | Jedan zid - osnovna kuhinja | carcass, frontovi, worktop, okov | TODO |  |  |  |
 | 2 | Jedan zid - sudopera + ploca | cutout, worktop, servisne napomene | TODO |  |  |  |
 | 3 | Jedan zid - fioke + masina za sudove | drawer box, klizaci, appliance | TODO |  |  |  |
-| 4 | L-kuhinja sa ugaonim elementom | ugao, clearance, worktop segmenti | TODO |  |  |  |
-| 5 | Visoki blok | visoki moduli, appliance, paneli | TODO |  |  |  |
+| 4 | Visoki blok | visoki moduli, appliance, paneli | TODO |  |  |  |
 
 ## Opsta provera za svaki scenario
 
@@ -116,33 +115,7 @@ Ocekivanje:
 - worktop prati donji raspon oko `2800 mm` plus rezerva
 - servisne napomene za sudoperu ostaju prisutne
 
-## Scenario 4 - L-kuhinja sa ugaonim donjim elementom
-
-Prostorija:
-
-- layout: L
-- zid A: `3000 mm`
-- zid B: `2400 mm`
-- visina: `2600 mm`
-
-Elementi:
-
-- na zidu A:
-- `BASE_2DOOR`: `800 x 720 x 560`
-- `BASE_CORNER` ili najblizi ugaoni donji element: default dimenzije
-- `SINK_BASE`: `800 x 720 x 560`
-- na zidu B:
-- `BASE_2DOOR`: `800 x 720 x 560`
-- `BASE_DRAWERS_3`: `600 x 720 x 560`
-- gornji elementi po potrebi: 1-2 kom `WALL_2DOOR`
-
-Ocekivanje:
-
-- ugao nema front collision warning ako je pravilno postavljen
-- worktop je podeljen po zidu/segmentu, ne sabira nelogicno sve u jednu ravnu liniju
-- PDF/Excel jasno prikazuju koji delovi pripadaju kom modulu
-
-## Scenario 5 - Visoki blok
+## Scenario 4 - Visoki blok
 
 Prostorija:
 
