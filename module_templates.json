@@ -806,7 +806,7 @@
   },
   "TALL_FRIDGE": {
     "id": "TALL_FRIDGE",
-    "label": "Visoki (frizider integrisani)",
+    "label": "Visoki (frižider integrisani)",
     "defaults": {
       "w_mm": 600,
       "h_mm": 2100,
@@ -825,7 +825,7 @@
       "icon": "❄️"
     },
     "label_i18n": {
-      "sr": "Visoki (frizider integrisani)",
+      "sr": "Visoki (frižider integrisani)",
       "en": "Tall (integrated fridge)",
       "ru": "Высокий (встроенный холодильник)",
       "es": "Columna (frigorífico integrado)",
@@ -836,7 +836,7 @@
   },
   "TALL_FRIDGE_FREESTANDING": {
     "id": "TALL_FRIDGE_FREESTANDING",
-    "label": "Visoki (frizider - samostojeci)",
+    "label": "Visoki (frižider - samostojeći)",
     "defaults": {
       "w_mm": 600,
       "h_mm": 2000,
@@ -856,7 +856,7 @@
       "icon": "â„ï¸"
     },
     "label_i18n": {
-      "sr": "Visoki (frizider - samostojeci)",
+      "sr": "Visoki (frižider - samostojeći)",
       "en": "Tall (fridge - freestanding)",
       "ru": "Высокий (холодильник - отдельно стоящий)",
       "es": "Columna (frigorífico independiente)",
@@ -867,7 +867,7 @@
   },
   "TALL_FRIDGE_FREEZER": {
     "id": "TALL_FRIDGE_FREEZER",
-    "label": "Visoki (frizider + zamrzivac)",
+    "label": "Visoki (frižider + zamrzivač)",
     "defaults": {
       "w_mm": 600,
       "h_mm": 2100,
@@ -887,7 +887,7 @@
       "icon": "❄️"
     },
     "label_i18n": {
-      "sr": "Visoki (frizider + zamrzivac)",
+      "sr": "Visoki (frižider + zamrzivač)",
       "en": "Tall (fridge + freezer)",
       "ru": "Высокий (холодильник + морозильник)",
       "es": "Columna (frigorífico + congelador)",
@@ -929,7 +929,7 @@
   },
   "TALL_PANTRY": {
     "id": "TALL_PANTRY",
-    "label": "Visoki ostava / spajz (police)",
+    "label": "Visoki ostava / špajz (police)",
     "defaults": {
       "w_mm": 600,
       "h_mm": 2100,
@@ -947,7 +947,7 @@
       "icon": "🏪"
     },
     "label_i18n": {
-      "sr": "Visoki ostava / spajz (police)",
+      "sr": "Visoki ostava / špajz (police)",
       "en": "Tall pantry (shelves)",
       "ru": "Высокий шкаф-кладовая (полки)",
       "es": "Columna despensa (estantes)",
