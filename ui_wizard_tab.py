@@ -165,10 +165,9 @@ def _render_wizard_step2_measurement(
 ) -> None:
     with ui.column().classes('w-full h-full overflow-auto bg-gray-50 items-center justify-center p-8 gap-6'):
         with ui.row().classes('items-center gap-2 mb-2'):
-            ui.button(icon='arrow_back', on_click=lambda: (
+            ui.button(f'← {tr_fn("wizard.back")}', on_click=lambda: (
                 setattr(state, 'wizard_step', 1), main_content_refresh()
-            )).props('flat round dense')
-            ui.label(tr_fn('wizard.back')).classes('text-sm text-gray-400')
+            )).props('flat dense')
             ui.label(SYM_CHEVRON).classes('text-gray-300')
             ui.label(tr_fn('wizard.step_type')).classes('text-sm text-gray-400')
             ui.label(SYM_CHEVRON).classes('text-gray-300')

@@ -286,9 +286,9 @@ def render_room_setup_step3(
             # ── Header ────────────────────────────────────────────────────────
             with ui.element('div').classes('bg-white px-3 py-3 shrink-0 border-b border-gray-300'):
                 with ui.row().classes('items-center gap-2'):
-                    ui.button(icon='arrow_back', on_click=lambda: (
+                    ui.button(f'← {tr_fn("wizard.back")}', on_click=lambda: (
                         setattr(state, 'wizard_step', 2), main_content.refresh()
-                    )).props('flat round dense')
+                    )).props('flat dense')
                     ui.label(
                         tr_fn('room.setup_room_fmt', icon=type_icons.get(state.furniture_type, "🏠"))
                     ).classes('text-xl font-bold text-gray-900')
