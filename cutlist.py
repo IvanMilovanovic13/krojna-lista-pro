@@ -3262,6 +3262,10 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
     return txt
 
 
+def _normalize_sr_export_text(value: Any) -> str:
+    return str(_translate_export_text(value, "sr") or "")
+
+
 def _format_material_role(material: Any, thickness: Any, role: str, lang: str = "sr") -> str:
     _lang = str(lang or "sr").lower().strip()
     mat = str(material or "").strip()
@@ -4315,7 +4319,7 @@ def build_cutlist_pdf_bytes(
             if _mparts.empty:
                 continue
 
-            _mlbl = str(_m.get("label", "") or "")
+            _mlbl = _normalize_sr_export_text(_m.get("label", "") or "")
             _mtid = str(_m.get("template_id", "") or "")
             _mz = str(_m.get("zone", "") or "").lower()
             _mw = int(_m.get("w_mm", 0) or 0)
