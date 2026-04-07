@@ -13,7 +13,7 @@ Pravila:
 
 | # | Scenario | Fokus | Status | PDF | Excel | Napomena |
 |---|---|---|---|---|---|---|
-| 1 | Jedan zid - osnovna kuhinja | carcass, frontovi, worktop, okov | TODO |  |  |  |
+| 1 | Jedan zid - osnovna kuhinja | carcass, frontovi, worktop, okov | PASS | `export_job_27_20260407_122029.pdf` | `export_job_28_20260407_122035.xlsx` | Provereno: 600+800 donji elementi, worktop 1420 mm, okov i dijakritika OK. |
 | 2 | Jedan zid - sudopera + ploca | cutout, worktop, servisne napomene | TODO |  |  |  |
 | 3 | Jedan zid - fioke + masina za sudove | drawer box, klizaci, appliance | TODO |  |  |  |
 | 4 | Visoki blok | visoki moduli, appliance, paneli | TODO |  |  |  |
@@ -52,20 +52,20 @@ Prostorija:
 
 Elementi sleva nadesno:
 
-- `BASE_1DOOR` / Donji (1 vrata): `400 x 720 x 560`
+- `BASE_1DOOR` / Donji (1 vrata): `600 x 720 x 560`
 - `BASE_2DOOR` / Donji (2 vrata): `800 x 720 x 560`
 - `WALL_2DOOR` / Gornji (2 vrata): `800 x 720 x 320`
 
 Napomena:
 
 - ako prvi element uz levi zid prijavi warning za sarku, promeni stranu rucke. To je ocekivano.
-- ocekivana radna ploca je oko `1220 mm`, ne `2420 mm`.
+- ocekivana radna ploca je oko `1420 mm`, ne `2420 mm`.
 
 Rucno proveri:
 
-- dno za `BASE_1DOOR` oko `364 x 540`
+- dno za `BASE_1DOOR` oko `564 x 540`
 - dno za `BASE_2DOOR` oko `764 x 540`
-- frontovi: 1 kom za `400`, 2 kom za `800`
+- frontovi: 1 kom za `600`, 2 kom za `800`
 
 ## Scenario 2 - Jedan zid, sudopera + ploca za kuvanje
 
