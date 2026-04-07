@@ -1,16 +1,36 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-# Pomoćne konstante/funkcije za podešavanje prostorije (zidovi / otvori / instalacije)
+from i18n import tr
+
+
 ROOM_OPENING_TYPES = {
-    "prozor": ("🪟", "Prozor", "#60A5FA"),
-    "vrata": ("🚪", "Vrata", "#86EFAC"),
+    "prozor": ("window", "Prozor", "#60A5FA"),
+    "vrata": ("door_front", "Vrata", "#86EFAC"),
 }
+
 ROOM_FIXTURE_TYPES = {
-    "voda": ("💧", "Voda/odvod", "#67E8F9"),
-    "struja": ("⚡", "Struja", "#FCD34D"),
-    "gas": ("🔥", "Gas", "#FCA5A5"),
+    "voda": ("water_drop", "Voda/odvod", "#67E8F9"),
+    "struja": ("bolt", "Struja", "#FCD34D"),
+    "gas": ("local_fire_department", "Gas", "#FCA5A5"),
 }
+
+
+def get_room_opening_types(lang: str = "sr") -> dict:
+    _lang = str(lang or "sr").lower().strip()
+    return {
+        "prozor": (ROOM_OPENING_TYPES["prozor"][0], tr("room.tool_window", _lang), ROOM_OPENING_TYPES["prozor"][2]),
+        "vrata": (ROOM_OPENING_TYPES["vrata"][0], tr("room.tool_door", _lang), ROOM_OPENING_TYPES["vrata"][2]),
+    }
+
+
+def get_room_fixture_types(lang: str = "sr") -> dict:
+    _lang = str(lang or "sr").lower().strip()
+    return {
+        "voda": (ROOM_FIXTURE_TYPES["voda"][0], tr("room.tool_water", _lang), ROOM_FIXTURE_TYPES["voda"][2]),
+        "struja": (ROOM_FIXTURE_TYPES["struja"][0], tr("room.tool_socket", _lang), ROOM_FIXTURE_TYPES["struja"][2]),
+        "gas": (ROOM_FIXTURE_TYPES["gas"][0], tr("room.tool_gas", _lang), ROOM_FIXTURE_TYPES["gas"][2]),
+    }
 
 
 def ensure_room_walls(room: dict) -> list:
@@ -23,20 +43,18 @@ def ensure_room_walls(room: dict) -> list:
         wh = int(room.get("wall_height_mm", 2600))
         rd = int(room.get("room_depth_mm", 3000))
         walls = [
-            {"key": "A", "label": "Zid A", "length_mm": wl, "height_mm": wh, "openings": [], "fixtures": []},
-            {"key": "B", "label": "Zid B", "length_mm": rd, "height_mm": wh, "openings": [], "fixtures": []},
-            {"key": "C", "label": "Zid C", "length_mm": rd, "height_mm": wh, "openings": [], "fixtures": []},
+            {"key": "A", "label": "Wall A", "length_mm": wl, "height_mm": wh, "openings": [], "fixtures": []},
+            {"key": "B", "label": "Wall B", "length_mm": rd, "height_mm": wh, "openings": [], "fixtures": []},
+            {"key": "C", "label": "Wall C", "length_mm": rd, "height_mm": wh, "openings": [], "fixtures": []},
         ]
         room["walls"] = walls
     if "active_wall" not in room:
         room["active_wall"] = "A"
-    # Legacy sync (wall A mirrors room-level fields)
     wall_a = next((w for w in walls if w.get("key") == "A"), walls[0])
     room["wall_length_mm"] = int(wall_a.get("length_mm", room.get("wall_length_mm", 3000)))
     room["wall_height_mm"] = int(wall_a.get("height_mm", room.get("wall_height_mm", 2600)))
     room.setdefault("openings", wall_a.get("openings", []))
     if room.get("openings") is not wall_a.get("openings"):
-        # keep same list reference for compatibility
         wall_a["openings"] = room["openings"]
     return walls
 
@@ -45,4 +63,3 @@ def get_room_wall(room: dict, key: str) -> dict:
     walls = ensure_room_walls(room)
     key = str(key or "A").upper()
     return next((w for w in walls if str(w.get("key", "")).upper() == key), walls[0] if walls else {})
-

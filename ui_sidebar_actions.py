@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 
-_SIDEBAR_PRIMARY_ACTION = {"label": "Dodaj na zid", "handler": None}
+_SIDEBAR_PRIMARY_ACTION = {"label": "", "handler": None}
 _SIDEBAR_FOOTER_REFRESH = None
 
 
@@ -57,4 +57,3 @@ def run_sidebar_primary_action(*, ui, label_fallback: str, notify_empty: str) ->
     else:
         ui.notify(notify_empty, type="warning")
         _SIDEBAR_PRIMARY_ACTION["label"] = label_fallback
-

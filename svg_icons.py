@@ -3,22 +3,13 @@ from __future__ import annotations
 import base64
 from functools import lru_cache
 from pathlib import Path
+import re
 
-# Ikonice kataloga — vizualno identične 2D prikazu na zidu (1:1).
-# Ručke: crni filled pravougaonik (kao u visualization.py HANDLE_FILL="#000000").
-# Dimenzije ručki proporcionalne stvarnim (200mm ručka, 20mm širina).
-# Izlaz uvek 52×46 px.
-#
-# ViewBox proporcije odgovaraju stvarnim dimenzijama elementa:
-#   TALL  (600×2100mm) → viewBox "0 0 40 80"   — uski, visoki
-#   WALL  (600×720mm)  → viewBox "0 0 80 54"   — široki, srednji
-#   BASE  (600×720mm)  → viewBox "0 0 80 60"   — široki, viši
-#   WALL_UPPER (600×400mm) → "0 0 80 50"       — široki, nizak
-#   TALL_TOP  (600×400mm)  → "0 0 80 50"       — široki, nizak (kao WU)
+# Ikonice kataloga — raw SVG inner content iz HTML preview fajla.
+# Svaki SVG se vraća u prirodnim dimenzijama (direktno iz HTML previewa).
 
-_W = 52
-_H = 46
 _HERE = Path(__file__).resolve().parent
+_ICONS_PREVIEW_NEW = _HERE / "icons_preview_new.html"
 _PHOTO_ICON_MAP = {}
 
 
@@ -30,568 +21,618 @@ def _photo_data_uri(path_str: str) -> str:
     return f"data:image/png;base64,{b64}"
 
 
+def _asset_src(path_obj: Path) -> str:
+    try:
+        rel = path_obj.resolve().relative_to((_HERE / "assets").resolve())
+        return "/assets/" + str(rel).replace("\\", "/")
+    except Exception:
+        return _photo_data_uri(str(path_obj))
+
+
+@lru_cache(maxsize=1)
+def _load_preview_svg_map() -> dict[str, str]:
+    if not _ICONS_PREVIEW_NEW.exists():
+        return {}
+
+    html = _ICONS_PREVIEW_NEW.read_text(encoding="utf-8", errors="ignore")
+    card_pattern = re.compile(
+        r'<div class="card"[^>]*>\s*(<svg\b.*?</svg>)\s*'
+        r'<div class="card-label">.*?</div>\s*'
+        r'<div class="card-id">([^<]+)</div>',
+        re.DOTALL | re.IGNORECASE,
+    )
+    svg_map: dict[str, str] = {}
+    for svg_html, card_id in card_pattern.findall(html):
+        tid = card_id.strip().upper()
+        if tid:
+            svg_map[tid] = svg_html.strip()
+    return svg_map
+
+
+def _fit_svg_markup(svg_html: str) -> str:
+    return re.sub(
+        r"<svg\b",
+        '<svg style="display:block;max-width:100%;max-height:100%;width:auto;height:auto;"',
+        svg_html,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+
+
 def svg_for_tid(tid: str) -> str:  # noqa: C901
     t = tid.upper()
 
-    # Real photo icon override (for templates where we have image assets).
+    if t == "BASE_OVEN_HOB_FREESTANDING":
+        vb = "0 0 54 78"
+        body = (
+            '<rect x="7" y="2" width="40" height="8" fill="#E8E8E6" stroke="#2C2C2C" stroke-width="1.2"/>'
+            '<ellipse cx="17" cy="6" rx="7" ry="2.2" fill="none" stroke="#666" stroke-width="0.8"/>'
+            '<ellipse cx="17" cy="6" rx="5" ry="1.4" fill="none" stroke="#888" stroke-width="0.6"/>'
+            '<ellipse cx="37" cy="6" rx="7" ry="2.2" fill="none" stroke="#666" stroke-width="0.8"/>'
+            '<ellipse cx="37" cy="6" rx="5" ry="1.4" fill="none" stroke="#888" stroke-width="0.6"/>'
+            '<ellipse cx="17" cy="10" rx="7" ry="2.2" fill="none" stroke="#666" stroke-width="0.8"/>'
+            '<ellipse cx="17" cy="10" rx="5" ry="1.4" fill="none" stroke="#888" stroke-width="0.6"/>'
+            '<ellipse cx="37" cy="10" rx="7" ry="2.2" fill="none" stroke="#666" stroke-width="0.8"/>'
+            '<ellipse cx="37" cy="10" rx="5" ry="1.4" fill="none" stroke="#888" stroke-width="0.6"/>'
+            '<rect x="6" y="10" width="42" height="11" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.2"/>'
+            '<circle cx="13" cy="16" r="2.1" fill="none" stroke="#666" stroke-width="0.8"/>'
+            '<line x1="13" y1="14" x2="13" y2="18" stroke="#666" stroke-width="0.7"/>'
+            '<circle cx="20" cy="16" r="2.1" fill="none" stroke="#666" stroke-width="0.8"/>'
+            '<line x1="20" y1="14" x2="20" y2="18" stroke="#666" stroke-width="0.7"/>'
+            '<circle cx="27" cy="16" r="2.1" fill="none" stroke="#666" stroke-width="0.8"/>'
+            '<line x1="27" y1="14" x2="27" y2="18" stroke="#666" stroke-width="0.7"/>'
+            '<rect x="31" y="14" width="9" height="4" rx="0.5" fill="#EDEDEB" stroke="#666" stroke-width="0.7"/>'
+            '<line x1="39" y1="15" x2="39" y2="17" stroke="#888" stroke-width="0.5"/>'
+            '<circle cx="43" cy="16" r="2.1" fill="none" stroke="#666" stroke-width="0.8"/>'
+            '<line x1="43" y1="14" x2="43" y2="18" stroke="#666" stroke-width="0.7"/>'
+            '<rect x="6" y="21" width="42" height="36" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.2"/>'
+            '<line x1="13" y1="27" x2="41" y2="27" stroke="#444" stroke-width="2"/>'
+            '<rect x="12" y="31" width="30" height="18" fill="#9C9C9C" stroke="#444" stroke-width="1"/>'
+            '<rect x="13.5" y="32.5" width="27" height="15" fill="#8A8A8A" stroke="#666" stroke-width="0.5"/>'
+            '<line x1="18" y1="33" x2="25" y2="46" stroke="#CFCFCF" stroke-width="1" opacity="0.45"/>'
+            '<line x1="24" y1="33" x2="31" y2="46" stroke="#DADADA" stroke-width="1" opacity="0.4"/>'
+            '<line x1="30" y1="33" x2="37" y2="46" stroke="#E3E3E3" stroke-width="1" opacity="0.35"/>'
+            '<rect x="6" y="57" width="42" height="12" fill="#F3F3F1" stroke="#2C2C2C" stroke-width="1.2"/>'
+            '<rect x="7" y="69" width="40" height="5" fill="#8C8C8C" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="8" y="72" width="4" height="2" rx="0.5" fill="#666"/>'
+            '<rect x="42" y="72" width="4" height="2" rx="0.5" fill="#666"/>'
+        )
+        return (f'<svg viewBox="{vb}" '
+                f'style="display:block;max-width:100%;max-height:100%;width:auto;height:auto;" fill="none" xmlns="http://www.w3.org/2000/svg">'
+                f'{body}</svg>')
+
+    if t == "BASE_DISHWASHER_FREESTANDING":
+        vb = "0 0 44 78"
+        body = (
+            '<rect x="5" y="2" width="34" height="68" rx="0.8" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.2"/>'
+            '<line x1="5" y1="10" x2="39" y2="10" stroke="#2C2C2C" stroke-width="1"/>'
+            '<line x1="5" y1="15" x2="39" y2="15" stroke="#B8B8B8" stroke-width="0.8"/>'
+            '<line x1="15" y1="12" x2="23" y2="12" stroke="#444" stroke-width="1.7"/>'
+            '<line x1="15" y1="13.5" x2="23" y2="13.5" stroke="#666" stroke-width="0.6"/>'
+            '<line x1="14" y1="12" x2="15" y2="14.2" stroke="#444" stroke-width="0.8"/>'
+            '<line x1="23" y1="12" x2="24" y2="14.2" stroke="#444" stroke-width="0.8"/>'
+            '<rect x="28" y="11" width="6" height="2.6" rx="0.4" fill="#F6F6F4" stroke="#666" stroke-width="0.7"/>'
+            '<circle cx="36.2" cy="12.3" r="1" fill="none" stroke="#666" stroke-width="0.7"/>'
+            '<circle cx="39.2" cy="12.3" r="1" fill="none" stroke="#666" stroke-width="0.7"/>'
+            '<line x1="5" y1="70" x2="39" y2="70" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="6" y="70" width="32" height="4" fill="#F3F3F1" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="7" y="73.5" width="4" height="2" rx="0.5" fill="#666"/>'
+            '<rect x="33" y="73.5" width="4" height="2" rx="0.5" fill="#666"/>'
+        )
+        return (f'<svg viewBox="{vb}" '
+                f'style="display:block;max-width:100%;max-height:100%;width:auto;height:auto;" fill="none" xmlns="http://www.w3.org/2000/svg">'
+                f'{body}</svg>')
+
+    # 1. Photo icon override (za template-e sa image asset-ima).
     _img_p = _PHOTO_ICON_MAP.get(t)
     if _img_p and _img_p.exists():
         try:
+            # BASE_COOKING_UNIT forsiramo kao inline image da ne zavisi od browser/app
+            # cache-a ili statičkog route-a. Fajl je već mali i optimizovan za katalog.
             _src = _photo_data_uri(str(_img_p))
             return (
-                f'<img src="{_src}" width="{_W}" height="{_H}" '
-                'style="display:block; object-fit:cover; border:1px solid #c8c8c8; '
+                f'<img src="{_src}" width="80" height="65" '
+                'style="display:block; object-fit:contain; border:1px solid #c8c8c8; '
                 'border-radius:2px; background:#f5f5f5;" />'
             )
         except Exception:
-            # Fallback below to SVG icon if image loading fails.
             pass
 
-    # ── Grundne helpers ────────────────────────────────────────────────────
-    def r(x, y, w, h, sw=1.5, fill="white"):
-        return (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
-                f'stroke="#383838" stroke-width="{sw}" fill="{fill}"/>')
+    _preview_svg = _load_preview_svg_map().get(t)
+    if _preview_svg:
+        return _fit_svg_markup(_preview_svg)
 
-    def ln(x1, y1, x2, y2, sw=1.2, sc="#383838", dash=""):
-        dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
-        return (f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" '
-                f'stroke="{sc}" stroke-width="{sw}"{dash_attr}/>')
+    # 2. Mapiranje template ID → SVG body (raw inner SVG content iz HTML preview).
 
-    def el(cx, cy, rx, ry, sw=1.2, sc="#383838", fill="none"):
-        return (f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" '
-                f'stroke="{sc}" stroke-width="{sw}" fill="{fill}"/>')
-
-    def circ(cx, cy, rad, sc="#383838", fill="none", sw=1.0):
-        return (f'<circle cx="{cx}" cy="{cy}" r="{rad}" '
-                f'stroke="{sc}" stroke-width="{sw}" fill="{fill}"/>')
-
-    def hv(x, y1, y2):
-        """Vertikalna ručka — crni filled pravougaonik (kao viz.py bar handle)."""
-        return (f'<rect x="{x - 1.2:.1f}" y="{y1}" width="2.5" '
-                f'height="{y2 - y1}" fill="#111111" rx="1.2"/>')
-
-    def hh(x1, x2, y):
-        """Horizontalna ručka — crni filled pravougaonik."""
-        return (f'<rect x="{x1}" y="{y - 1.2:.1f}" width="{x2 - x1}" '
-                f'height="2.5" fill="#111111" rx="1.2"/>')
-
-    # ══════════════════════════════════════════════════════
-    # VISOKI  –  viewBox 40×80  (uski, visoki, ~600×2100mm)
-    # Ručka: 200mm / 2100mm * 68 ≈ 6.5 jedin. — blizu VRHA  (jer visoka vrata
-    #         se hvataju blizu vrha pri otvaranju: handle_cy = h - 150mm)
-    # ══════════════════════════════════════════════════════
-
-    if "TALL_FRIDGE_FREEZER" in t:
-        # Integrisani frižider+zamrzivač u koloni:
-        # gornji frižider (~55% visine) + donji zamrzivač (~45%)
-        # Ručka frižidera: blizu vrha gornje sekcije
-        # Ručka zamrzivača: blizu vrha donje sekcije
-        vb = "0 0 40 80"
-        body = (r(3, 2, 34, 76)
-                + r(6, 5, 28, 71, sw=0.7, fill="#F1E7D4")
-                + ln(3, 44, 37, 44)           # linija frižider / zamrzivač
-                + hv(30, 8, 15)               # ručka frižidera
-                + hv(30, 48, 55))             # ručka zamrzivača
-
-    elif "TALL_FRIDGE" in t:
-        # Integrisani frižider — jedan panel, ručka desno blizu vrha
-        vb = "0 0 40 80"
-        body = (r(3, 2, 34, 76)
-                + r(6, 5, 28, 71, sw=0.7, fill="#F1E7D4")   # neutralni front panel
-                + ln(3, 44, 37, 44, sw=0.7)  # razdvajač (friz/zamrz)
-                + hv(30, 8, 15)               # ručka frižidera (blizu vrha)
-                + hv(30, 48, 55))             # ručka zamrzivača
-
-    elif "TALL_OVEN_MICRO" in t:
-        # Kolona: mikrovalna gore + rerna u sredini + storage najdole
-        # Horizontalne ručke za svaki uređaj (otvaraju se prema napred)
-        vb = "0 0 40 80"
-        body = (r(3, 2, 34, 76)               # okvir
-                + r(6, 5, 28, 18)             # mikrovalna — vrata/prozor
-                + hh(7, 33, 25)               # micro horizontalna ručka
-                + r(6, 30, 28, 20)            # rerna — prozor
-                + hh(7, 33, 52)               # rerna horizontalna ručka
-                + ln(3, 58, 37, 58)           # linija ispod rerne
-                + ln(14, 64, 26, 64))         # donja sekcija — linija
+    if "TALL_OVEN_MICRO" in t:
+        vb = "0 0 40 90"
+        body = (
+            '<rect x="2" y="2" width="36" height="86" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="5" y="5" width="30" height="30" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="8" y="9" width="18" height="20" rx="1" fill="#3A3A38" stroke="#555" stroke-width="0.8"/>'
+            '<line x1="28" y1="11" x2="32" y2="11" stroke="#888" stroke-width="0.8"/>'
+            '<line x1="28" y1="14" x2="32" y2="14" stroke="#888" stroke-width="0.8"/>'
+            '<line x1="28" y1="17" x2="32" y2="17" stroke="#888" stroke-width="0.8"/>'
+            '<circle cx="30" cy="22" r="3" fill="none" stroke="#888" stroke-width="0.8"/>'
+            '<line x1="5" y1="37" x2="35" y2="37" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="5" y="39" width="30" height="46" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="8" y="44" width="24" height="26" rx="1" fill="#3A3A38" stroke="#555" stroke-width="1"/>'
+            '<rect x="10" y="46" width="20" height="22" rx="1" fill="#2A2A28" stroke="#666" stroke-width="0.5"/>'
+            '<line x1="9" y1="75" x2="31" y2="75" stroke="#888" stroke-width="1"/>'
+            '<line x1="9" y1="78" x2="31" y2="78" stroke="#888" stroke-width="1"/>'
+            '<rect x="10" y="42" width="20" height="1.5" rx="0.75" fill="#1A1A1A"/>'
+            '<circle cx="14" cy="83" r="2" fill="none" stroke="#888" stroke-width="1"/>'
+            '<circle cx="20" cy="83" r="2" fill="none" stroke="#888" stroke-width="1"/>'
+            '<circle cx="26" cy="83" r="2" fill="none" stroke="#888" stroke-width="1"/>'
+        )
 
     elif "TALL_OVEN" in t:
-        # Visoki sa rernom + storage ispod/iznad
-        vb = "0 0 40 80"
-        body = (r(3, 2, 34, 76)               # okvir
-                + r(6, 17, 28, 27)            # rerna — prozor (tamni okvir)
-                + hh(7, 33, 48)               # horizontalna ručka rerne
-                + ln(3, 54, 37, 54)           # linija razdvajanja
-                + ln(14, 61, 26, 61))         # donja sekcija — linija
+        vb = "0 0 40 90"
+        body = (
+            '<rect x="2" y="2" width="36" height="86" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="5" y="5" width="30" height="26" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="8" y="10" width="22" height="12" rx="1" fill="#3A3A38" stroke="#555" stroke-width="0.8"/>'
+            '<line x1="5" y1="33" x2="35" y2="33" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="5" y="35" width="30" height="50" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="8" y="40" width="24" height="28" rx="1" fill="#3A3A38" stroke="#555" stroke-width="1"/>'
+            '<rect x="10" y="42" width="20" height="24" rx="1" fill="#2A2A28" stroke="#666" stroke-width="0.5"/>'
+            '<line x1="9" y1="72" x2="31" y2="72" stroke="#888" stroke-width="1"/>'
+            '<line x1="9" y1="75" x2="31" y2="75" stroke="#888" stroke-width="1"/>'
+            '<rect x="10" y="38" width="20" height="1.5" rx="0.75" fill="#1A1A1A"/>'
+            '<circle cx="13" cy="79" r="2" fill="none" stroke="#888" stroke-width="1"/>'
+            '<circle cx="20" cy="79" r="2" fill="none" stroke="#888" stroke-width="1"/>'
+            '<circle cx="27" cy="79" r="2" fill="none" stroke="#888" stroke-width="1"/>'
+        )
 
-    elif "TALL_TOP_OPEN" in t:
-        # Popuna iznad visokog elementa — otvorene police (600×400mm → WIDE!)
-        vb = "0 0 80 50"
-        _wc = "#D8CBBB"; _bc = "#BEBAB7"
-        body = (r(3, 3, 74, 44, fill=_bc, sw=1.5)
-                + r(3, 3, 74, 5, sw=0, fill=_wc)      # gornja ploča
-                + r(3, 42, 74, 5, sw=0, fill=_wc)     # donja ploča
-                + r(3, 3, 5, 44, sw=0, fill=_wc)      # leva ploča
-                + r(72, 3, 5, 44, sw=0, fill=_wc)     # desna ploča
-                + r(3, 19, 74, 4, sw=0.5, fill=_wc)   # polica 1
-                + r(3, 31, 74, 4, sw=0.5, fill=_wc)   # polica 2
-                + r(3, 3, 74, 44, fill="none", sw=1.5))
+    elif "TALL_FRIDGE_FREEZER" in t:
+        vb = "0 0 40 90"
+        body = (
+            '<rect x="2" y="2" width="36" height="86" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="5" y="5" width="30" height="52" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<line x1="20" y1="18" x2="20" y2="38" stroke="#5588AA" stroke-width="1.2"/>'
+            '<line x1="11" y1="28" x2="29" y2="28" stroke="#5588AA" stroke-width="1.2"/>'
+            '<line x1="14" y1="21" x2="26" y2="35" stroke="#5588AA" stroke-width="1"/>'
+            '<line x1="26" y1="21" x2="14" y2="35" stroke="#5588AA" stroke-width="1"/>'
+            '<rect x="28" y="17" width="2" height="22" rx="1" fill="#1A1A1A"/>'
+            '<rect x="5" y="59" width="30" height="26" rx="1" fill="#E8EEF2" stroke="#444" stroke-width="1"/>'
+            '<line x1="20" y1="66" x2="20" y2="76" stroke="#5588AA" stroke-width="1"/>'
+            '<line x1="15" y1="71" x2="25" y2="71" stroke="#5588AA" stroke-width="1"/>'
+            '<rect x="28" y="67" width="2" height="12" rx="1" fill="#1A1A1A"/>'
+        )
 
-    elif "TALL_TOP" in t:
-        # Popuna iznad visokog — sa 2 vrata (600×400mm → WIDE!)
-        vb = "0 0 80 50"
-        body = (r(3, 3, 74, 44)
-                + ln(40, 3, 40, 47)           # srednja vertikala
-                + r(6, 7, 31, 36) + r(43, 7, 31, 36)   # 2 panela vrata
-                + hv(34, 12, 21) + hv(46, 12, 21))     # 2 ručke prema sredini
+    elif "TALL_FRIDGE_FREESTANDING" in t:
+        vb = "0 0 44 90"
+        body = (
+            '<rect x="1" y="4" width="3" height="84" rx="1" fill="#E0DDD8" stroke="#AAA" stroke-width="0.8"/>'
+            '<rect x="40" y="4" width="3" height="84" rx="1" fill="#E0DDD8" stroke="#AAA" stroke-width="0.8"/>'
+            '<rect x="4" y="2" width="36" height="86" rx="3" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="7" y="5" width="30" height="62" rx="2" fill="#F0F0EE" stroke="#444" stroke-width="1"/>'
+            '<line x1="22" y1="18" x2="22" y2="46" stroke="#5588AA" stroke-width="1.3"/>'
+            '<line x1="9" y1="32" x2="35" y2="32" stroke="#5588AA" stroke-width="1.3"/>'
+            '<line x1="13" y1="21" x2="31" y2="43" stroke="#5588AA" stroke-width="1"/>'
+            '<line x1="31" y1="21" x2="13" y2="43" stroke="#5588AA" stroke-width="1"/>'
+            '<rect x="7" y="69" width="30" height="15" rx="2" fill="#E0EBF2" stroke="#444" stroke-width="1"/>'
+            '<rect x="30" y="22" width="2" height="28" rx="1" fill="#1A1A1A"/>'
+        )
 
-    elif "TALL_CORNER" in t:
-        # Visoki ugaoni — L-oblik punom visinom
-        vb = "0 0 40 80"
-        body = ('<path d="M3 2 H30 V38 H20 V78 H3 Z" '
-                'stroke="#383838" stroke-width="1.5" fill="white"/>'
-                + ln(3, 78, 30, 2, sw=0.7, sc="#C0C0C0", dash="3,2.5"))
-
-    elif "TALL_OPEN" in t:
-        # Visoki otvoreni — police vidljive (bez vrata)
-        vb = "0 0 40 80"
-        _wc = "#D8CBBB"; _bc = "#BEBAB7"
-        body = (r(3, 2, 34, 76, fill=_bc, sw=1.5)
-                + r(3, 2, 34, 5, sw=0, fill=_wc)      # gornja ploča
-                + r(3, 73, 34, 5, sw=0, fill=_wc)     # donja ploča
-                + r(3, 2, 5, 76, sw=0, fill=_wc)      # leva ploča
-                + r(32, 2, 5, 76, sw=0, fill=_wc)     # desna ploča
-                + r(3, 23, 34, 3, sw=0.5, fill=_wc)   # polica 1
-                + r(3, 40, 34, 3, sw=0.5, fill=_wc)   # polica 2
-                + r(3, 57, 34, 3, sw=0.5, fill=_wc)   # polica 3
-                + r(3, 2, 34, 76, fill="none", sw=1.5))
+    elif "TALL_FRIDGE" in t:
+        vb = "0 0 40 90"
+        body = (
+            '<rect x="2" y="2" width="36" height="86" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="5" y="5" width="30" height="68" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<line x1="20" y1="28" x2="20" y2="50" stroke="#5588AA" stroke-width="1.5"/>'
+            '<line x1="11" y1="39" x2="29" y2="39" stroke="#5588AA" stroke-width="1.5"/>'
+            '<line x1="13" y1="31" x2="27" y2="47" stroke="#5588AA" stroke-width="1.2"/>'
+            '<line x1="27" y1="31" x2="13" y2="47" stroke="#5588AA" stroke-width="1.2"/>'
+            '<circle cx="20" cy="39" r="3" fill="none" stroke="#5588AA" stroke-width="1"/>'
+            '<rect x="5" y="75" width="30" height="10" rx="1" fill="#E8EEF2" stroke="#444" stroke-width="1"/>'
+            '<rect x="28" y="24" width="2" height="30" rx="1" fill="#1A1A1A"/>'
+        )
 
     elif "TALL_PANTRY" in t:
-        # Ostava — 2 staklena vrata + police vidljive iza stakla
-        # Ručke okrenute prema sredini (kao u 2D prikazu)
-        vb = "0 0 40 80"
-        body = (r(3, 2, 34, 76)               # okvir
-                + ln(20, 2, 20, 78)           # srednja vertikala
-                + r(5, 5, 12, 68, sw=0.8, fill="#DDF0FB")   # leva staklo vrata
-                + r(23, 5, 12, 68, sw=0.8, fill="#DDF0FB")  # desna staklo vrata
-                + ln(5, 22, 17, 22, sw=0.7)   # polica L1
-                + ln(5, 42, 17, 42, sw=0.7)   # polica L2
-                + ln(5, 60, 17, 60, sw=0.7)   # polica L3
-                + ln(23, 22, 35, 22, sw=0.7)  # polica D1
-                + ln(23, 42, 35, 42, sw=0.7)  # polica D2
-                + ln(23, 60, 35, 60, sw=0.7)  # polica D3
-                + hv(16, 8, 15)               # ručka levih vrata (prema sredini)
-                + hv(24, 8, 15))              # ručka desnih vrata (prema sredini)
+        vb = "0 0 40 90"
+        body = (
+            '<rect x="2" y="2" width="36" height="86" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="5" y="5" width="30" height="80" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="28" y="28" width="2" height="34" rx="1" fill="#1A1A1A"/>'
+        )
 
     elif "TALL_GLASS" in t:
-        # Vitrina — 2 staklena vrata + police iza stakla + refleksije (plavi fill)
-        vb = "0 0 40 80"
-        body = (r(3, 2, 34, 76)               # okvir
-                + ln(20, 2, 20, 78)           # srednja vertikala
-                + r(5, 5, 12, 68, sw=0.8, fill="#D4E9F7")   # levo staklo (plavi fill)
-                + r(23, 5, 12, 68, sw=0.8, fill="#D4E9F7")  # desno staklo (plavi fill)
-                + ln(5, 5, 17, 73, sw=0.6, sc="#B0CCE0")    # refleksija L (dijagonala)
-                + ln(23, 5, 35, 73, sw=0.6, sc="#B0CCE0")   # refleksija D (dijagonala)
-                + ln(5, 22, 17, 22, sw=0.7)   # polica L1
-                + ln(5, 42, 17, 42, sw=0.7)   # polica L2
-                + ln(5, 60, 17, 60, sw=0.7)   # polica L3
-                + ln(23, 22, 35, 22, sw=0.7)  # polica D1
-                + ln(23, 42, 35, 42, sw=0.7)  # polica D2
-                + ln(23, 60, 35, 60, sw=0.7)  # polica D3
-                + hv(16, 8, 15)               # ručka L (prema sredini)
-                + hv(24, 8, 15))              # ručka D (prema sredini)
+        vb = "0 0 40 90"
+        body = (
+            '<rect x="2" y="2" width="36" height="86" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="5" y="5" width="30" height="54" rx="1" fill="#C8DCE8" fill-opacity="0.5" stroke="#444" stroke-width="1"/>'
+            '<line x1="5" y1="5" x2="35" y2="59" stroke="#5588AA" stroke-width="0.8" opacity="0.4"/>'
+            '<line x1="35" y1="5" x2="5" y2="59" stroke="#5588AA" stroke-width="0.8" opacity="0.4"/>'
+            '<line x1="7" y1="24" x2="33" y2="24" stroke="#5588AA" stroke-width="0.7" opacity="0.5"/>'
+            '<line x1="7" y1="42" x2="33" y2="42" stroke="#5588AA" stroke-width="0.7" opacity="0.5"/>'
+            '<rect x="5" y="61" width="30" height="24" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="10" y="71" width="20" height="2" rx="1" fill="#1A1A1A"/>'
+        )
+
+    elif "TALL_TOP_OPEN" in t:
+        vb = "0 0 80 40"
+        body = (
+            '<rect x="2" y="2" width="76" height="36" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<line x1="5" y1="20" x2="75" y2="20" stroke="#444" stroke-width="1"/>'
+        )
+
+    elif "TALL_TOP" in t:
+        vb = "0 0 80 40"
+        body = (
+            '<rect x="2" y="2" width="76" height="36" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="5" y="5" width="34" height="30" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="41" y="5" width="34" height="30" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="33" y="13" width="2" height="14" rx="1" fill="#1A1A1A"/>'
+            '<rect x="45" y="13" width="2" height="14" rx="1" fill="#1A1A1A"/>'
+        )
+
+    elif "TALL_OPEN" in t:
+        vb = "0 0 40 90"
+        body = (
+            '<rect x="2" y="2" width="36" height="86" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<line x1="5" y1="22" x2="35" y2="22" stroke="#444" stroke-width="1"/>'
+            '<line x1="5" y1="40" x2="35" y2="40" stroke="#444" stroke-width="1"/>'
+            '<line x1="5" y1="58" x2="35" y2="58" stroke="#444" stroke-width="1"/>'
+            '<line x1="5" y1="74" x2="35" y2="74" stroke="#444" stroke-width="1"/>'
+        )
 
     elif "TALL" in t:
-        # TALL_DOORS — 1 ili 2 vrata (punom visinom)
-        vb = "0 0 40 80"
-        _is_wardrobe = "WARDROBE" in t
-        _hy1, _hy2 = (34, 46) if _is_wardrobe else (8, 15)
-
-        # ── Unutrašnje sekcije ormara — otvorene, bez vrata ──────────────────
-        if "INT_SHELVES" in t:
-            # Sekcija: samo police (vidljive horizontalne linije)
-            body = (r(3, 2, 34, 76)
-                    + ln(3, 20, 37, 20, sw=0.9)   # polica 1
-                    + ln(3, 38, 37, 38, sw=0.9)   # polica 2
-                    + ln(3, 56, 37, 56, sw=0.9)   # polica 3
-                    + ln(3, 70, 37, 70, sw=0.7))  # dno (polica)
-        elif "INT_DRAWERS" in t:
-            # Sekcija: fioke (vidljivi frontovi s ručkama)
-            body = (r(3, 2, 34, 76)
-                    + r(5, 6, 30, 14)             # fioka 1
-                    + r(5, 23, 30, 14)            # fioka 2
-                    + r(5, 40, 30, 14)            # fioka 3
-                    + r(5, 57, 30, 14)            # fioka 4
-                    + hh(10, 30, 13) + hh(10, 30, 30)
-                    + hh(10, 30, 47) + hh(10, 30, 64))  # ručke fioka
-        elif "INT_HANG" in t:
-            # Sekcija: šipka za vješanje + siluete odjeće
-            body = (r(3, 2, 34, 76)
-                    + ln(6, 22, 34, 22, sw=2.2, sc="#555555")   # šipka (deblja)
-                    + ln(12, 22, 12, 56, sw=0.8)  # vješalica 1
-                    + ln(20, 22, 20, 56, sw=0.8)  # vješalica 2
-                    + ln(28, 22, 28, 56, sw=0.8)  # vješalica 3
-                    + ln(3, 64, 37, 64, sw=0.8))  # donja polica
-
-        elif "2DOOR" in t or "DOORS" in t:
-            body = (r(3, 2, 34, 76)
-                    + ln(20, 2, 20, 78)       # srednja vertikala
-                    + r(5, 5, 12, 68)         # levo vrata panel
-                    + r(23, 5, 12, 68)        # desno vrata panel
-                    + hv(16, _hy1, _hy2)      # ručka L (prema sredini)
-                    + hv(24, _hy1, _hy2))     # ručka D (prema sredini)
+        # TALL_DOORS (2DOOR) ili TALL_1DOOR
+        if "2DOOR" in t or "DOORS" in t:
+            vb = "0 0 60 90"
+            body = (
+                '<rect x="2" y="2" width="56" height="86" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+                '<rect x="5" y="5" width="24" height="80" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+                '<rect x="31" y="5" width="24" height="80" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+                '<rect x="26" y="35" width="2" height="20" rx="1" fill="#1A1A1A"/>'
+                '<rect x="32" y="35" width="2" height="20" rx="1" fill="#1A1A1A"/>'
+            )
         else:
-            # 1DOOR — ručka desno, blizu vrha
-            body = (r(3, 2, 34, 76)
-                    + r(6, 5, 28, 68)         # vrata panel
-                    + hv(30, _hy1, _hy2))     # ručka desno
-
-    # ══════════════════════════════════════════════════════
-    # WALL_UPPER  –  viewBox 80×50  (širok, nizak, ~600×400mm)
-    # Ručka: 200mm / 400mm * 36 ≈ 18 jedin. — proportionalna
-    # ══════════════════════════════════════════════════════
+            # TALL_PANTRY (1 door) — default tall 1 door
+            vb = "0 0 40 90"
+            body = (
+                '<rect x="2" y="2" width="36" height="86" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+                '<rect x="5" y="5" width="30" height="80" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+                '<rect x="28" y="28" width="2" height="34" rx="1" fill="#1A1A1A"/>'
+            )
 
     elif "WALL_UPPER" in t:
-        vb = "0 0 80 50"
         if "2DOOR" in t:
-            body = (r(3, 3, 74, 44)
-                    + ln(40, 3, 40, 47)
-                    + r(6, 7, 31, 36) + r(43, 7, 31, 36)
-                    + hv(34, 12, 22) + hv(46, 12, 22))
-        elif "LIFTUP" in t:
-            body = (r(3, 3, 74, 44)
-                    + r(7, 7, 66, 36)
-                    + ln(7, 7, 73, 27)        # dijagonala: klapna se otvara prema gore
-                    + hh(26, 54, 43))         # horizontalna ručka pri dnu
+            vb = "0 0 80 40"
+            body = (
+                '<rect x="2" y="2" width="76" height="36" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+                '<rect x="5" y="5" width="34" height="30" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+                '<rect x="41" y="5" width="34" height="30" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+                '<rect x="33" y="13" width="2" height="14" rx="1" fill="#1A1A1A"/>'
+                '<rect x="45" y="13" width="2" height="14" rx="1" fill="#1A1A1A"/>'
+            )
         elif "OPEN" in t:
-            _wc = "#D8CBBB"; _bc = "#BEBAB7"
-            body = (r(3, 3, 74, 44, fill=_bc, sw=1.5)
-                    + r(3, 3, 74, 5, sw=0, fill=_wc)      # gornja ploča
-                    + r(3, 42, 74, 5, sw=0, fill=_wc)     # donja ploča
-                    + r(3, 3, 5, 44, sw=0, fill=_wc)      # leva ploča
-                    + r(72, 3, 5, 44, sw=0, fill=_wc)     # desna ploča
-                    + r(3, 19, 74, 4, sw=0.5, fill=_wc)   # polica 1
-                    + r(3, 31, 74, 4, sw=0.5, fill=_wc)   # polica 2
-                    + r(3, 3, 74, 44, fill="none", sw=1.5))
+            vb = "0 0 80 40"
+            body = (
+                '<rect x="2" y="2" width="76" height="36" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+                '<line x1="5" y1="20" x2="75" y2="20" stroke="#444" stroke-width="1"/>'
+            )
         else:
-            # 1DOOR default
-            body = (r(3, 3, 74, 44)
-                    + r(7, 7, 66, 36)
-                    + hv(68, 11, 21))         # ručka desno
+            # WALL_UPPER_1DOOR
+            vb = "0 0 80 40"
+            body = (
+                '<rect x="2" y="2" width="76" height="36" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+                '<rect x="6" y="5" width="68" height="30" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+                '<rect x="62" y="13" width="2" height="14" rx="1" fill="#1A1A1A"/>'
+            )
 
-    # ══════════════════════════════════════════════════════
-    # GORNJI / WALL  –  viewBox 80×54  (širok, srednji, ~600×720mm)
-    # Ručka: 200mm/720mm * 40 ≈ 11 jedin. — centar na ~21% od vrha panela
-    # ══════════════════════════════════════════════════════
+    elif "WALL_NARROW" in t:
+        vb = "0 0 45 55"
+        body = (
+            '<rect x="2" y="2" width="41" height="51" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="6" y="6" width="33" height="43" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="32" y="19" width="2" height="16" rx="1" fill="#1A1A1A"/>'
+        )
 
-    elif "WALL_CORNER_DIAGONAL" in t:
-        # Ugaoni gornji dijagonalni — petougaoni front
-        vb = "0 0 80 54"
-        body = ('<path d="M3 3 H54 V28 L24 51 H3 Z" '
-                'stroke="#383838" stroke-width="1.5" fill="white"/>'
-                + hh(31, 47, 37))   # ručka na dijagonalnom frontu
+    elif "WALL_GLASS" in t:
+        vb = "0 0 80 55"
+        body = (
+            '<rect x="2" y="2" width="76" height="51" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="6" y="6" width="68" height="43" rx="1" fill="#C8DCE8" fill-opacity="0.5" stroke="#444" stroke-width="1"/>'
+            '<line x1="6" y1="6" x2="74" y2="49" stroke="#5588AA" stroke-width="0.8" opacity="0.5"/>'
+            '<line x1="74" y1="6" x2="6" y2="49" stroke="#5588AA" stroke-width="0.8" opacity="0.5"/>'
+            '<line x1="8" y1="20" x2="72" y2="20" stroke="#5588AA" stroke-width="0.7" opacity="0.6"/>'
+            '<line x1="8" y1="35" x2="72" y2="35" stroke="#5588AA" stroke-width="0.7" opacity="0.6"/>'
+            '<rect x="62" y="19" width="2" height="16" rx="1" fill="#1A1A1A"/>'
+        )
 
-    elif "WALL_CORNER" in t or ("WALL" in t and "CORNER" in t):
-        # Ugaoni gornji element — L-oblik
-        vb = "0 0 80 54"
-        body = ('<path d="M3 3 H54 V24 H24 V51 H3 Z" '
-                'stroke="#383838" stroke-width="1.5" fill="white"/>'
-                + ln(3, 51, 54, 3, sw=0.7, sc="#C0C0C0", dash="3,2.5"))
+    elif "WALL_LIFTUP" in t:
+        vb = "0 0 80 55"
+        body = (
+            '<rect x="2" y="2" width="76" height="51" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="6" y="6" width="68" height="43" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<line x1="40" y1="35" x2="40" y2="13" stroke="#444" stroke-width="1.5"/>'
+            '<line x1="40" y1="13" x2="34" y2="20" stroke="#444" stroke-width="1.5"/>'
+            '<line x1="40" y1="13" x2="46" y2="20" stroke="#444" stroke-width="1.5"/>'
+            '<circle cx="10" cy="8" r="2.5" fill="none" stroke="#1A1A1A" stroke-width="1.2"/>'
+            '<circle cx="70" cy="8" r="2.5" fill="none" stroke="#1A1A1A" stroke-width="1.2"/>'
+            '<rect x="22" y="43" width="36" height="2" rx="1" fill="#1A1A1A"/>'
+        )
+
+    elif "WALL_OPEN" in t:
+        vb = "0 0 80 55"
+        body = (
+            '<rect x="2" y="2" width="76" height="51" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<line x1="5" y1="22" x2="75" y2="22" stroke="#444" stroke-width="1"/>'
+            '<line x1="5" y1="40" x2="75" y2="40" stroke="#444" stroke-width="1"/>'
+        )
+
+    elif "WALL_MICRO" in t or ("MICRO" in t and "WALL" in t):
+        vb = "0 0 80 55"
+        body = (
+            '<rect x="2" y="2" width="76" height="51" fill="#3A3A38" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="6" y="7" width="48" height="38" rx="2" fill="#2A2A28" stroke="#888" stroke-width="1"/>'
+            '<rect x="8" y="9" width="44" height="34" rx="1" fill="#1E1E1C" stroke="#666" stroke-width="0.5"/>'
+            '<rect x="58" y="7" width="16" height="38" rx="1" fill="#2C2C2A" stroke="#666" stroke-width="0.8"/>'
+            '<circle cx="66" cy="18" r="4" fill="none" stroke="#AAA" stroke-width="1"/>'
+            '<line x1="60" y1="28" x2="72" y2="28" stroke="#888" stroke-width="0.8"/>'
+            '<line x1="60" y1="32" x2="72" y2="32" stroke="#888" stroke-width="0.8"/>'
+            '<line x1="60" y1="36" x2="72" y2="36" stroke="#888" stroke-width="0.8"/>'
+            '<rect x="60" y="40" width="12" height="3" rx="1" fill="#5588AA" opacity="0.8"/>'
+            '<rect x="6" y="49" width="48" height="2" rx="1" fill="#888"/>'
+        )
 
     elif "HOOD" in t:
-        # Napa/aspirator — trapezoidni oblik + rešetka (3 linije)
-        vb = "0 0 80 54"
-        body = ('<path d="M10 6 H70 L60 48 H20 Z" '
-                'stroke="#383838" stroke-width="1.5" fill="#E8E8E8"/>'
-                + ln(14, 20, 66, 20)          # rešetka linija 1
-                + ln(17, 32, 63, 32)          # rešetka linija 2
-                + ln(19, 44, 61, 44)          # rešetka linija 3
-                + circ(40, 13, 3.5, fill="white", sw=0.8))  # ventilator dugme
+        vb = "0 0 80 55"
+        body = (
+            '<path d="M 8 52 L 72 52 L 62 12 L 18 12 Z" fill="#D8D4CF" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="26" y="2" width="28" height="12" fill="#C8C4BF" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="14" y="26" width="52" height="5" rx="1" fill="#B8B4AF" stroke="#888" stroke-width="0.8"/>'
+            '<rect x="14" y="34" width="52" height="5" rx="1" fill="#B8B4AF" stroke="#888" stroke-width="0.8"/>'
+            '<circle cx="40" cy="44" r="5" fill="#C0BCB7" stroke="#888" stroke-width="1"/>'
+            '<circle cx="40" cy="44" r="2" fill="#A8A4A0" stroke="#888" stroke-width="0.6"/>'
+            '<line x1="20" y1="14" x2="60" y2="14" stroke="#888" stroke-width="0.8"/>'
+        )
 
     elif "MICRO" in t:
-        # Mikrotalasna — vrata/prozor levo + dial dugme desno + ručka
-        vb = "0 0 80 54"
-        body = (r(3, 3, 74, 48)
-                + r(7, 8, 44, 34)             # prozor/vrata
-                + el(65, 25, 8, 8)            # točkić/dial
-                + ln(3, 44, 77, 44, sw=0.8)   # kontrolna linija
-                + hh(10, 50, 45))             # horizontalna ručka
+        # MICRO bez WALL prefiksa — takodje mikrotalasna ikona
+        vb = "0 0 80 55"
+        body = (
+            '<rect x="2" y="2" width="76" height="51" fill="#3A3A38" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="6" y="7" width="48" height="38" rx="2" fill="#2A2A28" stroke="#888" stroke-width="1"/>'
+            '<rect x="8" y="9" width="44" height="34" rx="1" fill="#1E1E1C" stroke="#666" stroke-width="0.5"/>'
+            '<rect x="58" y="7" width="16" height="38" rx="1" fill="#2C2C2A" stroke="#666" stroke-width="0.8"/>'
+            '<circle cx="66" cy="18" r="4" fill="none" stroke="#AAA" stroke-width="1"/>'
+            '<line x1="60" y1="28" x2="72" y2="28" stroke="#888" stroke-width="0.8"/>'
+            '<line x1="60" y1="32" x2="72" y2="32" stroke="#888" stroke-width="0.8"/>'
+            '<line x1="60" y1="36" x2="72" y2="36" stroke="#888" stroke-width="0.8"/>'
+            '<rect x="60" y="40" width="12" height="3" rx="1" fill="#5588AA" opacity="0.8"/>'
+            '<rect x="6" y="49" width="48" height="2" rx="1" fill="#888"/>'
+        )
 
     elif "WALL" in t:
-        vb = "0 0 80 54"
         if "2DOOR" in t:
-            body = (r(3, 3, 74, 48)
-                    + ln(40, 3, 40, 51)       # srednja vertikala
-                    + r(6, 7, 31, 40) + r(43, 7, 31, 40)
-                    + hv(34, 13, 24) + hv(46, 13, 24))  # ručke prema sredini
-        elif "GLASS" in t:
-            # Staklena vrata — plavi fill + dijagonalne refleksije + ručke
-            body = (r(3, 3, 74, 48)
-                    + ln(40, 3, 40, 51)       # srednja vertikala
-                    + r(6, 7, 31, 40, sw=0.8, fill="#D4E9F7")    # levo staklo
-                    + r(43, 7, 31, 40, sw=0.8, fill="#D4E9F7")   # desno staklo
-                    + ln(6, 7, 37, 47, sw=0.7, sc="#B0CCE0")     # refleksija L
-                    + ln(43, 7, 74, 47, sw=0.7, sc="#B0CCE0")    # refleksija D
-                    + hv(34, 13, 24) + hv(46, 13, 24))           # ručke prema sredini
-        elif "LIFTUP" in t:
-            # Klapna — panel + dijagonalna strelica prema gore + horizontalna ručka
-            body = (r(3, 3, 74, 48)
-                    + r(7, 7, 66, 40)
-                    + ln(7, 7, 73, 30, sw=1.0)  # dijagonala (smer otvaranja gore)
-                    + hh(26, 54, 47))            # horizontalna ručka pri dnu
-        elif "NARROW" in t:
-            # Uski gornji (začini, ulje) — unutrašnji panel + ručka desno
-            body = (r(22, 3, 36, 48)
-                    + r(25, 7, 30, 40)
-                    + hv(51, 13, 23))
-        elif "OPEN" in t:
-            # Otvoreni gornji — vidljive police (bez vrata, bez ručke)
-            _wc = "#D8CBBB"; _bc = "#BEBAB7"
-            body = (r(3, 3, 74, 48, fill=_bc, sw=1.5)
-                    + r(3, 3, 74, 5, sw=0, fill=_wc)      # gornja ploča
-                    + r(3, 46, 74, 5, sw=0, fill=_wc)     # donja ploča
-                    + r(3, 3, 5, 48, sw=0, fill=_wc)      # leva ploča
-                    + r(72, 3, 5, 48, sw=0, fill=_wc)     # desna ploča
-                    + r(3, 20, 74, 4, sw=0.5, fill=_wc)   # polica 1
-                    + r(3, 33, 74, 4, sw=0.5, fill=_wc)   # polica 2
-                    + r(3, 3, 74, 48, fill="none", sw=1.5))
+            vb = "0 0 80 55"
+            body = (
+                '<rect x="2" y="2" width="76" height="51" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+                '<rect x="5" y="6" width="34" height="43" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+                '<rect x="41" y="6" width="34" height="43" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+                '<rect x="33" y="19" width="2" height="16" rx="1" fill="#1A1A1A"/>'
+                '<rect x="45" y="19" width="2" height="16" rx="1" fill="#1A1A1A"/>'
+            )
         else:
-            # WALL_1DOOR default — panel + ručka desno
-            body = (r(3, 3, 74, 48)
-                    + r(7, 7, 66, 40)
-                    + hv(68, 13, 24))
-
-    # ══════════════════════════════════════════════════════
-    # DONJI + UGRADNI  –  viewBox 80×60  (širok, viši, ~600×720mm)
-    # Ručka: 200mm/720mm * 46 ≈ 13 jedin. — centar na ~21% od vrha panela
-    # ══════════════════════════════════════════════════════
-
-    elif "BASE_CORNER_DIAGONAL" in t:
-        # Ugaoni donji dijagonalni — petougaoni front
-        vb = "0 0 80 60"
-        body = ('<path d="M3 3 H52 V35 L24 57 H3 Z" '
-                'stroke="#383838" stroke-width="1.5" fill="white"/>'
-                + hh(32, 44, 46))   # ručka na dijagonalnom frontu
-
-    elif "CORNER" in t:
-        # Ugaoni donji element — L-oblik + dijagonalna linija
-        vb = "0 0 80 60"
-        body = ('<path d="M3 3 H52 V26 H24 V57 H3 Z" '
-                'stroke="#383838" stroke-width="1.5" fill="white"/>'
-                + ln(3, 57, 52, 3, sw=0.7, sc="#C0C0C0", dash="3,2.5"))
+            # WALL_1DOOR default
+            vb = "0 0 80 55"
+            body = (
+                '<rect x="2" y="2" width="76" height="51" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+                '<rect x="6" y="6" width="68" height="43" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+                '<rect x="62" y="19" width="2" height="16" rx="1" fill="#1A1A1A"/>'
+            )
 
     elif "COOKING_UNIT" in t:
-        # Ugradna ploča + rerna + fioka (front prikaz)
-        vb = "0 0 80 60"
+        vb = "0 0 80 80"
         body = (
-            r(3, 3, 74, 54)                                    # korpus
-            # Hob / radna ploča
-            + r(3, 3, 74, 7, sw=0.8, fill="#B9B9B9")           # inox ram
-            + r(12, 3.8, 56, 5.2, sw=0.6, fill="#1A1A1A")      # crna staklokeramika
-            + el(24, 6.4, 7, 2.2, sw=0.7, sc="#7E7E7E")
-            + el(56, 6.4, 7, 2.2, sw=0.7, sc="#7E7E7E")
-            # Kontrolna traka rerne
-            + r(7, 11, 66, 7.5, sw=0.8, fill="#D8D8D8")
-            + circ(20, 14.7, 2.3, sc="#777", fill="#E5E5E5", sw=0.7)
-            + circ(60, 14.7, 2.3, sc="#777", fill="#E5E5E5", sw=0.7)
-            + r(35, 12.6, 10, 4.2, sw=0.6, fill="#161616")
-            # Vrata rerne
-            + r(9, 19.5, 62, 24.5, sw=0.9, fill="#BFC3C8")
-            + r(12, 22, 56, 18.5, sw=0.6, fill="#1A1A1A")
-            + hh(22, 39.2, 37)
-            # Donja fioka
-            + r(8, 45.5, 64, 10, sw=0.8, fill="#D7B98A")
-            + hh(26, 51.0, 28)
-            # Bočni razdelnici
-            + ln(9, 11, 9, 55, sw=0.6, sc="#9A9A9A")
-            + ln(71, 11, 71, 55, sw=0.6, sc="#9A9A9A")
+            '<rect x="5" y="73" width="70" height="5" fill="#C8C4BE" stroke="#2C2C2C" stroke-width="0.8"/>'
+            '<rect x="5" y="17" width="70" height="56" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="2" y="2" width="76" height="15" rx="1" fill="#D8D4CC" stroke="#2C2C2C" stroke-width="1.2"/>'
+            '<rect x="8" y="5" width="64" height="9" rx="1.5" fill="#1E1E1C" stroke="#2C2C2C" stroke-width="1"/>'
+            '<circle cx="20" cy="9.5" r="2.8" fill="none" stroke="#6E6E6A" stroke-width="1"/>'
+            '<circle cx="32" cy="9.5" r="2.8" fill="none" stroke="#6E6E6A" stroke-width="1"/>'
+            '<circle cx="48" cy="9.5" r="2.8" fill="none" stroke="#6E6E6A" stroke-width="1"/>'
+            '<circle cx="60" cy="9.5" r="2.8" fill="none" stroke="#6E6E6A" stroke-width="1"/>'
+            '<rect x="5" y="17" width="70" height="11" fill="#8A8880" stroke="#2C2C2C" stroke-width="1"/>'
+            '<circle cx="16" cy="22.5" r="3.2" fill="#6A6860" stroke="#444" stroke-width="0.8"/>'
+            '<rect x="28" y="19.5" width="24" height="6" rx="1" fill="#111" stroke="#444" stroke-width="0.6"/>'
+            '<text x="40" y="24.3" font-size="4.2" fill="#FF3030" text-anchor="middle" font-family="monospace" font-weight="bold">12:10</text>'
+            '<circle cx="64" cy="22.5" r="3.2" fill="#6A6860" stroke="#444" stroke-width="0.8"/>'
+            '<rect x="5" y="28" width="70" height="36" rx="1" fill="#F0F0EE" stroke="#444" stroke-width="1"/>'
+            '<rect x="11" y="31" width="58" height="2.5" rx="1.2" fill="#C8C8C6" stroke="#888" stroke-width="0.6"/>'
+            '<rect x="9" y="36" width="62" height="24" rx="1" fill="#2A2A28" stroke="#555" stroke-width="1"/>'
+            '<rect x="12" y="39" width="56" height="18" rx="1" fill="#161614" stroke="#444" stroke-width="0.5"/>'
+            '<rect x="5" y="64" width="70" height="9" rx="1" fill="#EEECE8" stroke="#555" stroke-width="1"/>'
+            '<rect x="20" y="67.5" width="40" height="2.5" rx="1.2" fill="#C8C8C6" stroke="#888" stroke-width="0.7"/>'
+            '<line x1="5" y1="64" x2="75" y2="64" stroke="#CFCBC5" stroke-width="0.8"/>'
+        )
+
+    elif "DISHWASHER_FREESTANDING" in t:
+        vb = "0 0 80 65"
+        body = (
+            '<rect x="1" y="3" width="3" height="61" rx="1" fill="#E0DDD8" stroke="#AAA" stroke-width="0.7"/>'
+            '<rect x="76" y="3" width="3" height="61" rx="1" fill="#E0DDD8" stroke="#AAA" stroke-width="0.7"/>'
+            '<rect x="8" y="59" width="8" height="4" fill="#C0BCB8" stroke="#888" stroke-width="0.8"/>'
+            '<rect x="64" y="59" width="8" height="4" fill="#C0BCB8" stroke="#888" stroke-width="0.8"/>'
+            '<rect x="4" y="2" width="72" height="57" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="4" y="2" width="72" height="9" fill="#3A3A38" stroke="#2C2C2C" stroke-width="1"/>'
+            '<circle cx="30" cy="6.5" r="2" fill="none" stroke="#AAA" stroke-width="0.8"/>'
+            '<circle cx="40" cy="6.5" r="2" fill="none" stroke="#AAA" stroke-width="0.8"/>'
+            '<circle cx="50" cy="6.5" r="2" fill="none" stroke="#AAA" stroke-width="0.8"/>'
+            '<circle cx="40" cy="35" r="20" fill="none" stroke="#444" stroke-width="1.2"/>'
+            '<circle cx="40" cy="35" r="15" fill="#E8ECF0" stroke="#5588AA" stroke-width="1"/>'
+            '<circle cx="40" cy="35" r="8" fill="#C8D8E4" stroke="#5588AA" stroke-width="0.8"/>'
+            '<rect x="26" y="12" width="28" height="2" rx="1" fill="#1A1A1A"/>'
+        )
+
+    elif "FREESTANDING" in t:
+        vb = "0 0 80 65"
+        body = (
+            '<rect x="1" y="2" width="4" height="62" fill="#D8D4CF" stroke="#AAA" stroke-width="0.7"/>'
+            '<rect x="75" y="2" width="4" height="62" fill="#D8D4CF" stroke="#AAA" stroke-width="0.7"/>'
+            '<rect x="5" y="59" width="70" height="4" fill="#C0BCB8" stroke="#888" stroke-width="0.8"/>'
+            '<rect x="5" y="2" width="70" height="5" fill="#1A1A1A" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="5" y="7" width="70" height="10" fill="#2C2C2A" stroke="#2C2C2C" stroke-width="1"/>'
+            '<circle cx="18" cy="12" r="3.5" fill="#3A3A38" stroke="#888" stroke-width="1"/>'
+            '<circle cx="18" cy="12" r="1.5" fill="#555"/>'
+            '<circle cx="31" cy="12" r="3.5" fill="#3A3A38" stroke="#888" stroke-width="1"/>'
+            '<circle cx="31" cy="12" r="1.5" fill="#555"/>'
+            '<circle cx="49" cy="12" r="3.5" fill="#3A3A38" stroke="#888" stroke-width="1"/>'
+            '<circle cx="49" cy="12" r="1.5" fill="#555"/>'
+            '<circle cx="62" cy="12" r="3.5" fill="#3A3A38" stroke="#888" stroke-width="1"/>'
+            '<circle cx="62" cy="12" r="1.5" fill="#555"/>'
+            '<rect x="5" y="18" width="70" height="38" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.2"/>'
+            '<rect x="12" y="19" width="56" height="3" rx="1.5" fill="#C0C0BE" stroke="#888" stroke-width="0.8"/>'
+            '<rect x="12" y="25" width="56" height="27" rx="1" fill="#2A2A28" stroke="#555" stroke-width="1"/>'
+            '<rect x="14" y="27" width="52" height="23" rx="1" fill="#1A1A18" stroke="#444" stroke-width="0.5"/>'
         )
 
     elif "DISHWASHER" in t:
-        # Mašina za sudove — vrata se otvaraju PREMA DOLJE, ručka je GORE u sredini
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + r(3, 3, 74, 11, sw=0.6, fill="#D0D0D0")      # kontrolna traka na vrhu
-                + circ(18, 8.5, 1.8, sc="#666", fill="#888", sw=0.6)   # LED/dugme 1
-                + circ(30, 8.5, 1.8, sc="#666", fill="#888", sw=0.6)   # LED/dugme 2
-                + circ(42, 8.5, 1.8, sc="#666", fill="#888", sw=0.6)   # LED/dugme 3
-                + r(7, 16, 66, 37)            # vrata panel
-                + hh(27, 53, 21))             # horizontalna ručka pri vrhu vrata (centar)
+        vb = "0 0 80 65"
+        body = (
+            '<rect x="2" y="57" width="76" height="6" fill="#D8D4CF"/>'
+            '<rect x="2" y="2" width="76" height="55" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="2" y="2" width="76" height="7" fill="#2C2C2C" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="15" y="10" width="50" height="3" rx="1.5" fill="#1A1A1A"/>'
+            '<rect x="5" y="14" width="70" height="39" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<line x1="2" y1="57" x2="78" y2="57" stroke="#2C2C2C" stroke-width="1"/>'
+        )
 
     elif "SINK" in t:
-        # Sudopera (do 600mm = 1 vrata, ručka desno) + česma iznad radne ploče
-        # Ikona prikazuje default stanje: 600mm = 1 vrata (kao u _draw_sink)
-        vb = "0 -10 80 70"
-        body = (r(3, 3, 74, 54)              # korpus
-                + r(6, 7, 68, 44)            # jedno vrata (puna sirina)
-                + hv(68, 11, 24)             # vertikalna ručka desno
-                # Česma iznad radne ploče (gooseneck)
-                + '<line x1="38" y1="-7" x2="38" y2="3" '
-                  'stroke="#383838" stroke-width="2.0"/>'        # stub
-                + '<path d="M38 -7 Q38 -12 43 -12 Q49 -12 49 -7" '
-                  'stroke="#383838" stroke-width="1.8" fill="none"/>'   # gooseneck luk
-                + '<line x1="49" y1="-7" x2="49" y2="-3" '
-                  'stroke="#383838" stroke-width="1.5"/>/')       # izlaz vode
-
-    elif "FRIDGE_UNDER" in t:
-        # Donji dio ugradnog frižidera (base zona) — integrisani panel (bijeli front)
-        # Horizontal pregrad ~28% od vrha + ručka desno + "F" oznaka
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)                                  # korpus
-                + r(7, 7, 66, 46, sw=0.8)                        # bijeli door panel (no fill = white)
-                + ln(9, 20, 71, 20, sw=0.7, dash="3,2")          # horizontalni pregrad (dashed)
-                + hv(68, 25, 38)                                  # ručka desno
-                + '<text x="33" y="41" font-size="9" font-style="italic" '
-                  'fill="#555555" opacity="0.6">F</text>'         # oznaka frižidera
-                )
-
-    elif "FRIDGE" in t or "FREEZER" in t:
-        # BASE ugradni frižider: gornje ~60% = frižider, donje ~40% = zamrzivač
-        # Horizontalna linija razdvajanja + 2 ručke desno (svaka sekcija)
-        # Odgovara _draw_fridge() u visualization.py: split_y = y + h * 0.40 (od dna)
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + r(7, 7, 66, 46, sw=0.8, fill="#F1E7D4")       # neutralni front panel
-                + ln(3, 35, 77, 35, sw=1.0)                     # razdvajač: frižider / zamrzivač
-                + hv(68, 14, 28)                                 # ručka frižidera (gornja sekcija)
-                + hv(68, 38, 51))                               # ručka zamrzivača (donja sekcija)
-
-    elif "DOOR_DRAWER" in t:
-        # Donji kombinirani: fioka GORE (~28%) + 2 vrata DOLE (~72%)
-        # (isti raspored kao u 2D viz: _draw_base_doors_drawers)
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + ln(3, 19, 77, 19)           # linija fioka / vrata
-                + hh(26, 54, 11)              # horizontalna ručka fioke
-                + ln(40, 19, 40, 57)          # vertikalna podjela vrata (2 krila)
-                + r(6, 22, 30, 31) + r(44, 22, 30, 31)   # 2 vrata panela
-                + hv(34, 30, 41) + hv(46, 30, 41))        # vertikalne ručke vrata
-
-    elif "DRAWERS" in t:
-        # Donji samo fioke (3 fioke jednakih visina)
-        # Horizontalne ručke centrirane u svakoj fioci
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + ln(3, 21, 77, 21)           # razdvajač fioka 1/2
-                + ln(3, 39, 77, 39)           # razdvajač fioka 2/3
-                + hh(26, 54, 12)              # ručka fioke 1 (gornja)
-                + hh(26, 54, 30)              # ručka fioke 2 (srednja)
-                + hh(26, 54, 47))             # ručka fioke 3 (donja)
-
-    elif "NARROW" in t:
-        # Uski BASE (flase, ulje, začini) — panel + ručka desno
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + r(24, 7, 32, 46)
-                + hv(52, 12, 25))
-
-    elif "OPEN" in t:
-        # Donji otvoreni — police vidljive (bez vrata)
-        vb = "0 0 80 60"
-        _wc = "#D8CBBB"; _bc = "#BEBAB7"
-        body = (r(3, 3, 74, 54, fill=_bc, sw=1.5)
-                + r(3, 3, 74, 5, sw=0, fill=_wc)      # gornja ploča
-                + r(3, 52, 74, 5, sw=0, fill=_wc)     # donja ploča
-                + r(3, 3, 5, 54, sw=0, fill=_wc)      # leva ploča
-                + r(72, 3, 5, 54, sw=0, fill=_wc)     # desna ploča
-                + r(3, 22, 74, 4, sw=0.5, fill=_wc)   # polica 1
-                + r(3, 37, 74, 4, sw=0.5, fill=_wc)   # polica 2
-                + r(3, 3, 74, 54, fill="none", sw=1.5))
-
-    elif "2DOOR" in t:
-        # BASE 2-vrata — panel levo i desno, ručke prema sredini
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + ln(40, 3, 40, 57)           # srednja vertikala
-                + r(6, 7, 30, 46) + r(44, 7, 30, 46)
-                + hv(34, 12, 25) + hv(46, 12, 25))
-
-    elif "GLASS" in t:
-        # BASE staklo — plavi fill + dijagonalne refleksije + ručka
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + r(7, 7, 66, 46, sw=0.8, fill="#D4E9F7")       # staklo fill
-                + ln(7, 7, 73, 53, sw=0.7, sc="#B0CCE0")        # refleksija 1
-                + ln(73, 7, 7, 53, sw=0.7, sc="#B0CCE0")        # refleksija 2
-                + hv(68, 12, 25))             # ručka desno
-
-    elif "LIFTUP" in t:
-        # BASE klapna — panel + dijagonalna linija + horizontalna ručka dole
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + r(7, 7, 66, 46)
-                + ln(7, 53, 73, 28, sw=1.0)   # dijagonala (smer gore)
-                + hh(26, 54, 51))             # horizontalna ručka pri dnu
-
-    elif "OVEN" in t:
-        # Ugradna rerna — prozor + horizontalna ručka + linija razdvajanja
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + r(8, 7, 64, 30)             # prozor rerne
-                + hh(26, 54, 42)              # horizontalna ručka rerne
-                + ln(3, 46, 77, 46)           # linija razdvajanja
-                + ln(26, 52, 54, 52))         # donja sekcija
+        vb = "0 0 80 65"
+        body = (
+            '<rect x="2" y="57" width="76" height="6" fill="#D8D4CF"/>'
+            '<rect x="2" y="2" width="76" height="55" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="2" y="2" width="76" height="9" fill="#D8D4CC" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="14" y="3.5" width="40" height="6" rx="1" fill="#8AAABB" stroke="#4A7A9A" stroke-width="1"/>'
+            '<rect x="16" y="4.5" width="36" height="4" rx="0.5" fill="#6A90A0" stroke="#4A7A9A" stroke-width="0.5"/>'
+            '<rect x="57" y="2.5" width="1.5" height="5" fill="#AAA" rx="0.7"/>'
+            '<path d="M 54 4 Q 54 2 57.5 2.5" stroke="#AAA" stroke-width="1.2" fill="none"/>'
+            '<rect x="5" y="12" width="34" height="41" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="33" y="26" width="2" height="18" rx="1" fill="#1A1A1A"/>'
+            '<rect x="41" y="12" width="34" height="41" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="45" y="26" width="2" height="18" rx="1" fill="#1A1A1A"/>'
+            '<line x1="2" y1="57" x2="78" y2="57" stroke="#2C2C2C" stroke-width="1"/>'
+        )
 
     elif "TRASH" in t:
-        # Sortirnik — 2 vrata sa ovalima koji naznačuju kante za otpad
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + ln(40, 3, 40, 57)           # srednja vertikala
-                + r(6, 7, 30, 46) + r(44, 7, 30, 46)    # 2 vrata
-                + hv(34, 12, 25) + hv(46, 12, 25)        # ručke prema sredini
-                + el(21, 33, 8, 11, sc="#666666", sw=0.8)  # kanta L (oval)
-                + el(21, 24, 3, 2, sc="#666666", sw=0.6)   # poklopac L (oval mali)
-                + el(59, 33, 8, 11, sc="#666666", sw=0.8)  # kanta D (oval)
-                + el(59, 24, 3, 2, sc="#666666", sw=0.6))  # poklopac D (oval mali)
+        vb = "0 0 80 65"
+        body = (
+            '<rect x="2" y="57" width="76" height="6" fill="#D8D4CF"/>'
+            '<rect x="2" y="2" width="76" height="55" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="2" y="2" width="76" height="4" fill="#E0DDD8" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="5" y="9" width="70" height="44" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="14" y="15" width="20" height="28" rx="2" fill="none" stroke="#888" stroke-width="1"/>'
+            '<rect x="46" y="15" width="20" height="28" rx="2" fill="none" stroke="#888" stroke-width="1"/>'
+            '<line x1="14" y1="21" x2="34" y2="21" stroke="#888" stroke-width="1"/>'
+            '<line x1="46" y1="21" x2="66" y2="21" stroke="#888" stroke-width="1"/>'
+            '<rect x="26" y="48" width="28" height="2" rx="1" fill="#1A1A1A"/>'
+            '<line x1="2" y1="57" x2="78" y2="57" stroke="#2C2C2C" stroke-width="1"/>'
+        )
 
-    elif "HOB" in t:
-        # Samostalna ploča za kuvanje — tamna gornja ploča sa 4 ringlje + vrata ispod
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + r(3, 3, 74, 22, sw=0.6, fill="#1A1A1A")   # tamna kuhinjska ploča
-                + el(26, 13, 9, 6, sw=0.9, sc="#888888")     # ring levi
-                + el(26, 13, 4, 3, sw=0.7, sc="#888888", fill="#555555")  # centar L
-                + el(54, 13, 9, 6, sw=0.9, sc="#888888")     # ring desni
-                + el(54, 13, 4, 3, sw=0.7, sc="#888888", fill="#555555")  # centar D
-                + r(6, 26, 68, 25)            # vrata panel (ispod ploče)
-                + hv(68, 29, 42))             # ručka desno
+    elif "DOOR_DRAWER" in t:
+        vb = "0 0 80 65"
+        body = (
+            '<rect x="2" y="57" width="76" height="6" fill="#D8D4CF"/>'
+            '<rect x="2" y="2" width="76" height="55" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="2" y="2" width="76" height="4" fill="#E0DDD8" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="5" y="8" width="70" height="16" rx="1" fill="#EEECE8" stroke="#555" stroke-width="1.2"/>'
+            '<rect x="28" y="14" width="24" height="2.5" rx="1.2" fill="#1A1A1A"/>'
+            '<rect x="5" y="26" width="33" height="27" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="32" y="34" width="2" height="12" rx="1" fill="#1A1A1A"/>'
+            '<rect x="40" y="26" width="35" height="27" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="46" y="34" width="2" height="12" rx="1" fill="#1A1A1A"/>'
+            '<line x1="2" y1="57" x2="78" y2="57" stroke="#2C2C2C" stroke-width="1"/>'
+        )
 
-    elif "FILLER_PANEL" in t or "FILLER" in t:
-        # Filer panel — uski popunjač prikazan kao tanka ploča u centru viewBox-a
-        vb = "0 0 80 60"
-        body = (r(31, 3, 18, 54)             # tanka ploča (filer)
-                + ln(34, 12, 48, 12, sw=0.5, sc="#CCCCCC")  # drvena žila 1
-                + ln(34, 24, 48, 24, sw=0.5, sc="#CCCCCC")  # drvena žila 2
-                + ln(34, 36, 48, 36, sw=0.5, sc="#CCCCCC")  # drvena žila 3
-                + ln(34, 47, 48, 47, sw=0.5, sc="#CCCCCC"))  # drvena žila 4
+    elif "DRAWERS" in t:
+        vb = "0 0 80 65"
+        body = (
+            '<rect x="2" y="57" width="76" height="6" fill="#D8D4CF"/>'
+            '<rect x="2" y="2" width="76" height="55" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="2" y="2" width="76" height="4" fill="#E0DDD8" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="5" y="9" width="70" height="14" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="5" y="25" width="70" height="14" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="5" y="41" width="70" height="12" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="26" y="14" width="28" height="2" rx="1" fill="#1A1A1A"/>'
+            '<rect x="26" y="30" width="28" height="2" rx="1" fill="#1A1A1A"/>'
+            '<rect x="26" y="45" width="28" height="2" rx="1" fill="#1A1A1A"/>'
+            '<line x1="2" y1="57" x2="78" y2="57" stroke="#2C2C2C" stroke-width="1"/>'
+        )
+
+    elif "NARROW" in t:
+        vb = "0 0 45 65"
+        body = (
+            '<rect x="2" y="57" width="41" height="6" fill="#D8D4CF"/>'
+            '<rect x="2" y="2" width="41" height="55" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="2" y="2" width="41" height="4" fill="#E0DDD8" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="6" y="9" width="33" height="44" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="35" y="23" width="2" height="18" rx="1" fill="#1A1A1A"/>'
+            '<line x1="2" y1="57" x2="43" y2="57" stroke="#2C2C2C" stroke-width="1"/>'
+        )
+
+    elif "OPEN" in t:
+        vb = "0 0 80 65"
+        body = (
+            '<rect x="2" y="57" width="76" height="6" fill="#D8D4CF"/>'
+            '<rect x="2" y="2" width="76" height="55" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="2" y="2" width="76" height="4" fill="#E0DDD8" stroke="#2C2C2C" stroke-width="1"/>'
+            '<line x1="5" y1="26" x2="75" y2="26" stroke="#444" stroke-width="1"/>'
+            '<line x1="5" y1="44" x2="75" y2="44" stroke="#444" stroke-width="1"/>'
+            '<line x1="2" y1="57" x2="78" y2="57" stroke="#2C2C2C" stroke-width="1"/>'
+        )
+
+    elif "2DOOR" in t:
+        vb = "0 0 80 65"
+        body = (
+            '<rect x="2" y="57" width="76" height="6" fill="#D8D4CF"/>'
+            '<rect x="2" y="2" width="76" height="55" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="2" y="2" width="76" height="4" fill="#E0DDD8" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="5" y="9" width="34" height="44" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="41" y="9" width="34" height="44" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="33" y="23" width="2" height="18" rx="1" fill="#1A1A1A"/>'
+            '<rect x="45" y="23" width="2" height="18" rx="1" fill="#1A1A1A"/>'
+            '<line x1="2" y1="57" x2="78" y2="57" stroke="#2C2C2C" stroke-width="1"/>'
+        )
 
     elif "END_PANEL" in t:
-        vb = "0 0 80 60"
-        body = (r(24, 3, 28, 54, sw=1.1, fill="#EEE8DC")
-                + r(52, 6, 6, 48, sw=0.7, fill="#D7CFBF")
-                + ln(28, 15, 48, 15, sw=0.5, sc="#D0C9B8")
-                + ln(28, 28, 48, 28, sw=0.5, sc="#D0C9B8")
-                + ln(28, 41, 48, 41, sw=0.5, sc="#D0C9B8")
-                + ln(52, 6, 58, 10, sw=0.6, sc="#B8AF9F")
-                + ln(52, 54, 58, 50, sw=0.6, sc="#B8AF9F"))
+        vb = "0 0 80 65"
+        body = (
+            '<rect x="2" y="2" width="76" height="61" fill="#F0EDE8" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<line x1="5" y1="12" x2="75" y2="12" stroke="#D8D4CF" stroke-width="0.8"/>'
+            '<line x1="5" y1="20" x2="75" y2="20" stroke="#D8D4CF" stroke-width="0.8"/>'
+            '<line x1="5" y1="28" x2="72" y2="28" stroke="#D8D4CF" stroke-width="0.8"/>'
+            '<line x1="5" y1="36" x2="75" y2="36" stroke="#D8D4CF" stroke-width="0.8"/>'
+            '<line x1="5" y1="44" x2="70" y2="44" stroke="#D8D4CF" stroke-width="0.8"/>'
+            '<line x1="5" y1="52" x2="73" y2="52" stroke="#D8D4CF" stroke-width="0.8"/>'
+            '<line x1="5" y1="60" x2="75" y2="60" stroke="#D8D4CF" stroke-width="0.8"/>'
+        )
 
-    elif "END_PANEL_OLD_UNUSED" in t:
-        # Završna bočna ploča — prikazana face-on kao dekorativna drvena ploča
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)              # puna ploča (face view)
-                + r(6, 6, 68, 48, sw=0.6, fill="#EEE8DC")   # drvo fill (topli ton)
-                + ln(6, 18, 74, 18, sw=0.5, sc="#D0C9B8")   # drvena žila 1
-                + ln(6, 32, 74, 32, sw=0.5, sc="#D0C9B8")   # drvena žila 2
-                + ln(6, 44, 74, 44, sw=0.5, sc="#D0C9B8"))  # drvena žila 3
+    elif "FILLER_PANEL" in t or "FILLER" in t:
+        vb = "0 0 24 65"
+        body = (
+            '<rect x="2" y="2" width="20" height="61" fill="#F0EDE8" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<line x1="7" y1="4" x2="7" y2="61" stroke="#D8D4CF" stroke-width="1"/>'
+            '<line x1="12" y1="4" x2="12" y2="61" stroke="#D8D4CF" stroke-width="1"/>'
+            '<line x1="17" y1="4" x2="17" y2="61" stroke="#D8D4CF" stroke-width="1"/>'
+        )
 
     else:
-        # BASE_1DOOR i default — panel + ručka desno
-        vb = "0 0 80 60"
-        body = (r(3, 3, 74, 54)
-                + r(7, 7, 66, 46)
-                + hv(68, 12, 25))             # ručka desno (standardno)
+        # BASE_1DOOR — default
+        vb = "0 0 80 65"
+        body = (
+            '<rect x="2" y="57" width="76" height="6" fill="#D8D4CF"/>'
+            '<rect x="2" y="2" width="76" height="55" fill="#F8F8F6" stroke="#2C2C2C" stroke-width="1.5"/>'
+            '<rect x="2" y="2" width="76" height="4" fill="#E0DDD8" stroke="#2C2C2C" stroke-width="1"/>'
+            '<rect x="6" y="9" width="68" height="44" rx="1" fill="#F8F8F6" stroke="#444" stroke-width="1"/>'
+            '<rect x="62" y="23" width="2" height="18" rx="1" fill="#1A1A1A"/>'
+            '<line x1="2" y1="57" x2="78" y2="57" stroke="#2C2C2C" stroke-width="1"/>'
+        )
 
-    return (
-        f'<svg viewBox="{vb}" width="{_W}" height="{_H}" '
-        f'style="flex-shrink:0" preserveAspectRatio="xMidYMid meet">'
-        f'{body}</svg>'
-    )
+    # SVG bez fiksnih dimenzija — kontejner u katalogu kontroliše veličinu
+    return (f'<svg viewBox="{vb}" '
+            f'style="display:block;max-width:100%;max-height:100%;width:auto;height:auto;" fill="none" xmlns="http://www.w3.org/2000/svg">'
+            f'{body}</svg>')

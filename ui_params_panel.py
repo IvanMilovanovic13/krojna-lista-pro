@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+from i18n import tr
 from i18n import (
     BTN_OTKAZI,
     GRAIN_HORZ,
@@ -37,6 +38,19 @@ from i18n import (
     PARAMS_WHAT_TO_DO,
 )
 from ui_panels_helpers import format_user_error
+from ui_catalog_config import translate_template_label
+from module_rules import (
+    default_shelf_count,
+    dishwasher_installation_metrics,
+    module_supports_adjustable_shelves,
+)
+from drawer_logic import rebalance_drawers_proportional, redistribute_drawers_proportional
+
+_FREESTANDING_TIDS = {
+    "BASE_DISHWASHER_FREESTANDING",
+    "BASE_OVEN_HOB_FREESTANDING",
+    "TALL_FRIDGE_FREESTANDING",
+}
 
 def render_params_panel(
     *,
@@ -66,6 +80,10 @@ def render_params_panel(
     m_nema_gornjih_1_red,
     b_dodaj_na_zid,
 ) -> None:
+    _lang = str(getattr(state, 'language', 'sr') or 'sr').lower().strip()
+    def _t(key: str, **fmt: object) -> str:
+        return tr(key, _lang, **fmt)
+
     if not state.selected_tid:
         set_sidebar_primary_action(None)
         with ui.column().classes('w-full items-center py-6 gap-2'):
@@ -83,7 +101,11 @@ def render_params_panel(
         'h_mm': int(tmpl.get('h_mm', 720)),
         'd_mm': int(tmpl.get('d_mm', 560)),
     }
-    label = tmpl.get("label", state.selected_tid)
+    label = translate_template_label(
+        tmpl.get("label", state.selected_tid),
+        _lang,
+        tmpl.get("label_i18n"),
+    )
     zone = str(tmpl.get("zone", "base"))
     tid = str(state.selected_tid or "").upper()
     _active_wall = str((getattr(state, 'room', {}) or {}).get('active_wall', 'A') or 'A').upper()
@@ -101,7 +123,11 @@ def render_params_panel(
         _zone_std_d = get_zone_depth_standard(zone)
 
         _zd = state.zone_defaults.get(zone, {})
-        _h_val = _zd.get('h_mm', defaults.get('h_mm', 720)) if zone not in ('tall', 'tall_top') else defaults.get('h_mm', 2100)
+        _use_template_defaults = tid in _FREESTANDING_TIDS
+        if zone not in ('tall', 'tall_top'):
+            _h_val = defaults.get('h_mm', 720) if _use_template_defaults else _zd.get('h_mm', defaults.get('h_mm', 720))
+        else:
+            _h_val = defaults.get('h_mm', 2100)
         if _is_indep:
             _d_val = defaults.get('d_mm', 560)
         elif zone not in ('tall', 'tall_top'):
@@ -109,7 +135,7 @@ def render_params_panel(
         else:
             _d_val = defaults.get('d_mm', 560)
 
-        _max_h = max_allowed_h_for_zone(zone)
+        _max_h = max_allowed_h_for_zone(zone, tid)
 
         # ── Mutable tracker za dimenzije (zaštita od NiceGUI async desync) ────
         # Problem: korisnik unese vrednost u browser, klikne dugme, ali Python-side
@@ -147,26 +173,29 @@ def render_params_panel(
                     min=100, max=3000, step=10,
                     on_change=_on_w_change,
                 ).props('dense outlined').classes('flex-1 min-w-0')
+                w.on('update:model-value', _on_w_change)
                 h = ui.number(
                     label=l_visina_mm, value=min(_h_val, _max_h),
                     min=100, max=_max_h, step=10,
                     on_change=_on_h_change,
                 ).props('dense outlined').classes('flex-1 min-w-0')
+                h.on('update:model-value', _on_h_change)
             d = ui.number(
                 label=l_dubina_mm, value=_d_val,
                 min=100, max=2000, step=10,
                 on_change=_on_d_change,
             ).props('dense outlined').classes('w-full')
-            ui.label(PARAMS_MAX_H_FMT.format(h=_max_h)).classes(
+            d.on('update:model-value', _on_d_change)
+            ui.label(_t("params.max_height_fmt", h=_max_h)).classes(
                 'text-[10px] text-gray-500'
             )
 
         # ── Depth status badge ────────────────────────────────────────────────
         if _is_indep:
-            _depth_badge_txt = PARAMS_DEPTH_INDEPENDENT_FMT.format(d=_d_val)
+            _depth_badge_txt = _t("params.depth_independent_fmt", d=_d_val)
             _depth_badge_cls = 'text-[10px] text-gray-700 bg-gray-50 border border-gray-300 px-2 py-0.5 rounded mt-1'
         else:
-            _depth_badge_txt = PARAMS_DEPTH_STANDARD_FMT.format(d=_zone_std_d)
+            _depth_badge_txt = _t("params.depth_standard_fmt", d=_zone_std_d)
             _depth_badge_cls = 'text-[10px] text-gray-700 bg-gray-50 border border-gray-300 px-2 py-0.5 rounded mt-1'
         _depth_status_lbl = ui.label(_depth_badge_txt).classes(_depth_badge_cls)
         if _corner_guidance.get('active'):
@@ -178,14 +207,18 @@ def render_params_panel(
         with ui.row().classes('w-full items-center gap-2 mt-1'):
             ui.label(l_smer_goda).classes('text-[10px] text-gray-500 shrink-0')
             grain_sel_add = ui.select(
-                {'V': GRAIN_VERT, 'H': GRAIN_HORZ, 'N': GRAIN_NONE},
+                {
+                    'V': _t("params.grain_vertical"),
+                    'H': _t("params.grain_horizontal"),
+                    'N': _t("params.grain_none"),
+                },
                 value='V'
             ).classes('flex-1').props('dense outlined')
 
         # ── Fioke / Police panel ──────────────────────────────────────────
         features = tmpl.get("features", {})
         has_drawers = features.get("drawers", False)
-        has_shelves = features.get("open", False) or features.get("pantry", False)
+        has_shelves = module_supports_adjustable_shelves(tid, features=features) and not has_drawers
         has_oven = features.get("oven", False)
         has_door_and_drawer = features.get("doors", False) and features.get("drawers", False)
         has_wardrobe = bool(features.get("wardrobe", False))
@@ -196,8 +229,6 @@ def render_params_panel(
         OVEN_H = 595  # standardna visina rerne
         OVEN_D = 550  # standardna dubina rerne
         MIN_DRAWER_H = 80  # minimalna visina fioke
-        SHELF_STEP = 250  # jedna polica na svakih 250mm
-
         def _inner_h(corp_h: float) -> float:
             """Unutrašnja visina korpusa (oduzmi dno i plafon)."""
             return corp_h - 2 * carcass_thk
@@ -221,6 +252,14 @@ def render_params_panel(
         door_h_inp = None
         n_shelves = None
         fioka_h = None
+        sink_cutout_x = None
+        sink_cutout_w = None
+        sink_cutout_d = None
+        hob_cutout_x = None
+        hob_cutout_w = None
+        hob_cutout_d = None
+        dishwasher_slot_info = None
+        tall_appliance_info = None
         wardrobe_front_style = None
         wardrobe_door_mode = None
         wardrobe_n_shelves = None
@@ -237,18 +276,265 @@ def render_params_panel(
             inner = _inner_h(corp_h)
             fioka_h = max(MIN_DRAWER_H, inner - OVEN_H)
             with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
-                ui.label(PARAMS_OVEN_DRAWER_TITLE).classes('font-bold text-xs mb-0')
-                ui.label(PARAMS_OVEN_STD_H_FMT.format(h=OVEN_H)).classes('text-xs text-gray-500')
-                ui.label(PARAMS_DRAWER_REMAINING_FMT.format(h=fioka_h)).classes('text-xs text-gray-700 font-bold')
+                ui.label(_t('elements.oven_drawer_title')).classes('font-bold text-xs mb-0')
+                ui.label(_t('elements.oven_std_h', h=OVEN_H)).classes('text-xs text-gray-500')
+                ui.label(_t('elements.drawer_remaining', h=fioka_h)).classes('text-xs text-gray-700 font-bold')
+                _drawer_info = (
+                    f'Visina fioke: {fioka_h:.0f} mm'
+                    if _lang == 'sr' else
+                    f'Drawer height: {fioka_h:.0f} mm'
+                )
+                _oven_handle_note = (
+                    'Ručka rerne je fiksno horizontalna pri vrhu vrata.'
+                    if _lang == 'sr' else
+                    'The oven handle is fixed horizontally at the top of the door.'
+                )
+                ui.label(_drawer_info).classes('text-xs text-gray-700')
+                ui.label(_oven_handle_note).classes('text-[10px] text-gray-500')
                 if fioka_h < MIN_DRAWER_H:
-                    ui.label(PARAMS_DRAWER_MIN_WARN_FMT.format(h=MIN_DRAWER_H)).classes('text-xs text-red-500')
+                    ui.label(_t('elements.drawer_min_warn', h=MIN_DRAWER_H)).classes('text-xs text-red-500')
+
+        if tid == "SINK_BASE":
+            _default_cut_w = max(400, min(int(_dim['w']) - 80, 500))
+            _default_cut_d = max(400, min(int(_dim['d']) - 40, 480))
+            _default_cut_x = max(0, int((int(_dim['w']) - _default_cut_w) / 2))
+            _sink_title = 'Sudopera - izrez u radnoj ploči' if _lang == 'sr' else 'Sink - worktop cut-out'
+            _sink_x_lbl = 'X pozicija izreza [mm]' if _lang == 'sr' else 'Cut-out X position [mm]'
+            _sink_w_lbl = 'Širina izreza [mm]' if _lang == 'sr' else 'Cut-out width [mm]'
+            _sink_d_lbl = 'Dubina izreza [mm]' if _lang == 'sr' else 'Cut-out depth [mm]'
+            _sink_note = (
+                'Izrez se radi na licu mesta po šablonu proizvođača sudopere.'
+                if _lang == 'sr' else
+                "Cut-out is made on site according to the sink manufacturer's template."
+            )
+            with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
+                ui.label(_sink_title).classes('font-bold text-xs mb-1')
+                sink_cutout_x = ui.number(label=_sink_x_lbl, value=_default_cut_x, min=0, max=max(0, int(_dim['w']) - 200), step=5).props('dense outlined').classes('w-full')
+                sink_cutout_w = ui.number(label=_sink_w_lbl, value=_default_cut_w, min=300, max=max(300, int(_dim['w']) - 40), step=5).props('dense outlined').classes('w-full')
+                sink_cutout_d = ui.number(label=_sink_d_lbl, value=_default_cut_d, min=300, max=max(300, int(_dim['d']) - 20), step=5).props('dense outlined').classes('w-full')
+                ui.label(_sink_note).classes('text-[10px] text-gray-500')
+
+        if tid in {"BASE_COOKING_UNIT", "BASE_HOB"}:
+            _default_hob_w = max(450, min(int(_dim['w']) - 60, 560))
+            _default_hob_d = max(400, min(int(_dim['d']) - 40, 490))
+            _default_hob_x = max(0, int((int(_dim['w']) - _default_hob_w) / 2))
+            _hob_title = 'Ploča za kuvanje - izrez u radnoj ploči' if _lang == 'sr' else 'Hob - worktop cut-out'
+            _hob_x_lbl = 'X pozicija izreza [mm]' if _lang == 'sr' else 'Cut-out X position [mm]'
+            _hob_w_lbl = 'Širina izreza [mm]' if _lang == 'sr' else 'Cut-out width [mm]'
+            _hob_d_lbl = 'Dubina izreza [mm]' if _lang == 'sr' else 'Cut-out depth [mm]'
+            _hob_note = (
+                'Izrez se radi na licu mesta po šablonu proizvođača ploče za kuvanje.'
+                if _lang == 'sr' else
+                "Cut-out is made on site according to the hob manufacturer's template."
+            )
+            with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
+                ui.label(_hob_title).classes('font-bold text-xs mb-1')
+                hob_cutout_x = ui.number(label=_hob_x_lbl, value=_default_hob_x, min=0, max=max(0, int(_dim['w']) - 200), step=5).props('dense outlined').classes('w-full')
+                hob_cutout_w = ui.number(label=_hob_w_lbl, value=_default_hob_w, min=350, max=max(350, int(_dim['w']) - 40), step=5).props('dense outlined').classes('w-full')
+                hob_cutout_d = ui.number(label=_hob_d_lbl, value=_default_hob_d, min=300, max=max(300, int(_dim['d']) - 20), step=5).props('dense outlined').classes('w-full')
+                ui.label(_hob_note).classes('text-[10px] text-gray-500')
+
+        if tid == "BASE_DISHWASHER":
+            _dish = dishwasher_installation_metrics(
+                {
+                    **state.kitchen,
+                    "worktop": state.kitchen.get("worktop", {}) or {},
+                },
+                {"h_mm": int(_dim['h']), "template_id": tid},
+            )
+            _dish_title = 'Ugradna mašina za sudove' if _lang == 'sr' else 'Built-in dishwasher'
+            _dish_l1 = (
+                'Ovo je otvor za ugradni uređaj sa integrisanim frontom, ne puni korpus.'
+                if _lang == 'sr' else
+                'This is an appliance slot with an integrated front, not a full cabinet carcass.'
+            )
+            _dish_l2 = (
+                'Krojna lista daje veznu letvu i front za MZS.'
+                if _lang == 'sr' else
+                'The cut list includes the cross rail and the integrated dishwasher front.'
+            )
+            _dish_l3 = (
+                'Proveri prolaz creva i kabla prema instalacijama.'
+                if _lang == 'sr' else
+                'Check hose and cable routing against the service points.'
+            )
+            with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
+                ui.label(_dish_title).classes('font-bold text-xs mb-1')
+                ui.label(_dish_l1).classes('text-[10px] text-gray-600')
+                ui.label(_dish_l2).classes('text-[10px] text-gray-600')
+                ui.label(_dish_l3).classes('text-[10px] text-gray-500')
+                ui.label(
+                    (
+                        f"Dostupno ispod ploče: {_dish['dishwasher_available_height_under_worktop']} mm"
+                        if _lang == 'sr' else
+                        f"Available under worktop: {_dish['dishwasher_available_height_under_worktop']} mm"
+                    )
+                ).classes('text-[10px] text-gray-600')
+                ui.label(
+                    (
+                        f"Standardni front MZS: {_dish['dishwasher_front_height']} mm"
+                        if _lang == 'sr' else
+                        f"Standard dishwasher front: {_dish['dishwasher_front_height']} mm"
+                    )
+                ).classes('text-[10px] text-gray-600')
+                if _dish["dishwasher_raised_mode"]:
+                    ui.label(
+                        (
+                            f"Raised mode: postolje {_dish['dishwasher_platform_height']} mm + donja maska {_dish['dishwasher_lower_filler_height']} mm"
+                            if _lang == 'sr' else
+                            f"Raised mode: platform {_dish['dishwasher_platform_height']} mm + lower filler {_dish['dishwasher_lower_filler_height']} mm"
+                        )
+                    ).classes('text-[10px] font-semibold text-gray-700')
+
+        if tid == "BASE_TRASH":
+            _trash_title = 'Sortirnik / kante za otpad' if _lang == 'sr' else 'Waste sorting / bins'
+            _trash_l1 = (
+                'Ovo je funkcionalni modul sa gotovim izvlaÄnim mehanizmom.'
+                if _lang == 'sr' else
+                'This is a functional unit with a ready-made pull-out mechanism.'
+            )
+            _trash_l2 = (
+                'Krojna lista daje korpus i front; sortirnik se kupuje kao gotov set.'
+                if _lang == 'sr' else
+                'The cut list includes the carcass and front; the waste sorter is purchased as a ready-made set.'
+            )
+            _trash_l3 = (
+                'Proveri potreban svetli otvor i kompatibilnost mehanizma sa Å¡irinom korpusa.'
+                if _lang == 'sr' else
+                'Check the required clear opening and mechanism compatibility with the cabinet width.'
+            )
+            with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
+                ui.label(_trash_title).classes('font-bold text-xs mb-1')
+                ui.label(_trash_l1).classes('text-[10px] text-gray-600')
+                ui.label(_trash_l2).classes('text-[10px] text-gray-600')
+                ui.label(_trash_l3).classes('text-[10px] text-gray-500')
+
+        if tid == "BASE_CORNER":
+            _corner_title = 'Ugaoni donji element' if _lang == 'sr' else 'Base corner unit'
+            _corner_l1 = (
+                'Ovo je ugaoni modul; proveri smer otvaranja fronta prema susednom elementu.'
+                if _lang == 'sr' else
+                'This is a corner unit; verify the front opening direction against the adjacent unit.'
+            )
+            _corner_l2 = (
+                'Po potrebi dodaj filer ili tehnički razmak za ručku, front i montažu.'
+                if _lang == 'sr' else
+                'Add a filler or technical gap if needed for the handle, front clearance, and installation.'
+            )
+            _corner_l3 = (
+                'Krojna lista daje ugaoni korpus; ugaona funkcija i pristup zavise od rasporeda zida.'
+                if _lang == 'sr' else
+                'The cut list includes the corner carcass; corner usability and access depend on the wall layout.'
+            )
+            with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
+                ui.label(_corner_title).classes('font-bold text-xs mb-1')
+                ui.label(_corner_l1).classes('text-[10px] text-gray-600')
+                ui.label(_corner_l2).classes('text-[10px] text-gray-600')
+                ui.label(_corner_l3).classes('text-[10px] text-gray-500')
+
+        if tid == "END_PANEL":
+            _end_title = 'Završna bočna ploča' if _lang == 'sr' else 'End side panel'
+            _end_l1 = (
+                'Ovo je vidljiva završna dekorativna bočna ploča, ne standardna stranica korpusa.'
+                if _lang == 'sr' else
+                'This is a visible decorative end side panel, not a standard carcass side.'
+            )
+            _end_l2 = (
+                'Dimenzija prati visinu elementa i dubinu završne strane koju zatvara.'
+                if _lang == 'sr' else
+                'Its size follows the unit height and the finished side depth it closes.'
+            )
+            _end_l3 = (
+                'Proveri smer goda, vidljive ivice i eventualni prepust prema podu ili radnoj ploči.'
+                if _lang == 'sr' else
+                'Check grain direction, visible edges, and any reveal toward the floor or worktop.'
+            )
+            with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
+                ui.label(_end_title).classes('font-bold text-xs mb-1')
+                ui.label(_end_l1).classes('text-[10px] text-gray-600')
+                ui.label(_end_l2).classes('text-[10px] text-gray-600')
+                ui.label(_end_l3).classes('text-[10px] text-gray-500')
+
+        if tid == "FILLER_PANEL":
+            _filler_title = 'Filer panel' if _lang == 'sr' else 'Filler panel'
+            _filler_l1 = (
+                'Ovo je uska panel-popuna prostora, ne puni korpus.'
+                if _lang == 'sr' else
+                'This is a narrow space-filling panel, not a full cabinet carcass.'
+            )
+            _filler_l2 = (
+                'Koristi se za završetak reda, nivelaciju zazora i odvajanje fronta od zida.'
+                if _lang == 'sr' else
+                'Use it to finish a run, tune installation gaps, and separate fronts from the wall.'
+            )
+            _filler_l3 = (
+                'Ako je preširok, razmotri završnu bočnu ploču ili poseban uski modul.'
+                if _lang == 'sr' else
+                'If it becomes too wide, consider an end side panel or a dedicated narrow unit.'
+            )
+            with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
+                ui.label(_filler_title).classes('font-bold text-xs mb-1')
+                ui.label(_filler_l1).classes('text-[10px] text-gray-600')
+                ui.label(_filler_l2).classes('text-[10px] text-gray-600')
+                ui.label(_filler_l3).classes('text-[10px] text-gray-500')
+
+        if tid in {"TALL_FRIDGE", "TALL_FRIDGE_FREEZER", "TALL_FRIDGE_FREESTANDING"}:
+            _fridge_title = 'Visoka kolona za frižider' if _lang == 'sr' else 'Tall fridge column'
+            _fridge_l1 = (
+                'Ovo je kolona za ugradni frižider; otvor uređaja ne ide kao puni korpus.'
+                if _lang == 'sr' else
+                'This is a built-in fridge column; the appliance opening is not treated as a full carcass bay.'
+            )
+            _fridge_l2 = (
+                'Krojna lista daje noseće stranice, bazu, plafon i servisne frontove prema tipu modula.'
+                if _lang == 'sr' else
+                'The cut list includes the supporting sides, base, top panel, and service fronts depending on the module type.'
+            )
+            _fridge_l3 = (
+                'Proveri ventilacione razmake i ugradne mere proizvođača frižidera.'
+                if _lang == 'sr' else
+                "Check ventilation clearances and the fridge manufacturer's built-in dimensions."
+            )
+            with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
+                ui.label(_fridge_title).classes('font-bold text-xs mb-1')
+                ui.label(_fridge_l1).classes('text-[10px] text-gray-600')
+                ui.label(_fridge_l2).classes('text-[10px] text-gray-600')
+                ui.label(_fridge_l3).classes('text-[10px] text-gray-500')
+
+        if tid in {"TALL_OVEN", "TALL_OVEN_MICRO"}:
+            _is_combo = tid == "TALL_OVEN_MICRO"
+            _title = 'Visoka kolona za uređaje' if _lang == 'sr' else 'Tall appliance column'
+            _l1 = (
+                'Donji servisni front ulazi u krojnu listu.'
+                if _lang == 'sr' else
+                'The lower service front is included in the cut list.'
+            )
+            _l2 = (
+                'Zona rerne i mikrotalasne zatvara se gotovim uređajima.'
+                if _is_combo and _lang == 'sr' else
+                'The oven and microwave zones are closed by the finished appliances.'
+                if _is_combo else
+                'Zona rerne zatvara se gotovim uređajem.'
+                if _lang == 'sr' else
+                'The oven zone is closed by the finished appliance.'
+            )
+            _l3 = (
+                'Proveri ventilaciju i ugradne mere proizvođača.'
+                if _lang == 'sr' else
+                "Check ventilation clearances and the manufacturer's built-in dimensions."
+            )
+            with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
+                ui.label(_title).classes('font-bold text-xs mb-1')
+                ui.label(_l1).classes('text-[10px] text-gray-600')
+                ui.label(_l2).classes('text-[10px] text-gray-600')
+                ui.label(_l3).classes('text-[10px] text-gray-500')
 
         elif has_drawers and not has_door_and_drawer:
             # Čiste fioke — nova logika bez locked/distribute
             n_drawers_default = features.get("n_drawers", 3)
 
             with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
-                ui.label(PARAMS_DRAWERS_TITLE).classes('font-bold text-xs mb-0')
+                ui.label(_t('elements.drawers')).classes('font-bold text-xs mb-0')
 
                 # State: samo lista visina i inputi — bez locked
                 drawer_heights_state = {'n': n_drawers_default, 'heights': [], 'inputs': {}}
@@ -261,8 +547,17 @@ def render_params_panel(
                 def _p_get_total():
                     return _inner_h(float(_dim['h']))
 
+                def _p_distribute_equal_int(total_mm, count):
+                    total_i = int(round(total_mm))
+                    count_i = max(1, int(count))
+                    base = total_i // count_i
+                    rem = total_i - (base * count_i)
+                    vals = [base] * count_i
+                    vals[0] += rem
+                    return vals
+
                 def _p_refresh_valid():
-                    total = _p_get_total()
+                    total = int(round(_p_get_total()))
                     zbir = sum(drawer_heights_state['heights'])
                     diff = abs(zbir - total)
                     if _p_valid_lbl[0] is not None:
@@ -270,7 +565,8 @@ def render_params_panel(
                             _p_valid_lbl[0].set_text(f'✅ {zbir:.0f} = {total:.0f}mm')
                             _p_valid_lbl[0].classes(remove='text-red-500', add='text-gray-700')
                         else:
-                            _p_valid_lbl[0].set_text(f'⚠️ {zbir:.0f} ≠ {total:.0f}mm — klikni ↺')
+                            _warn_hint = 'klikni ↺' if _lang == 'sr' else 'click ↺'
+                            _p_valid_lbl[0].set_text(f'⚠️ {zbir:.0f} ≠ {total:.0f}mm — {_warn_hint}')
                             _p_valid_lbl[0].classes(remove='text-gray-700', add='text-red-500')
 
                 def _p_update_prop_bars():
@@ -300,56 +596,45 @@ def render_params_panel(
 
                 def _p_auto_redistribute(idx, new_val, heights, total, n):
                     """Set heights[idx]=new_val, redistribute remaining proportionally."""
-                    max_val = total - (n - 1) * MIN_DRAWER_H
-                    new_val = max(float(MIN_DRAWER_H), min(float(new_val), float(max_val)))
-                    others = [j for j in range(n) if j != idx]
-                    remaining = total - new_val
-                    other_sum = sum(heights[j] for j in others)
-                    if other_sum > 0:
-                        for j in others:
-                            heights[j] = remaining * heights[j] / other_sum
-                    elif others:
-                        per = remaining / len(others)
-                        for j in others:
-                            heights[j] = per
-                    # Fix rounding on last other drawer
-                    if others:
-                        fix = others[-1]
-                        heights[fix] = max(MIN_DRAWER_H,
-                                           remaining - sum(heights[j] for j in others if j != fix))
-                    heights[idx] = new_val
+                    redistributed = redistribute_drawers_proportional(
+                        heights,
+                        changed_idx=idx,
+                        requested_height=new_val,
+                        total_target=total,
+                        min_h=MIN_DRAWER_H,
+                        step=1,
+                    )
+                    for pos in range(min(n, len(redistributed))):
+                        heights[pos] = int(redistributed[pos])
                     return heights
 
                 def _p_build(n, init_list=None):
                     fioka_container.clear()
                     drawer_heights_state['inputs'].clear()
-                    total = _p_get_total()
+                    total = int(round(_p_get_total()))
                     if init_list and len(init_list) == n:
-                        heights = [float(x) for x in init_list]
+                        heights = [int(round(float(x))) for x in init_list]
                     else:
-                        per = round(total / n, 1)
-                        heights = [per] * (n - 1)
-                        heights.append(round(total - sum(heights), 1))
+                        heights = _p_distribute_equal_int(total, n)
                     drawer_heights_state['heights'] = heights
                     drawer_heights_state['original_heights'] = list(heights)
                     drawer_heights_state['n'] = n
                     with fioka_container:
                         # F1 = top drawer (index 0) shown at top; F(n) = bottom
                         for i in range(n):
-                            with ui.row().classes('w-full items-center gap-1 p-1'):
-                                ui.label(PARAMS_DRAWER_LABEL_FMT.format(i=i+1)).classes('text-[6px] text-gray-500 w-8')
+                            with ui.row().classes('w-full items-center gap-2 p-1'):
+                                ui.label(_t('elements.drawer_label', i=i+1)).classes('text-[10px] text-gray-500 w-10 shrink-0')
                                 def _on_change(e, idx=i):
                                     try:
-                                        h_state = drawer_heights_state['heights']
+                                        h_state = list(drawer_heights_state['heights'])
                                         _n = drawer_heights_state['n']
                                         _total = _p_get_total()
                                         _p_auto_redistribute(idx, float(e.value), h_state, _total, _n)
                                         drawer_heights_state['heights'] = h_state
-                                        # Update other inputs to show new values
                                         for j, inp in drawer_heights_state['inputs'].items():
                                             if j != idx:
                                                 try:
-                                                    inp.set_value(round(h_state[j], 1))
+                                                    inp.set_value(int(h_state[j]))
                                                 except Exception as ex:
                                                     logger.debug("Add drawer input sync failed: %s", ex)
                                         _p_refresh_valid()
@@ -357,17 +642,17 @@ def render_params_panel(
                                     except Exception as ex:
                                         logger.debug("Add drawer redistribute failed: %s", ex)
                                 inp = ui.number(
-                                    value=round(heights[i], 1),
+                                    value=int(heights[i]),
                                     min=MIN_DRAWER_H, max=int(total),
                                     step=1, on_change=_on_change
-                                ).props('outlined dense').classes('w-24')
+                                ).props('outlined dense').classes('w-32 max-w-full')
                                 drawer_heights_state['inputs'][i] = inp
                     _p_refresh_valid()
                     _p_update_prop_bars()
 
                 def _p_recalc():
                     n = drawer_heights_state['n']
-                    total = _p_get_total()
+                    total = int(round(_p_get_total()))
                     current = list(drawer_heights_state['heights'])
                     original = drawer_heights_state.get('original_heights', [])
                     THRESHOLD = 1.0
@@ -380,22 +665,15 @@ def render_params_panel(
                     if len(modified) == n:
                         modified = set(range(1, n))
                     free_indices = [i for i in range(n) if i not in modified]
-                    fixed_sum = sum(current[i] for i in modified)
-                    heights = list(current)
-                    if free_indices:
-                        remaining = total - fixed_sum
-                        per = remaining / len(free_indices)
-                        for i in free_indices:
-                            heights[i] = round(per, 1)
-                        # Koriguj poslednji slobodni zbog zaokruživanja
-                        rounding_adj = round(total - sum(heights), 1)
-                        heights[free_indices[-1]] = round(heights[free_indices[-1]] + rounding_adj, 1)
-                    else:
-                        per = round(total / n, 1)
-                        heights = [per] * (n - 1)
-                        heights.append(round(total - sum(heights), 1))
+                    heights = rebalance_drawers_proportional(
+                        current,
+                        fixed_indices=modified,
+                        total_target=total,
+                        min_h=MIN_DRAWER_H,
+                        step=1,
+                        basis_heights=original if original and len(original) == n else current,
+                    )
                     drawer_heights_state['heights'] = heights
-                    # Ažuriraj baseline za slobodne indekse
                     if 'original_heights' not in drawer_heights_state:
                         drawer_heights_state['original_heights'] = list(heights)
                     else:
@@ -403,7 +681,7 @@ def render_params_panel(
                             drawer_heights_state['original_heights'][i] = heights[i]
                     for idx, inp in drawer_heights_state['inputs'].items():
                         try:
-                            inp.set_value(round(heights[idx], 1))
+                            inp.set_value(int(heights[idx]))
                         except Exception as ex:
                             logger.debug("Add drawer recalc input update failed: %s", ex)
                     _p_refresh_valid()
@@ -413,12 +691,15 @@ def render_params_panel(
                     _p_build(int(float(e.value)))
                     _p_update_prop_bars()
 
-                ui.number(PARAMS_DRAWERS_COUNT, value=n_drawers_default, min=1, max=6, step=1,
+                ui.number(_t('elements.drawer_count'), value=n_drawers_default, min=1, max=6, step=1,
                           on_change=_on_n_change_p).props('dense').classes('w-full mt-1')
 
                 with ui.row().classes('w-full items-center gap-2 mt-1'):
                     _p_valid_lbl[0] = ui.label('').classes('text-xs text-gray-700 flex-1')
-                    ui.button(PARAMS_RECALC_BTN.format(label=PARAMS_RECALC), on_click=_p_recalc).props('flat dense').classes('text-xs text-gray-700 border border-gray-300')
+                    ui.button(
+                        _t('elements.recalc_drawers', label=_t('elements.recalc')),
+                        on_click=_p_recalc,
+                    ).props('flat dense').classes('text-xs text-gray-700 border border-gray-300')
 
                 # ── Proportion bars — instant CSS preview ─────────────────────
                 _p_prop_html[0] = ui.html('').classes('w-full mt-1')
@@ -434,23 +715,23 @@ def render_params_panel(
             default_door_h = inner - default_drawer_h
 
             with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
-                ui.label(PARAMS_DOOR_DRAWER).classes('font-bold text-xs mb-0')
-                ui.label(PARAMS_INNER_H_FMT.format(h=inner)).classes('text-xs text-gray-500')
+                ui.label(_t('elements.door_drawer')).classes('font-bold text-xs mb-0')
+                ui.label(_t('elements.inner_h', h=inner)).classes('text-xs text-gray-500')
 
                 door_h_inp = ui.number(
-                    label=PARAMS_DOOR_H_LABEL,
+                    label=_t('elements.door_h_label'),
                     value=round(default_door_h, 1),
                     min=100, max=int(inner - MIN_DRAWER_H), step=1
                 ).props('dense').classes('w-full')
 
-                drawer_h_lbl = ui.label(PARAMS_DRAWER_H_FMT.format(h=default_drawer_h)).classes('text-xs text-gray-700 font-bold mt-1')
+                drawer_h_lbl = ui.label(_t('elements.drawer_h', h=default_drawer_h)).classes('text-xs text-gray-700 font-bold mt-1')
 
                 def _on_door_change(e):
                     dh = inner - float(e.value)
                     if dh < MIN_DRAWER_H:
-                        drawer_h_lbl.set_text(PARAMS_DRAWER_TOO_SMALL_FMT.format(h=dh, min_h=MIN_DRAWER_H))
+                        drawer_h_lbl.set_text(_t('elements.drawer_too_small', h=dh, min_h=MIN_DRAWER_H))
                     else:
-                        drawer_h_lbl.set_text(PARAMS_DRAWER_OK_FMT.format(h=dh))
+                        drawer_h_lbl.set_text(_t('elements.drawer_ok', h=dh))
 
                 door_h_inp.on('change', _on_door_change)
 
@@ -458,18 +739,25 @@ def render_params_panel(
             # Police
             corp_h = float(_dim['h'])
             inner = _inner_h(corp_h)
-            default_n_shelves = max(1, int(inner / SHELF_STEP))
+            default_n_shelves = default_shelf_count(
+                tid,
+                zone=zone,
+                h_mm=corp_h,
+                params={},
+                features=features,
+            )
 
             with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
-                ui.label(PARAMS_SHELVES).classes('font-bold text-xs mb-0')
-                ui.label(PARAMS_SHELVES_SUGGEST_FMT.format(n=default_n_shelves)).classes('text-xs text-gray-500')
-                n_shelves = ui.number(PARAMS_SHELVES_COUNT, value=default_n_shelves, min=0, max=10, step=1).props('dense').classes('w-full')
-                shelf_h_lbl = ui.label(PARAMS_SHELVES_SPACING_FMT.format(h=inner/(default_n_shelves+1))).classes('text-xs text-gray-700')
+                ui.label(_t('elements.shelves')).classes('font-bold text-xs mb-0')
+                ui.label(_t('elements.shelves_suggest', n=default_n_shelves)).classes('text-xs text-gray-500')
+                n_shelves = ui.number(_t('elements.shelf_count'), value=default_n_shelves, min=0, max=10, step=1).props('dense').classes('w-full')
+                _initial_spacing = (inner / (default_n_shelves + 1)) if default_n_shelves > 0 else inner
+                shelf_h_lbl = ui.label(_t('elements.shelves_spacing', h=_initial_spacing)).classes('text-xs text-gray-700')
 
                 def _on_shelves_change(e):
-                    n = max(1, int(e.value))
-                    spacing = inner / (n + 1)
-                    shelf_h_lbl.set_text(PARAMS_SHELVES_SPACING_FMT.format(h=spacing))
+                    n = max(0, int(e.value or 0))
+                    spacing = inner / (n + 1) if n > 0 else inner
+                    shelf_h_lbl.set_text(_t('elements.shelves_spacing', h=spacing))
 
                 n_shelves.on('change', _on_shelves_change)
 
@@ -479,33 +767,33 @@ def render_params_panel(
             _d_min, _d_max = (0, 8)
             _h_min, _h_max = (0, 3)
             with ui.card().classes('w-full p-2 bg-gray-50 border border-gray-300 mt-1'):
-                ui.label('Orman: unutrasnji raspored').classes('font-bold text-xs mb-0')
+                ui.label(_t('elements.wardrobe_interior')).classes('font-bold text-xs mb-0')
                 _front_default = 'inside' if bool(features.get('interior_only', False)) else 'both'
                 wardrobe_front_style = ui.select(
                     {
-                        'doors': 'Spolja (vrata)',
-                        'inside': 'Unutra (bez vrata)',
-                        'both': 'Oba prikaza',
+                        'doors': _t('elements.front_outside'),
+                        'inside': _t('elements.front_inside'),
+                        'both': _t('elements.front_both'),
                     },
                     value=_front_default,
-                    label='Sta zelis da vidis na frontu?',
+                    label=_t('elements.front_view_choice'),
                 ).props('dense outlined').classes('w-full')
                 _default_door_mode = 'sliding' if bool(features.get('sliding', False)) else str(getattr(state, 'wardrobe_door_mode', 'hinged') or 'hinged')
                 wardrobe_door_mode = ui.select(
-                    {'hinged': 'Krilna vrata', 'sliding': 'Klizna vrata'},
+                    {'hinged': _t('elements.doors_hinged'), 'sliding': _t('elements.doors_sliding')},
                     value=_default_door_mode if _default_door_mode in ('hinged', 'sliding') else 'hinged',
-                    label='Tip vrata',
+                    label=_t('elements.door_type'),
                 ).props('dense outlined').classes('w-full')
                 _ws = int(features.get('n_shelves', 4))
                 _wd = int(features.get('n_drawers', 2))
                 _wh = int(features.get('hanger_sections', 1))
-                wardrobe_n_shelves = ui.number('Broj polica', value=_ws, min=_s_min, max=_s_max, step=1).props('dense outlined').classes('w-full')
+                wardrobe_n_shelves = ui.number(_t('elements.shelf_count'), value=_ws, min=_s_min, max=_s_max, step=1).props('dense outlined').classes('w-full')
                 wardrobe_n_shelves_slider = ui.slider(min=_s_min, max=_s_max, value=_ws, step=1).props('label-always').classes('w-full -mt-1')
-                wardrobe_n_drawers = ui.number('Broj fioka', value=_wd, min=_d_min, max=_d_max, step=1).props('dense outlined').classes('w-full')
+                wardrobe_n_drawers = ui.number(_t('elements.drawer_count'), value=_wd, min=_d_min, max=_d_max, step=1).props('dense outlined').classes('w-full')
                 wardrobe_n_drawers_slider = ui.slider(min=_d_min, max=_d_max, value=_wd, step=1).props('label-always').classes('w-full -mt-1')
-                wardrobe_hanger_sections = ui.number('Broj zona za kacenje', value=_wh, min=_h_min, max=_h_max, step=1).props('dense outlined').classes('w-full')
+                wardrobe_hanger_sections = ui.number(_t('elements.hanging_zones'), value=_wh, min=_h_min, max=_h_max, step=1).props('dense outlined').classes('w-full')
                 wardrobe_hanger_sections_slider = ui.slider(min=_h_min, max=_h_max, value=_wh, step=1).props('label-always').classes('w-full -mt-1')
-                wardrobe_to_ceiling = ui.switch('Do plafona', value=bool(getattr(state, 'wardrobe_to_ceiling', True))).classes('mt-1')
+                wardrobe_to_ceiling = ui.switch(_t('elements.to_ceiling'), value=bool(getattr(state, 'wardrobe_to_ceiling', True))).classes('mt-1')
 
                 def _sync_num_to_slider(num_el, slider_el):
                     def _h(e):
@@ -574,7 +862,7 @@ def render_params_panel(
                     _h_for_add = int(_max_h)
 
                 # Ažuriraj zone_defaults (samo za base/wall/wall_upper)
-                if zone not in ('tall', 'tall_top'):
+                if zone not in ('tall', 'tall_top') and not _use_template_defaults:
                     state.zone_defaults[zone]['h_mm'] = _h_for_add
                     if not _is_indep:
                         state.zone_defaults[zone]['d_mm'] = int(use_d_mm)
@@ -590,11 +878,9 @@ def render_params_panel(
                         n_cur = int(drawer_heights_state.get('n', 3))
                         heights = drawer_heights_state.get('heights', [])
                         if not heights or len(heights) != n_cur:
-                            total = _inner_h(float(_dim['h']))
-                            per = round(total / n_cur, 1)
-                            heights = [per] * (n_cur - 1)
-                            heights.append(round(total - sum(heights), 1))
-                        _extra_params['drawer_heights'] = [round(x, 1) for x in heights]
+                            total = int(round(_inner_h(float(_dim['h']))))
+                            heights = _p_distribute_equal_int(total, n_cur)
+                        _extra_params['drawer_heights'] = [int(round(x)) for x in heights]
                         _extra_params['n_drawers'] = n_cur
                     if has_door_and_drawer and door_h_inp is not None:
                         _door_h = float(door_h_inp.value)
@@ -608,6 +894,20 @@ def render_params_panel(
                         _extra_params['drawer_heights'] = [fioka_h]
                         _extra_params['n_drawers'] = 1
                         _extra_params['oven_h'] = OVEN_H
+                    if tid == "SINK_BASE":
+                        if sink_cutout_x is not None:
+                            _extra_params['sink_cutout_x_mm'] = int(float(sink_cutout_x.value or 0))
+                        if sink_cutout_w is not None:
+                            _extra_params['sink_cutout_width_mm'] = int(float(sink_cutout_w.value or 0))
+                        if sink_cutout_d is not None:
+                            _extra_params['sink_cutout_depth_mm'] = int(float(sink_cutout_d.value or 0))
+                    if tid in {"BASE_COOKING_UNIT", "BASE_HOB"}:
+                        if hob_cutout_x is not None:
+                            _extra_params['hob_cutout_x_mm'] = int(float(hob_cutout_x.value or 0))
+                        if hob_cutout_w is not None:
+                            _extra_params['hob_cutout_width_mm'] = int(float(hob_cutout_w.value or 0))
+                        if hob_cutout_d is not None:
+                            _extra_params['hob_cutout_depth_mm'] = int(float(hob_cutout_d.value or 0))
                     if has_wardrobe:
                         _extra_params['wardrobe'] = True
                         if wardrobe_front_style is not None:
@@ -683,11 +983,11 @@ def render_params_panel(
                 # Ako je CUSTOM (korisnik uneo drugačiju d od standarda), označi
                 if not _is_indep and int(use_d_mm) != get_zone_depth_standard(zone):
                     new_mod["depth_mode"] = "CUSTOM"
-                ui.notify(PARAMS_ADD_OK_FMT.format(label=label), type='positive')
+                ui.notify(_t('elements.added', label=label), type='positive')
                 nacrt_refresh()
                 sidebar_refresh()
             except Exception as e:
-                ui.notify(PARAMS_ERR_FMT.format(err=format_user_error(e)), type='negative')
+                ui.notify(_t('elements.error', err=format_user_error(e, getattr(state, 'language', 'sr'))), type='negative')
 
         def dodaj() -> None:
             entered_d = _dim['d']
@@ -703,13 +1003,15 @@ def render_params_panel(
                 zone_label = zone.upper()
                 with ui.dialog() as _dlg_override:
                     with ui.card().classes('p-4 gap-2 min-w-72'):
-                        ui.label(PARAMS_DEPTH_DIALOG_TITLE_FMT.format(entered=entered_d, zone=zone_label, std=zone_std)).classes('font-bold text-sm')
-                        ui.label(PARAMS_WHAT_TO_DO).classes('text-sm text-gray-600')
+                        ui.label(
+                            _t('elements.depth_dialog_title', entered=entered_d, zone=zone_label, std=zone_std)
+                        ).classes('font-bold text-sm')
+                        ui.label(_t('elements.what_to_do')).classes('text-sm text-gray-600')
                         with ui.column().classes('w-full gap-2 mt-2'):
                             def _set_as_std():
                                 _dlg_override.close()
                                 _do_dodaj(entered_d, override_as_new_standard=True)
-                                ui.notify(PARAMS_DEPTH_SET_OK_FMT.format(zone=zone_label, d=entered_d), type='info')
+                                ui.notify(_t('elements.depth_set_ok', zone=zone_label, d=entered_d), type='info')
                                 params_panel_refresh()
                             def _keep_custom():
                                 _dlg_override.close()
@@ -718,14 +1020,14 @@ def render_params_panel(
                                 _dlg_override.close()
 
                             ui.button(
-                                PARAMS_DEPTH_SET_STD_FMT.format(d=entered_d, zone=zone_label),
+                                _t('elements.depth_set_std', d=entered_d, zone=zone_label),
                                 on_click=_set_as_std
                             ).classes('w-full bg-white text-[#111] border border-[#111] text-xs')
                             ui.button(
-                                PARAMS_DEPTH_ONLY_THIS_FMT.format(std=zone_std),
+                                _t('elements.depth_only_this', std=zone_std),
                                 on_click=_keep_custom
                             ).classes('w-full bg-gray-100 text-xs')
-                            ui.button(BTN_OTKAZI, on_click=_cancel).classes('w-full text-xs')
+                            ui.button(_t('common.cancel'), on_click=_cancel).classes('w-full text-xs')
                 _dlg_override.open()
             else:
                 _do_dodaj(entered_d)

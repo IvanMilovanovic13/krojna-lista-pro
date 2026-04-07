@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  krojna-lista-pro-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: production
+      BASE_URL: ${BASE_URL}
+      HOST: 0.0.0.0
+      PORT: 8080
+      WEB_WORKERS: ${WEB_WORKERS:-2}
+      EXPORT_WORKER_MODE: dedicated_process
+      EXPORT_WORKER_POLL_SECONDS: ${EXPORT_WORKER_POLL_SECONDS:-2}
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: ${DATABASE_URL}
+      LEMON_SQUEEZY_API_KEY: ${LEMON_SQUEEZY_API_KEY:-}
+      LEMON_SQUEEZY_WEBHOOK_SECRET: ${LEMON_SQUEEZY_WEBHOOK_SECRET:-}
+      LEMON_SQUEEZY_STORE_ID: ${LEMON_SQUEEZY_STORE_ID:-}
+      LEMON_SQUEEZY_STORE_SUBDOMAIN: ${LEMON_SQUEEZY_STORE_SUBDOMAIN:-}
+      LEMON_SQUEEZY_VARIANT_ID_WEEKLY: ${LEMON_SQUEEZY_VARIANT_ID_WEEKLY:-}
+      LEMON_SQUEEZY_VARIANT_ID_MONTHLY: ${LEMON_SQUEEZY_VARIANT_ID_MONTHLY:-}
+      LEMON_SQUEEZY_CHECKOUT_SUCCESS_URL: ${LEMON_SQUEEZY_CHECKOUT_SUCCESS_URL:-}
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  krojna-lista-pro-export-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "export_worker_cli.py"]
+    environment:
+      APP_ENV: production
+      BASE_URL: ${BASE_URL}
+      EXPORT_WORKER_MODE: dedicated_process
+      EXPORT_WORKER_POLL_SECONDS: ${EXPORT_WORKER_POLL_SECONDS:-2}
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: ${DATABASE_URL}
+      LEMON_SQUEEZY_API_KEY: ${LEMON_SQUEEZY_API_KEY:-}
+      LEMON_SQUEEZY_WEBHOOK_SECRET: ${LEMON_SQUEEZY_WEBHOOK_SECRET:-}
+      LEMON_SQUEEZY_STORE_ID: ${LEMON_SQUEEZY_STORE_ID:-}
+      LEMON_SQUEEZY_STORE_SUBDOMAIN: ${LEMON_SQUEEZY_STORE_SUBDOMAIN:-}
+      LEMON_SQUEEZY_VARIANT_ID_WEEKLY: ${LEMON_SQUEEZY_VARIANT_ID_WEEKLY:-}
+      LEMON_SQUEEZY_VARIANT_ID_MONTHLY: ${LEMON_SQUEEZY_VARIANT_ID_MONTHLY:-}
+      LEMON_SQUEEZY_CHECKOUT_SUCCESS_URL: ${LEMON_SQUEEZY_CHECKOUT_SUCCESS_URL:-}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  krojna-lista-pro-nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - krojna-lista-pro-app
+    ports:
+      - "80:80"
+    volumes:
+      - ./infra/nginx/krojna-lista-pro.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped

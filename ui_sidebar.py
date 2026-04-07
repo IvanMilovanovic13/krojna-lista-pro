@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from typing import Any, Callable, Iterable
-from i18n import LBL_DODAJ_ELEMENT, LBL_PARAMETRI_ELEMENTA
 
 
 def render_sidebar_content_layout(
@@ -18,6 +17,7 @@ def render_sidebar_content_layout(
     add_body: Callable[[], None],
     footer_label: str,
     on_footer_click: Callable[[], None],
+    tr_fn: Callable[[str], str],
 ) -> None:
     """Render left sidebar shell (ADD/EDIT modes) with external callbacks."""
     with ui.element('div').classes(
@@ -25,7 +25,7 @@ def render_sidebar_content_layout(
     ):
         with ui.row().classes('w-full items-center justify-between'):
             ui.label(
-                LBL_PARAMETRI_ELEMENTA if is_edit_mode else LBL_DODAJ_ELEMENT
+                tr_fn("elements.params_title") if is_edit_mode else tr_fn("elements.add_element")
             ).classes('text-xs font-bold text-gray-600 uppercase tracking-wider')
             if is_edit_mode:
                 ui.button(

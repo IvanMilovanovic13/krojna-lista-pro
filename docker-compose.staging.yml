@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  krojna-lista-pro:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      APP_ENV: staging
+      BASE_URL: http://localhost:8080
+      SECRET_KEY: change-me-in-staging
+      DATABASE_URL: sqlite:////app/data/project_store.db
+      LEMON_SQUEEZY_API_KEY: ${LEMON_SQUEEZY_API_KEY:-}
+      LEMON_SQUEEZY_WEBHOOK_SECRET: ${LEMON_SQUEEZY_WEBHOOK_SECRET:-}
+      LEMON_SQUEEZY_STORE_ID: ${LEMON_SQUEEZY_STORE_ID:-}
+      LEMON_SQUEEZY_STORE_SUBDOMAIN: ${LEMON_SQUEEZY_STORE_SUBDOMAIN:-}
+      LEMON_SQUEEZY_VARIANT_ID_WEEKLY: ${LEMON_SQUEEZY_VARIANT_ID_WEEKLY:-}
+      LEMON_SQUEEZY_VARIANT_ID_MONTHLY: ${LEMON_SQUEEZY_VARIANT_ID_MONTHLY:-}
+      LEMON_SQUEEZY_CHECKOUT_SUCCESS_URL: ${LEMON_SQUEEZY_CHECKOUT_SUCCESS_URL:-http://localhost:8080/nalog?checkout=success}
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

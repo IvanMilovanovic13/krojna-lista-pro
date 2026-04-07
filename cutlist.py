@@ -5,12 +5,19 @@ from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, List
+import base64
 import logging
 
 import matplotlib
 matplotlib.use("Agg")  # non-interactive backend
 import matplotlib.pyplot as plt
 import pandas as pd
+from module_templates import resolve_template
+from module_rules import (
+    default_shelf_count,
+    dishwasher_installation_metrics,
+    module_supports_adjustable_shelves,
+)
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -18,6 +25,9 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (
     Image as RLImage,
+    HRFlowable,
+    KeepTogether,
+    PageBreak,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -27,6 +37,16 @@ from reportlab.platypus import (
 
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from ui_assembly import assembly_instructions
+from ui_pdf_export import (
+    _friendly_part_name,
+    _friendly_position_name,
+    _kant_legend,
+    _module_preassembly_lines,
+    _module_tool_hardware_lines,
+    _part_role_note,
+    _short_part_code,
+)
 
 _LOG = logging.getLogger(__name__)
 
@@ -67,7 +87,7 @@ def _register_fonts() -> None:
 
 MANUFACTURING_PROFILES: Dict[str, Dict[str, Any]] = {
     "EU_SRB": {
-        "label": "EU / SRB – frameless (на фугу)",
+        "label": "EU / SRB - frameless (na fugu)",
         "front_gap_mm": 2.0,
         "cut_rounding_step_mm": 0.5,
         "cut_rounding_only_cut": True,
@@ -76,7 +96,7 @@ MANUFACTURING_PROFILES: Dict[str, Dict[str, Any]] = {
         "back_inset_mm": 10,
     },
     "EU_SRB_BLUM": {
-        "label": "EU / SRB – Blum",
+        "label": "EU / SRB - Blum",
         "front_gap_mm": 2.0,
         "cut_rounding_step_mm": 0.5,
         "cut_rounding_only_cut": True,
@@ -85,7 +105,7 @@ MANUFACTURING_PROFILES: Dict[str, Dict[str, Any]] = {
         "back_inset_mm": 10,
     },
     "EU_SRB_HETTICH": {
-        "label": "EU / SRB – Hettich",
+        "label": "EU / SRB - Hettich",
         "front_gap_mm": 2.0,
         "cut_rounding_step_mm": 0.5,
         "cut_rounding_only_cut": True,
@@ -94,7 +114,7 @@ MANUFACTURING_PROFILES: Dict[str, Dict[str, Any]] = {
         "back_inset_mm": 10,
     },
     "EU_SRB_GTV": {
-        "label": "EU / SRB – GTV",
+        "label": "EU / SRB - GTV",
         "front_gap_mm": 2.0,
         "cut_rounding_step_mm": 0.5,
         "cut_rounding_only_cut": True,
@@ -120,15 +140,15 @@ HARDWARE_BRAND_CATALOGS: Dict[str, Dict[str, str]] = {
         "dowel": "8x30 mm",
         "shelf_pin": "5 mm",
         "leg": "Podesiva h=100 mm",
-        "hang_rail": "Nosac + sina za visece elemente",
+        "hang_rail": "Nosač + šina za viseće elemente",
         "wall_anchor": "Tipl + vijak 8x80 mm",
         "cabinet_connector": "Spojnica korpusa + vijak",
         "plinth_clip": "Klipsa za soklu",
-        "worktop_fix": "Vijak / ugaonik za radnu plocu",
+        "worktop_fix": "Vijak / ugaonik za radnu ploču",
         "anti_tip": "Anti-tip ugaonik / traka",
-        "appliance_hookup": "Prikljucni set uredjaja",
+        "appliance_hookup": "Priključni set uređaja",
         "sliding_track":   "Hafele Slido / Accuride klizni sistem vrata (set)",
-        "hanging_rod":     "Okrugla sipka za vesanje O25mm + par nosaca",
+        "hanging_rod":     "Okrugla šipka za vešanje O25mm + par nosača",
         "hinge_plate":     "Blum CLIP-top Montageplatte 175H71 / 175L71",
         "handle_screw":    "M4 x 50mm vijak za rucku",
     },
@@ -146,21 +166,21 @@ HARDWARE_BRAND_CATALOGS: Dict[str, Dict[str, str]] = {
         "dowel": "8x30 mm",
         "shelf_pin": "5 mm",
         "leg": "Podesiva h=100 mm",
-        "hang_rail": "Nosac + sina za visece elemente",
+        "hang_rail": "Nosač + šina za viseće elemente",
         "wall_anchor": "Tipl + vijak 8x80 mm",
         "cabinet_connector": "Spojnica korpusa + vijak",
         "plinth_clip": "Klipsa za soklu",
-        "worktop_fix": "Vijak / ugaonik za radnu plocu",
+        "worktop_fix": "Vijak / ugaonik za radnu ploču",
         "anti_tip": "Anti-tip ugaonik / traka",
-        "appliance_hookup": "Prikljucni set uredjaja",
+        "appliance_hookup": "Priključni set uređaja",
         "sliding_track":   "Hettich EKU Porta 50 klizni sistem vrata (set)",
-        "hanging_rod":     "Okrugla sipka za vesanje O25mm + par nosaca",
+        "hanging_rod":     "Okrugla šipka za vešanje O25mm + par nosača",
         "hinge_plate":     "",
         "handle_screw":    "M4 x 50mm vijak za rucku",
     },
     "GTV": {
         "hinge": "GTV zglobna sarka 110°",
-        "slide": "GTV klizac fioke (par)",
+        "slide": "GTV klizač fioke (par)",
         "liftup": "GTV lift-up mehanizam (par)",
         "dish_hinge": "GTV set za front MZS",
         "handle": "Po izboru korisnika",
@@ -172,16 +192,16 @@ HARDWARE_BRAND_CATALOGS: Dict[str, Dict[str, str]] = {
         "dowel": "8x30 mm",
         "shelf_pin": "5 mm",
         "leg": "Podesiva h=100 mm",
-        "hang_rail": "Nosac + sina za visece elemente",
+        "hang_rail": "Nosač + šina za viseće elemente",
         "wall_anchor": "Tipl + vijak 8x80 mm",
         "cabinet_connector": "Spojnica korpusa + vijak",
         "plinth_clip": "Klipsa za soklu",
-        "worktop_fix": "Vijak / ugaonik za radnu plocu",
+        "worktop_fix": "Vijak / ugaonik za radnu ploču",
         "anti_tip": "Anti-tip ugaonik / traka",
-        "appliance_hookup": "Prikljucni set uredjaja",
+        "appliance_hookup": "Priključni set uređaja",
         "sliding_track":   "GTV klizni sistem kliznih vrata (set)",
-        "hanging_rod":     "Okrugla sipka za vesanje O25mm + par nosaca",
-        "hinge_plate":     "GTV montazna ploca za sarku",
+        "hanging_rod":     "Okrugla šipka za vešanje O25mm + par nosača",
+        "hinge_plate":     "GTV montažna ploča za šarku",
         "handle_screw":    "M4 x 50mm vijak za rucku",
     },
 }
@@ -317,6 +337,99 @@ def _attach_wall_column(df: pd.DataFrame, modules: List[Dict[str, Any]]) -> pd.D
     return out
 
 
+def _wall_length_mm(kitchen: Dict[str, Any], wall_key: str = "A") -> int:
+    wk = str(wall_key or "A").upper()
+    wl_map = (kitchen or {}).get("wall_lengths_mm", {}) or {}
+    if wk in wl_map:
+        try:
+            return int(wl_map[wk])
+        except Exception:
+            pass
+    for _w in list(((kitchen or {}).get("walls", []) or [])):
+        if str((_w or {}).get("key", "")).upper() == wk:
+            try:
+                return int((_w or {}).get("length_mm", 3000) or 3000)
+            except Exception:
+                return 3000
+    return int((((kitchen or {}).get("wall", {}) or {}).get("length_mm", 3000)) or 3000)
+
+
+def _purchase_worktop_length(required_mm: int, standard_lengths: List[int]) -> int:
+    _std = sorted(int(x) for x in (standard_lengths or []) if int(x) > 0)
+    if not _std:
+        _std = [2000, 3000, 4000]
+    for _cand in _std:
+        if _cand >= int(required_mm):
+            return int(_cand)
+    _step = 1000
+    return int(((int(required_mm) + _step - 1) // _step) * _step)
+
+
+def _required_worktop_length_for_wall(
+    wall_modules: List[Dict[str, Any]],
+    *,
+    reserve_mm: int = 0,
+) -> int:
+    if not wall_modules:
+        return int(max(0, reserve_mm))
+    xs = [int(m.get("x_mm", 0) or 0) for m in wall_modules]
+    xe = [int(m.get("x_mm", 0) or 0) + int(m.get("w_mm", 0) or 0) for m in wall_modules]
+    span_mm = max(xe) - min(xs)
+    return int(max(0, span_mm + int(reserve_mm or 0)))
+
+
+def _cooking_unit_partial_back_height_mm(
+    module: Dict[str, Any],
+    *,
+    front_gap_mm: float,
+    step_mm: float,
+) -> float:
+    params = dict((module or {}).get("params", {}) or {})
+    h_mm = float((module or {}).get("h_mm", 0) or 0)
+    if params.get("has_drawer", True):
+        dh_list = params.get("drawer_heights", None)
+        if dh_list and len(dh_list) > 0:
+            _base_h = float(dh_list[0])
+        else:
+            _base_h = 130.0
+    else:
+        _base_h = min(150.0, max(120.0, h_mm * 0.18))
+    _service_zone_h = max(120.0, _base_h)
+    return float(_round_cut(_service_zone_h - 2 * float(front_gap_mm or 0), step_mm))
+
+
+def _default_worktop_cutout(module: Dict[str, Any], wt_depth: float) -> Dict[str, Any] | None:
+    _tid = str((module or {}).get("template_id", "")).upper()
+    _x = int((module or {}).get("x_mm", 0) or 0)
+    _w = int((module or {}).get("w_mm", 0) or 0)
+    _params = dict((module or {}).get("params", {}) or {})
+    if _tid == "SINK_BASE":
+        _cw = max(400, min(_w - 80, 500))
+        _cd = max(400, min(int(wt_depth) - 40, 480))
+        _cw = int(_params.get("sink_cutout_width_mm", _cw) or _cw)
+        _cd = int(_params.get("sink_cutout_depth_mm", _cd) or _cd)
+        _cx = int(_params.get("sink_cutout_x_mm", int(_x + max((_w - _cw) / 2.0, 0))) or int(_x + max((_w - _cw) / 2.0, 0)))
+        return {
+            "type": "sink",
+            "x": int(_cx),
+            "width": int(_cw),
+            "depth": int(_cd),
+        }
+    if _tid in {"BASE_COOKING_UNIT", "BASE_HOB"}:
+        _cw = max(450, min(_w - 60, 560))
+        _cd = max(400, min(int(wt_depth) - 40, 490))
+        _cw = int(_params.get("hob_cutout_width_mm", _cw) or _cw)
+        _cd = int(_params.get("hob_cutout_depth_mm", _cd) or _cd)
+        _cx = int(_params.get("hob_cutout_x_mm", int(_x + max((_w - _cw) / 2.0, 0))) or int(_x + max((_w - _cw) / 2.0, 0)))
+        return {
+            "type": "hob",
+            "x": int(_cx),
+            "width": int(_cw),
+            "depth": int(_cd),
+        }
+    return None
+
+
 def _hardware_brand_from_profile(profile_key: str, mfg: Dict[str, Any]) -> str:
     brand = str((mfg or {}).get("hardware_brand", "")).strip().upper()
     if brand in HARDWARE_BRAND_CATALOGS:
@@ -356,6 +469,12 @@ def _manufacturing_warnings(
     front_gap_mm: float,
 ) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
+    _wall_len_map = (kitchen or {}).get("wall_lengths_mm", {}) or {}
+    _room_walls = (((kitchen or {}).get("room", {}) or {}).get("walls", {}) or {})
+    _valid_walls = {str(k).upper() for k in _wall_len_map.keys() if str(k).strip()}
+    _valid_walls.update({str(k).upper() for k in _room_walls.keys() if str(k).strip()})
+    if not _valid_walls:
+        _valid_walls = {"A"}
 
     def _row(mid: int, zone: str, modul: str, code: str, opis: str, preporuka: str) -> Dict[str, Any]:
         return {
@@ -390,6 +509,31 @@ def _manufacturing_warnings(
         params = m.get("params", {}) or {}
         wk = str(m.get("wall_key", "A") or "A").upper()
 
+        try:
+            resolve_template(tid)
+        except Exception:
+            rows.append(_row(
+                mid, zone, lbl, "MISSING_TEMPLATE",
+                f"Element koristi nepoznat template_id '{tid}'.",
+                "Proveri module_templates.json ili zameni element važećim template-om pre eksporta."
+            ))
+            continue
+
+        if wk not in _valid_walls:
+            rows.append(_row(
+                mid, zone, lbl, "INVALID_WALL_REFERENCE",
+                f"Element referiše na nepostojeći zid '{wk}'.",
+                f"Postavi wall_key na jedan od važećih zidova: {', '.join(sorted(_valid_walls))}."
+            ))
+
+        if w <= 0 or h <= 0 or d <= 0:
+            rows.append(_row(
+                mid, zone, lbl, "INVALID_DIMENSIONS",
+                f"Element ima nevažeće dimenzije w={w:.0f}, h={h:.0f}, d={d:.0f} mm.",
+                "Proveri širinu, visinu i dubinu elementa pre eksporta."
+            ))
+            continue
+
         if zone in ("wall", "wall_upper") and d > 400:
             rows.append(_row(
                 mid, zone, lbl, "WALL_DEPTH",
@@ -419,14 +563,32 @@ def _manufacturing_warnings(
             ))
 
         if zone == "wall_upper":
-            _supported = any(
-                str(mm.get("zone", "")).lower() == "wall"
+            _supporting_wall = next((
+                mm for mm in modules
+                if str(mm.get("zone", "")).lower() == "wall"
                 and str(mm.get("wall_key", "A") or "A").upper() == wk
                 and float(mm.get("x_mm", 0) or 0) <= float(m.get("x_mm", 0) or 0)
                 and (float(mm.get("x_mm", 0) or 0) + float(mm.get("w_mm", 0) or 0))
                 >= (float(m.get("x_mm", 0) or 0) + w)
-                for mm in modules
-            )
+            ), None)
+            _supported = _supporting_wall is not None
+            if _supported and _supporting_wall is not None:
+                _zones = ((kitchen or {}).get("zones", {}) or {})
+                _wall_gap = int((_zones.get("wall", {}) or {}).get("gap_from_base_mm", 0) or 0)
+                if _wall_gap == 0:
+                    _foot_mm = int(float((kitchen or {}).get("foot_height_mm", foot_h_mm) or foot_h_mm))
+                    _base_h = int(float((kitchen or {}).get("base_korpus_h_mm", 720) or 720))
+                    _wt = ((kitchen or {}).get("worktop", {}) or {})
+                    _wt_thk_mm = int(round(float(_wt.get("thickness", 4.0) or 4.0) * 10.0))
+                    _vgap = int(float((kitchen or {}).get("vertical_gap_mm", 600) or 600))
+                    _wall_gap = _foot_mm + _base_h + _wt_thk_mm + _vgap
+                _free_h = max(wall_h_mm - _wall_gap - float(_supporting_wall.get("h_mm", 0) or 0) - 5.0, 0.0)
+                if h > (_free_h + 2.0):
+                    rows.append(_row(
+                        mid, zone, lbl, "WALL_UPPER_HEIGHT",
+                        f"Drugi red gornjih elemenata je visok {h:.0f} mm, a raspoloziv prostor iznad nosivog gornjeg elementa je {_free_h:.0f} mm.",
+                        "Smanji visinu wall_upper elementa ili proveri realan razmak do plafona."
+                    ))
             if not _supported:
                 rows.append(_row(
                     mid, zone, lbl, "WALL_UPPER_SUPPORT",
@@ -435,14 +597,23 @@ def _manufacturing_warnings(
                 ))
 
         if zone == "tall_top":
-            _supported = any(
-                str(mm.get("zone", "")).lower() == "tall"
+            _supporting_tall = next((
+                mm for mm in modules
+                if str(mm.get("zone", "")).lower() == "tall"
                 and str(mm.get("wall_key", "A") or "A").upper() == wk
                 and float(mm.get("x_mm", 0) or 0) <= float(m.get("x_mm", 0) or 0)
                 and (float(mm.get("x_mm", 0) or 0) + float(mm.get("w_mm", 0) or 0))
                 >= (float(m.get("x_mm", 0) or 0) + w)
-                for mm in modules
-            )
+            ), None)
+            _supported = _supporting_tall is not None
+            if _supported and _supporting_tall is not None:
+                _free_h = max(wall_h_mm - foot_h_mm - float(_supporting_tall.get("h_mm", 0) or 0), 0.0)
+                if h > (_free_h + 2.0):
+                    rows.append(_row(
+                        mid, zone, lbl, "TALL_TOP_HEIGHT",
+                        f"Popuna iznad visokog je visoka {h:.0f} mm, a raspoloziv prostor iznad nosivog visokog elementa je {_free_h:.0f} mm.",
+                        "Smanji visinu tall_top popune ili visinu visokog elementa ispod nje."
+                    ))
             if not _supported:
                 rows.append(_row(
                     mid, zone, lbl, "TALL_TOP_SUPPORT",
@@ -506,11 +677,40 @@ def _manufacturing_warnings(
                 "Koristi najmanje 600 mm širine."
             ))
 
+        if tid == "SINK_BASE":
+            _cx = float(params.get("sink_cutout_x_mm", max((w - 500.0) / 2.0, 0.0)) or 0.0)
+            _cw = float(params.get("sink_cutout_width_mm", max(400.0, min(w - 80.0, 500.0))) or 0.0)
+            _cd = float(params.get("sink_cutout_depth_mm", max(400.0, min(d - 40.0, 480.0))) or 0.0)
+            if _cx < 0 or _cw <= 0 or (_cx + _cw) > w or _cd <= 0 or _cd > d:
+                rows.append(_row(
+                    mid, zone, lbl, "CUTOUT_OUT_OF_BOUNDS",
+                    f"Izrez za sudoperu izlazi van radne ploče/modula (X={_cx:.0f}, W={_cw:.0f}, D={_cd:.0f} mm; modul W={w:.0f}, D={d:.0f} mm).",
+                    "Smanji izrez ili ga pomeri tako da ostane unutar širine i dubine modula."
+                ))
+
+        if tid in {"BASE_COOKING_UNIT", "BASE_HOB"}:
+            _cx = float(params.get("hob_cutout_x_mm", max((w - 560.0) / 2.0, 0.0)) or 0.0)
+            _cw = float(params.get("hob_cutout_width_mm", max(450.0, min(w - 60.0, 560.0))) or 0.0)
+            _cd = float(params.get("hob_cutout_depth_mm", max(400.0, min(d - 40.0, 490.0))) or 0.0)
+            if _cx < 0 or _cw <= 0 or (_cx + _cw) > w or _cd <= 0 or _cd > d:
+                rows.append(_row(
+                    mid, zone, lbl, "CUTOUT_OUT_OF_BOUNDS",
+                    f"Izrez za ploču za kuvanje izlazi van radne ploče/modula (X={_cx:.0f}, W={_cw:.0f}, D={_cd:.0f} mm; modul W={w:.0f}, D={d:.0f} mm).",
+                    "Smanji izrez ili ga pomeri tako da ostane unutar širine i dubine modula."
+                ))
+
         if "CORNER" in tid and w < 800:
             rows.append(_row(
                 mid, zone, lbl, "CORNER_WIDTH",
                 f"Ugaoni element širine {w:.0f} mm je rizičan za stabilan raspored i pristup uglu.",
                 "Povećaj širinu na najmanje 800 mm."
+            ))
+
+        if tid == "FILLER_PANEL" and w > 120:
+            rows.append(_row(
+                mid, zone, lbl, "FILLER_TOO_WIDE",
+                f"Filer panel širine {w:.0f} mm je širok za standardnu popunu prostora.",
+                "Razmotri pravi završni panel ili poseban uski modul umesto širokog filera."
             ))
         if "CORNER" in tid:
             _anchor = "desno" if wk == "A" else "levo"
@@ -642,6 +842,58 @@ def _manufacturing_warnings(
                 "Proveri pristup instalaciji i ostavi servisni prostor."
             ))
 
+    # Worktop alignment validation: all base units on the same wall should share
+    # the same effective top level before a continuous worktop is mounted.
+    _base_by_wall: Dict[str, List[Dict[str, Any]]] = {}
+    for m in modules:
+        if str(m.get("zone", "")).lower() != "base":
+            continue
+        wk = str(m.get("wall_key", "A") or "A").upper()
+        _base_by_wall.setdefault(wk, []).append(m)
+    for wk, _wall_mods in _base_by_wall.items():
+        if len(_wall_mods) < 2:
+            continue
+        _tops = []
+        for _m in _wall_mods:
+            _top = float(foot_h_mm) + float(_m.get("h_mm", 0) or 0)
+            _tops.append((int(_m.get("id", 0) or 0), str(_m.get("label", "") or _m.get("template_id", "")), _top))
+        _min_top = min(_t[2] for _t in _tops)
+        _max_top = max(_t[2] for _t in _tops)
+        if (_max_top - _min_top) > 2.0:
+            _mods_txt = ", ".join(f"#{_mid} {_lbl}={_top:.0f}mm" for _mid, _lbl, _top in _tops)
+            for _mid, _lbl, _top in _tops:
+                rows.append(_row(
+                    _mid, "base", _lbl, "BASE_ALIGNMENT_INVALID",
+                    f"Donji elementi na zidu {wk} nisu u istoj ravni za kontinualnu radnu ploču. Top-level raspon je {_min_top:.0f}-{_max_top:.0f} mm. ({_mods_txt})",
+                    "Poravnaj visine svih BASE elemenata pre radne ploče ili koristi poseban segment/raskid ploče."
+                ))
+
+    _wt = (kitchen or {}).get("worktop", {}) or {}
+    _wt_enabled = bool(_wt.get("enabled", False))
+    _wt_reserve = int(_wt.get("mounting_reserve_mm", _wt.get("reserve_mm", 20)) or 20)
+    _wt_lengths = sorted(
+        int(x) for x in (_wt.get("standard_lengths_mm", [2000, 3000, 4000]) or [2000, 3000, 4000])
+        if int(x) > 0
+    )
+    if _wt_enabled and _wt_lengths:
+        _max_stock = max(_wt_lengths)
+        for wk, _wall_mods in _base_by_wall.items():
+            if not _wall_mods:
+                continue
+            _required = _required_worktop_length_for_wall(
+                _wall_mods,
+                reserve_mm=_wt_reserve,
+            )
+            if _required > _max_stock:
+                for _m in _wall_mods:
+                    _mid = int(_m.get("id", 0) or 0)
+                    _lbl = str(_m.get("label", "") or _m.get("template_id", ""))
+                    rows.append(_row(
+                        _mid, "base", _lbl, "WORKTOP_TOO_SHORT",
+                        f"Potrebna dužina radne ploče za zid {wk} je {_required} mm, a najveća standardna nabavna dužina je {_max_stock} mm.",
+                        "Dodaj spoj/raskid ploče, koristi duži komercijalni format ili naruči specijalnu radnu ploču."
+                    ))
+
     # ── Out-of-bounds validacija — modul izlazi van duzine zida ──────────────────
     for m in modules:
         mid  = int(m.get("id", 0) or 0)
@@ -655,6 +907,12 @@ def _manufacturing_warnings(
         _wl_kt  = (kitchen or {}).get("wall", {}) or {}
         _wall_len = float(_wl_map.get(wk, _wl_kt.get("length_mm", 3000)) or 3000)
         _tol = 2.0  # dozvoljena tolerancija u mm (montažni zazor)
+        if x0 < (0.0 - _tol):
+            rows.append(_row(
+                mid, zone, lbl, "MODULE_BEFORE_WALL_START",
+                f"Element pocinje pre pocetka zida {wk}: x={x0:.0f}mm < 0mm.",
+                "Pomeri element udesno tako da pocinje od nule ili ostavi samo planirani tehnicki zazor."
+            ))
         if x1 > _wall_len + _tol:
             rows.append(_row(
                 mid, zone, lbl, "MODULE_OUT_OF_BOUNDS",
@@ -805,7 +1063,7 @@ def _carcass_piece(
         "Kant": _kant_desc(n_edge_w, n_edge_h, edge_thk, orient=orient),
         "L1": L1, "L2": L2, "K1": K1, "K2": K2,
         "Orijentacija": orient,
-        "Duzina [mm]": fw,   # FIN dimenzija (gotova mera)
+        "Dužina [mm]": fw,   # FIN dimenzija (gotova mera)
         "Sirina [mm]": fh,   # FIN dimenzija (gotova mera)
         "CUT_W [mm]": cw,    # sirova mera pre kanta
         "CUT_H [mm]": ch,    # sirova mera pre kanta
@@ -846,7 +1104,7 @@ def _front_row(
         "Kant": _kant_desc(2, 2, edge_thk),  # sve 4 ivice = L+R + T+B
         "L1": 1, "L2": 1, "K1": 1, "K2": 1,
         "Orijentacija": "vertikalna",
-        "Duzina [mm]": fw,   # FIN dimenzija (gotova mera)
+        "Dužina [mm]": fw,   # FIN dimenzija (gotova mera)
         "Sirina [mm]": fh,   # FIN dimenzija (gotova mera)
         "CUT_W [mm]": cw,
         "CUT_H [mm]": ch,
@@ -1226,39 +1484,23 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                                             orient="vertikalna", L1=1, L2=0, K1=1, K2=0,
                                             _mlbl=modul_label))
 
-        # Police — za elemente koji imaju otvorene police (OPEN, GLASS, PANTRY)
-        # Dimenzije police = iste kao dno (inner_w × inner_d), kant samo prednja ivica (L1)
-        _N_SHELVES: Dict[str, int] = {
-            "BASE_OPEN": 1,
-            "WALL_OPEN": 1, "WALL_GLASS": 1,
-            "WALL_UPPER_OPEN": 1,
-            "TALL_PANTRY": 3, "TALL_OPEN": 2,
-        }
-        _n_sh = 0
-        for _kp, _nv in _N_SHELVES.items():
-            if _kp in tid.upper():
-                _n_sh = _nv
-                break
-        if _n_sh > 0:
-            rows_carcass.append(_cp(mid, zone, label, "Polica",
+        # Police — jedinstvena logika:
+        # - otvoreni/pantry moduli imaju pametne podrazumevane police
+        # - standardni ormari dobijaju podrazumevane police
+        # - korisnik uvek moze da override-uje preko params["n_shelves"]
+        _n_sh = default_shelf_count(
+            tid,
+            zone=zone,
+            h_mm=h,
+            params=params,
+            features={},
+        )
+        if not _skip_carcass and _n_sh > 0 and module_supports_adjustable_shelves(tid, features={}):
+            _shelf_part = "Polica (podesiva)" if "n_shelves" in (params or {}) else "Polica"
+            rows_carcass.append(_cp(mid, zone, label, _shelf_part,
                                     inner_w, inner_d, n_ew=0, n_eh=1,
                                     orient="horizontalna", L1=1, L2=0, K1=0, K2=0,
                                     kol=_n_sh, _mlbl=modul_label))
-
-        # Police iz params — za standardne zatvorene elemente (1DOOR, 2DOOR, LIFTUP, itd.)
-        # Korisnik unosi broj polica u UI params panelu → params["n_shelves"]
-        # ISKLJUČENI: aparati, sudopera, napa, i moduli koji već imaju police iz _N_SHELVES
-        _NO_SHELF_TIDS = (
-            "FRIDGE", "DISHWASHER", "COOKING_UNIT", "OVEN_HOB", "OVEN",
-            "SINK", "HOOD", "HOB", "TRASH", "OPEN", "GLASS", "PANTRY", "NARROW", "DRAWER",
-        )
-        if _n_sh == 0 and not _skip_carcass and not any(k in tid for k in _NO_SHELF_TIDS):
-            _n_sh_params = int((params or {}).get("n_shelves", 0) or 0)
-            if _n_sh_params > 0:
-                rows_carcass.append(_cp(mid, zone, label, "Polica (podesiva)",
-                                        inner_w, inner_d, n_ew=0, n_eh=1,
-                                        orient="horizontalna", L1=1, L2=0, K1=0, K2=0,
-                                        kol=_n_sh_params, _mlbl=modul_label))
 
         # Horizontalne pregrade za TALL aparat module (odvajaju zone: fioka / rerna / mikrovalna)
         # TALL_OVEN_MICRO mora biti provjeren PRIJE TALL_OVEN (sadrži isti substring)
@@ -1311,7 +1553,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                         "Kant":        "-",
                         "L1": 0, "L2": 0, "K1": 0, "K2": 0,
                         "Orijentacija": "vertikalna",
-                        "Duzina [mm]": _bw_arm,
+                        "Dužina [mm]": _bw_arm,
                         "Sirina [mm]": _bh_arm,
                         "CUT_W [mm]":  _bw_arm,
                         "CUT_H [mm]":  _bh_arm,
@@ -1328,6 +1570,14 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                     bw = _round_cut(w, step)
                     bh = _round_cut(h, step)
                     back_nap = "overlay"
+                _back_part_name = "Leđna ploča"
+                if tid in {"BASE_COOKING_UNIT", "OVEN_HOB"}:
+                    bh = _cooking_unit_partial_back_height_mm(inst, front_gap_mm=front_gap, step_mm=step)
+                    _back_part_name = "Parcijalna leđna ploča"
+                    back_nap = (
+                        f"{back_nap}; parcijalna leđa samo u donjoj servisnoj zoni,"
+                        " gornja zona iza rerne ostaje otvorena radi ventilacije i priključaka"
+                    )
                 if "HOOD" in tid:
                     back_nap = f"{back_nap}; ostaviti otvor/prolaz za odvod nape prema modelu uređaja"
                 elif "MICRO" in tid:
@@ -1339,14 +1589,14 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                     "TYPE":        zone.upper(),
                     "Modul":       modul_label,
                     "Element":     label,
-                    "Deo":         "Leđna ploča",
+                    "Deo":         _back_part_name,
                     "Materijal":   back_mat,
                     "Deb.":        back_thk,
                     "Kol.":        1,
                     "Kant":        "-",
                     "L1": 0, "L2": 0, "K1": 0, "K2": 0,
                     "Orijentacija": "vertikalna",
-                    "Duzina [mm]": bw,   # FIN = CUT (nema kanta)
+                    "Dužina [mm]": bw,   # FIN = CUT (nema kanta)
                     "Sirina [mm]": bh,   # FIN = CUT (nema kanta)
                     "CUT_W [mm]":  bw,
                     "CUT_H [mm]":  bh,
@@ -1598,6 +1848,14 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
         # Jedina korpusna ploča: VEZNA LETVA (gornji vez ispod radne ploče).
         # Opciono: integrisani front panel.
         elif tid == "BASE_DISHWASHER":
+            _dish = dishwasher_installation_metrics(kitchen, inst)
+            _front_h = float(_dish.get("dishwasher_front_height", 720))
+            _lower_fill_h = float(_dish.get("dishwasher_lower_filler_height", 0))
+            _platform_h = float(_dish.get("dishwasher_platform_height", 0))
+            _raised = bool(_dish.get("dishwasher_raised_mode", False))
+            _lower_fill_cut_h = max(0.0, _lower_fill_h - 2 * front_gap)
+            _lower_fill_fin_h = max(0.0, _lower_fill_cut_h - 2 * edge_thk)
+
             # 1. Vezna letva — jedina ploča MZS slota
             #    Širina  = širina slota (w), dubina = 100mm, debljina = carcass_thk
             #    Kant    = samo prednja ivica (L1, frontalna strana)
@@ -1614,12 +1872,43 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                     "oslanja se na susedne korpuse",
                 _mlbl=modul_label,
             ))
+            if _raised and _platform_h > 0:
+                rows_carcass.append(_cp(
+                    mid, zone, label,
+                    "Postolje / nosač — MZS",
+                    w,
+                    max(100.0, d - 40.0),
+                    n_ew=0, n_eh=0,
+                    orient="horizontalna",
+                    L1=0, L2=0, K1=0, K2=0,
+                    nap=(
+                        f"Konstruktivna platforma za podizanje ugradne MZS; "
+                        f"visina podizanja = {_platform_h:.0f} mm. "
+                        f"Sokla ostaje kontinuirana, maska zatvara prostor iznad sokle."
+                    ),
+                    _mlbl=modul_label,
+                ))
             # 2. Front panel (integrisana MZS — vrata u ravni sa ostalim frontovima)
             rows_fronts.append(fr(
                 "Front — mašina za sudove",
-                fw, h - 2 * front_gap,
-                nap_="Integrisani front ugradne MZS",
+                fw, max(0.0, _front_h - 2 * front_gap),
+                nap_=(
+                    "Integrisani front ugradne MZS"
+                    if not _raised else
+                    f"Integrisani front ugradne MZS; raised mode, front ostaje standardne visine {_front_h:.0f} mm"
+                ),
             ))
+            if _raised and _lower_fill_h > 0:
+                rows_fronts.append(fr(
+                    "Donja maska — MZS",
+                    fw, _lower_fill_cut_h,
+                    nap_=(
+                        f"Donja maska iznad sokle za raised dishwasher; "
+                        f"gotova visina maske = {_lower_fill_fin_h:.0f} mm, "
+                        f"CUT visina = {_lower_fill_cut_h:.0f} mm; "
+                        f"sokla ostaje zasebna i kontinuirana."
+                    ),
+                ))
 
         # Pantry/ostava
         elif "PANTRY" in tid:
@@ -1676,14 +1965,14 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                 "Deo":         "Sokla (lajsna)",
                 "Materijal":   "MDF",
                 "Deb. [mm]":   16,
-                "Duzina [mm]": x1 - x0,
+                "Dužina [mm]": x1 - x0,
                 "Visina [mm]": foot_h,
                 "Kol.":        1,
                 "Napomena":    f"Segment zida {_bwk}, raspon {x0}–{x1}mm",
             })
 
     # -------------------------------------------------------
-    # Radna ploca — jedan segment
+    # Radna ploca — kontinualni segment po geometriji zida
     # -------------------------------------------------------
     rows_worktop: List[Dict[str, Any]] = []
     wt = kitchen.get("worktop", {}) or {}
@@ -1691,32 +1980,56 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
     if wt_thk_mm > 0:
         if base_mods:
             wt_depth = float(wt.get("width", 600.0))
+            wt_reserve_mm = int(wt.get("mounting_reserve_mm", wt.get("reserve_mm", 20)) or 20)
+            wt_front_overhang = int(wt.get("front_overhang_mm", 20) or 20)
+            wt_field_cut = bool(wt.get("field_cut", True))
+            wt_edge_protection = bool(wt.get("edge_protection", True))
+            wt_edge_protection_type = str(wt.get("edge_protection_type", "silikon / vodootporni premaz") or "silikon / vodootporni premaz")
+            wt_purchase_lengths = list(wt.get("standard_lengths_mm", [2000, 3000, 4000]) or [2000, 3000, 4000])
             _is_l_kitchen = str((kitchen or {}).get("kitchen_layout", "")) == "l_oblik"
             for _bwk, _bmods in sorted(_base_by_wall.items()):
                 xs = [int(m.get("x_mm", 0)) for m in _bmods]
                 xe = [int(m.get("x_mm", 0)) + int(m.get("w_mm", 0)) for m in _bmods]
-                total_wt_w = max(xe) - min(xs)
-                _x_start = min(xs)
-                # Napomena za ugaono spajanje radne ploče u L-kuhinji
-                if _is_l_kitchen and _bwk != "A":
-                    from layout_engine import _l_corner_offsets_mm as _co_off
-                    _lo, _ro = _co_off(kitchen, _bwk)
-                    if _lo > 0:
-                        _wt_note = (
-                            f"Zid {_bwk} — radna ploča počinje na x={_x_start}mm. "
-                            f"Ugaono spajanje s Zidom A: rezati/stepenasto obradi lijevu stranu "
-                            f"({_lo}mm dubine Zida A). Dužina segmenta: {total_wt_w}mm."
+                _base_zone_w = max(xe) - min(xs)
+                _wall_len = _wall_length_mm(kitchen, _bwk)
+                _required_len = _required_worktop_length_for_wall(
+                    _bmods,
+                    reserve_mm=wt_reserve_mm,
+                )
+                _purchase_len = _purchase_worktop_length(_required_len, wt_purchase_lengths)
+                _joint_type = str(wt.get("joint_type", "STRAIGHT") or "STRAIGHT").upper()
+                _cutout_specs: List[Dict[str, Any]] = []
+                for _m in _bmods:
+                    _spec = _default_worktop_cutout(_m, wt_depth)
+                    if _spec:
+                        _cutout_specs.append(_spec)
+                _joint_desc = ""
+                if _is_l_kitchen:
+                    _joint_desc = f" Spoj u uglu: {_joint_type}."
+                _cutout_desc = ""
+                _cutout_export = ""
+                if _cutout_specs:
+                    _cutout_parts = []
+                    for _c in _cutout_specs:
+                        _type_lbl = "sudopera" if _c["type"] == "sink" else "ploča za kuvanje"
+                        _cutout_parts.append(
+                            f"{_type_lbl} [X={int(_c['x'])} mm, W={int(_c['width'])} mm, D={int(_c['depth'])} mm]"
                         )
-                    elif _ro > 0:
-                        _wt_note = (
-                            f"Zid {_bwk} — radna ploča dužine {total_wt_w}mm. "
-                            f"Ugaono spajanje s Zidom A: rezati/stepenasto obradi desnu stranu "
-                            f"({_ro}mm dubine Zida A)."
-                        )
-                    else:
-                        _wt_note = f"1 segment na zidu {_bwk}, ukupna dužina base zone {total_wt_w}mm"
-                else:
-                    _wt_note = f"1 segment na zidu {_bwk}, ukupna dužina base zone {total_wt_w}mm"
+                    _cutout_export = "; ".join(_cutout_parts)
+                    _cutout_desc = " Izrezi na licu mesta: " + _cutout_export + "."
+                _protection_desc = ""
+                if wt_edge_protection:
+                    _protection_desc = f" Zaštita isečenih ivica: {wt_edge_protection_type}."
+                _field_cut_desc = " Sečenje na licu mesta." if wt_field_cut else ""
+                _wt_note = (
+                    f"Kontinualni segment po zidu {_bwk}. "
+                    f"Geometrija zida: {_wall_len} mm; base oslonac: {_base_zone_w} mm. "
+                    f"Potrebna dužina za ugradnju: {_required_len} mm "
+                    f"(rezerva +{wt_reserve_mm} mm). "
+                    f"Nabavna dužina: {_purchase_len} mm. "
+                    f"Prepust napred: {wt_front_overhang} mm."
+                    f"{_field_cut_desc}{_protection_desc}{_cutout_desc}{_joint_desc}"
+                )
                 rows_worktop.append({
                     "ID":           "-",
                     "Modul":        f"Radna ploča - Zid {_bwk}",
@@ -1728,10 +2041,19 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                     "Kant":         "-",
                     "L1": 1, "L2": 0, "K1": 0, "K2": 0,
                     "Orijentacija": "horizontalna",
-                    "Duzina [mm]":  float(total_wt_w),
+                    "Dužina [mm]":  float(_required_len),
                     "Sirina [mm]":  float(wt_depth),
-                    "CUT_W [mm]":   float(total_wt_w),
+                    "CUT_W [mm]":   float(_required_len),
                     "CUT_H [mm]":   float(wt_depth),
+                    "Required length [mm]": float(_required_len),
+                    "Purchase length [mm]": float(_purchase_len),
+                    "Wall length [mm]": float(_wall_len),
+                    "Field cut": "TRUE" if wt_field_cut else "FALSE",
+                    "Joint type": _joint_type if _is_l_kitchen else "",
+                    "Front overhang [mm]": float(wt_front_overhang),
+                    "Edge protection": "TRUE" if wt_edge_protection else "FALSE",
+                    "Edge protection type": wt_edge_protection_type if wt_edge_protection else "",
+                    "Cutouts": _cutout_export,
                     "Napomena":     _wt_note,
                 })
             # Nosači radne ploče: 2 daske po BASE elementu (100mm × širina_elementa × carcass_thk)
@@ -1756,7 +2078,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                     "Kant":         "F (ABS 0.5mm)",
                     "L1": 1, "L2": 0, "K1": 0, "K2": 0,
                     "Orijentacija": "horizontalna",
-                    "Duzina [mm]":  _nosac_w,
+                    "Dužina [mm]":  _nosac_w,
                     "Sirina [mm]":  _nosac_h,
                     "CUT_W [mm]":   _nosac_w + edge_thk,
                     "CUT_H [mm]":   _nosac_h,
@@ -1807,7 +2129,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                 "Vijak / spojnica za panel",
                 "4x30 mm",
                 _panel_qty,
-                "Za pričvršćenje dekorativnog panela uz susjedni korpus ili zidnu letvu",
+                "Za pričvršćenje dekorativnog panela uz susedni korpus ili zidnu letvu",
                 kategorija="potrosni",
             ))
             continue
@@ -1872,7 +2194,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                 "Klizač za fioku",
                 hwc.get("slide", ""),
                 _n_dr,
-                f"{_n_dr} × 1 par klizača (lijevi + desni)",
+                f"{_n_dr} × 1 par klizača (levi + desni)",
             ))
 
         elif _is_trash_m:
@@ -2031,24 +2353,24 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
             _n_panels = 3 if _is_wardrobe_american else 2
             rows_hardware.append(_hw(
                 _hmid, _hzone, _hmlbl,
-                "Klizni sistem vrata (gornja sina + donja vodilica)",
+                "Klizni sistem vrata (gornja šina + donja vodilica)",
                 hwc.get("sliding_track", "Klizni sistem kliznih vrata"),
                 1,
-                f"Komplet za {_n_panels} klizna krila; duzina sine = sirina otvora + preklapanje",
+                f"Komplet za {_n_panels} klizna krila; dužina šine = širina otvora + preklapanje",
             ))
             rows_hardware.append(_hw(
                 _hmid, _hzone, _hmlbl,
-                "Set tockica / nosaca kliznih krila",
-                "2 gornja + 2 donja tockica po krilu",
+                "Set točkića / nosača kliznih krila",
+                "2 gornja + 2 donja točkića po krilu",
                 _n_panels,
-                f"{_n_panels} seta (1 set po krilu = 4 tockica)",
+                f"{_n_panels} seta (1 set po krilu = 4 točkića)",
             ))
             rows_hardware.append(_hw(
                 _hmid, _hzone, _hmlbl,
                 "Gumeni stop / krajnji odbojnik",
-                "Odbojnik za kraj sine",
+                "Odbojnik za kraj šine",
                 2,
-                "Na oba kraja sine — sprecava udar krila na krajnjoj poziciji",
+                "Na oba kraja šine — sprečava udar krila na krajnjoj poziciji",
                 kategorija="potrosni",
             ))
 
@@ -2088,7 +2410,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                 "Šarka (CLIP-top 110°)",
                 hwc.get("hinge", ""),
                 _n_vrata * _sharke_po,
-                f"{_n_vrata} vrata × {_sharke_po} sarke (v vrata={_dh:.0f}mm); busenje: O35mm dubina 13mm, 22.5mm od ruba vrata",
+                f"{_n_vrata} vrata × {_sharke_po} šarke (v vrata={_dh:.0f}mm); bušenje: Ø35mm dubina 13mm, 22.5mm od ruba vrata",
             ))
 
         # ── Kombi: vrata + fioka ─────────────────────────────
@@ -2139,22 +2461,22 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                 kategorija="potrosni",
             ))
 
-        # ── Vešalica (sipka za vesanje odece) — wardrobe hang sekcija ───────
+        # ── Vešalica (šipka za vešanje odeće) — wardrobe hang sekcija ───────
         if _is_wardrobe_hang:
             _n_sip = int(_hp.get("hanger_sections", 1))
             rows_hardware.append(_hw(
                 _hmid, _hzone, _hmlbl,
-                "Sipka za vesanje odece",
-                hwc.get("hanging_rod", "Okrugla sipka O25mm + par nosaca"),
+                "Šipka za vešanje odeće",
+                hwc.get("hanging_rod", "Okrugla šipka O25mm + par nosača"),
                 _n_sip,
-                f"{_n_sip} sipka/e × 1 par nosaca; duzina = sirina sekcije - 5mm",
+                f"{_n_sip} šipka/e × 1 par nosača; dužina = širina sekcije - 5mm",
             ))
             rows_hardware.append(_hw(
                 _hmid, _hzone, _hmlbl,
-                "Nosaci sipke za vesanje",
-                "Ugradbeni nosac O25mm",
+                "Nosači šipke za vešanje",
+                "Ugradbeni nosač O25mm",
                 _n_sip * 2,
-                f"{_n_sip} sipke × 2 nosaca = {_n_sip * 2} kom ukupno",
+                f"{_n_sip} šipke × 2 nosača = {_n_sip * 2} kom ukupno",
             ))
 
         # ── Ručke / pulls ────────────────────────────────────────────────
@@ -2198,14 +2520,13 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
         # ── Bazni montažni potrošni materijal (po modulu) ─────────────────
         # Dodajemo za sve module koji imaju korpus (nije sam uređaj).
         if not _skip_carcass and not any(_kw in _htid for _kw in ("DISHWASHER",)):
-            _n_shelves = int((_hp.get("n_shelves", 0) or 0))
-            if _n_shelves <= 0:
-                if "PANTRY" in _htid or "TALL_OPEN" in _htid:
-                    _n_shelves = 4
-                elif "WALL_UPPER_OPEN" in _htid or "TALL_TOP_OPEN" in _htid:
-                    _n_shelves = 1
-                elif "OPEN" in _htid or "GLASS" in _htid:
-                    _n_shelves = 2
+            _n_shelves = default_shelf_count(
+                _htid,
+                zone=_hzone,
+                h_mm=_hh,
+                params=_hp,
+                features={},
+            )
             _conf_qty = 20 if _hzone == "tall" else 16
             _dowel_qty = 12 if _hzone == "tall" else 8
             rows_hardware.append(_hw(
@@ -2324,10 +2645,10 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
     if rows_worktop:
         rows_hardware.append(_hw(
             0, "project", "Projekat",
-            "Vijak / ugaonik za radnu plocu",
-            hwc.get("worktop_fix", "Vijak / ugaonik za radnu plocu"),
+            "Vijak / ugaonik za radnu ploču",
+            hwc.get("worktop_fix", "Vijak / ugaonik za radnu ploču"),
             max(4, len(base_mods) * 2),
-            "Osnovni set za pricvrscenje radne ploce na nosace i korpuse",
+            "Osnovni set za pričvršćenje radne ploče na nosače i korpuse",
             kategorija="potrosni",
         ))
         rows_hardware.append(_hw(
@@ -2362,10 +2683,10 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
     if _total_slide_pairs > 0:
         rows_hardware.append(_hw(
             0, "project", "Projekat",
-            "Vijak za klizac",
+            "Vijak za klizač",
             hwc.get("slide_screw", "3.5x16 mm"),
             _total_slide_pairs * 12,
-            "Osnovno 12 vijaka po paru klizaca ako nisu ukljuceni u set",
+            "Osnovno 12 vijaka po paru klizača ako nisu uključeni u set",
             kategorija="potrosni",
         ))
 
@@ -2378,10 +2699,10 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
     if _back_fix_qty > 0:
         rows_hardware.append(_hw(
             0, "project", "Projekat",
-            "Vijak / ekser za ledja",
+            "Vijak / ekser za leđa",
             hwc.get("back_fix", "3x16 mm / ekser 1.4x25 mm"),
             _back_fix_qty,
-            "Osnovno pricvrscenje ledja po korpusu; broj proveriti prema standardu radionice",
+            "Osnovno pričvršćenje leđa po korpusu; broj proveriti prema standardu radionice",
             kategorija="potrosni",
         ))
 
@@ -2393,10 +2714,10 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
     if _wall_mount_modules:
         rows_hardware.append(_hw(
             0, "project", "Projekat",
-            "Vijak za zidni nosac / sinu",
+            "Vijak za zidni nosač / šinu",
             hwc.get("wall_mount_screw", "5x60 mm"),
             len(_wall_mount_modules) * 4,
-            "Za pricvrscenje nosaca, sine ili anti-tip seta; tip vijka prilagoditi zidu",
+            "Za pričvršćenje nosača, šine ili anti-tip seta; tip vijka prilagoditi zidu",
             kategorija="potrosni",
         ))
 
@@ -2413,10 +2734,10 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
         if _total_hinges_for_plate > 0:
             rows_hardware.append(_hw(
                 0, "project", "Projekat",
-                "Montazna ploca za sarku",
+                "Montažna ploča za šarku",
                 _hinge_plate_brand,
                 _total_hinges_for_plate,
-                "1 montazna ploca po sarki (BLUM CLIP-top sistem: ploca + sarki odvojeni)",
+                "1 montažna ploča po šarki (BLUM CLIP-top sistem: ploča + šarki odvojeni)",
             ))
 
     # ── Vijci za ručke ─────────────────────────────────────────────────────
@@ -2468,46 +2789,667 @@ def build_cutlist_sections(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
     return generate_cutlist(kitchen)
 
 
-def build_project_header(kitchen: Dict[str, Any]) -> pd.DataFrame:
+def build_project_header(kitchen: Dict[str, Any], lang: str = "sr") -> pd.DataFrame:
     """Project header for workshop / end-user packet."""
+    _lang = str(lang or "sr").lower().strip()
+    def _t(sr: str, en: str) -> str:
+        return en if _lang == "en" else sr
     wall = kitchen.get("wall", {}) or {}
     meta = kitchen.get("project", {}) or {}
-    room = str(meta.get("room", "") or kitchen.get("room_name", "") or "Kuhinja")
-    project_name = str(meta.get("name", "") or kitchen.get("project_name", "") or "Krojna Lista PRO")
+    room = str(meta.get("room", "") or kitchen.get("room_name", "") or _t("Kuhinja", "Kitchen"))
+    project_name = str(meta.get("name", "") or kitchen.get("project_name", "") or _t("Krojna Lista PRO", "Cut List PRO"))
     version = str(meta.get("version", "") or kitchen.get("version", "") or "v1")
     customer = str(meta.get("customer", "") or kitchen.get("customer_name", "") or "-")
-    wall_name = str(meta.get("wall_name", "") or wall.get("name", "") or "Zid A")
+    wall_name = str(meta.get("wall_name", "") or wall.get("name", "") or _t("Zid A", "Wall A"))
     measured_by = str(meta.get("measured_by", "") or "-")
     designed_by = str(meta.get("designed_by", "") or "-")
     workshop_note = str(
         meta.get("workshop_note", "")
-        or "U servisu raditi secenje i kantovanje po CUT merama. Otvore i posebne obrade proveriti po napomenama."
+        or _t(
+            "U servisu raditi secenje i kantovanje po CUT merama. Otvore i posebne obrade proveriti po napomenama.",
+            "In the workshop, do cutting and edging strictly by CUT dimensions. Verify openings and special machining against the notes.",
+        )
     )
     today = datetime.now().strftime("%d.%m.%Y %H:%M")
 
     return pd.DataFrame([
-        {"Polje": "Projekat", "Vrednost": project_name},
-        {"Polje": "Kupac", "Vrednost": customer},
-        {"Polje": "Prostorija", "Vrednost": room},
-        {"Polje": "Zid", "Vrednost": wall_name},
-        {"Polje": "Mera zida", "Vrednost": f"{wall.get('length_mm', 0)} x {wall.get('height_mm', 0)} mm"},
-        {"Polje": "Verzija", "Vrednost": version},
-        {"Polje": "Generisano", "Vrednost": today},
-        {"Polje": "Merio", "Vrednost": measured_by},
-        {"Polje": "Crtano", "Vrednost": designed_by},
-        {"Polje": "Napomena za servis", "Vrednost": workshop_note},
+        {"Polje": _t("Projekat", "Project"), "Vrednost": project_name},
+        {"Polje": _t("Kupac", "Customer"), "Vrednost": customer},
+        {"Polje": _t("Prostorija", "Room"), "Vrednost": room},
+        {"Polje": _t("Zid", "Wall"), "Vrednost": wall_name},
+        {"Polje": _t("Mera zida", "Wall size"), "Vrednost": f"{wall.get('length_mm', 0)} x {wall.get('height_mm', 0)} mm"},
+        {"Polje": _t("Verzija", "Version"), "Vrednost": version},
+        {"Polje": _t("Generisano", "Generated"), "Vrednost": today},
+        {"Polje": _t("Merio", "Measured by"), "Vrednost": measured_by},
+        {"Polje": _t("Crtano", "Designed by"), "Vrednost": designed_by},
+        {"Polje": _t("Napomena za servis", "Workshop note"), "Vrednost": workshop_note},
     ])
+
+
+def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> Any:
+    txt = str(value or "")
+    col = str(column or "")
+    _lang = str(lang or "sr").lower().strip()
+
+    if _lang != "en":
+        replacements = {
+            "ploca za kuvanje": "ploča za kuvanje",
+            "plocu za kuvanje": "ploču za kuvanje",
+            "Otvor za plocu": "Otvor za ploču",
+            "sarke": "šarke",
+            "sarki": "šarki",
+            "busenje:": "bušenje:",
+            "O35mm": "Ø35mm",
+            "sablonu": "šablonu",
+            "radnoj ploci": "radnoj ploči",
+            "radnu plocu": "radnu ploču",
+            "radna ploca": "radna ploča",
+            "Radna ploca": "Radna ploča",
+            "sina": "šina",
+            "Sipka": "Šipka",
+            "sipka": "šipka",
+            "vesanje": "vešanje",
+            "odece": "odeće",
+            "nosaca": "nosača",
+            "Nosaci": "Nosači",
+            "nosaci": "nosači",
+            "nosac": "nosač",
+            "duzina": "dužina",
+            "sirina": "širina",
+        }
+        for src, dst in replacements.items():
+            txt = txt.replace(src, dst)
+        txt = txt.replace("višina", "visina").replace("Višina", "Visina")
+        return txt
+
+    if col in {"Zid", "Wall"}:
+        return txt.replace("Zid ", "Wall ")
+
+    if col in {"Modul", "Module"}:
+        txt = txt.replace("Sokla - Zid ", "Plinth - Wall ")
+        txt = txt.replace("Radna ploča - Zid ", "Worktop - Wall ")
+        txt = txt.replace("Radna ploca - Zid ", "Worktop - Wall ")
+        txt = txt.replace("Modul ", "Module ")
+        txt = txt.replace("Zid ", "Wall ")
+        txt = txt.replace("Donji (fioke)", "Base (drawers)")
+        txt = txt.replace("Donji uski (flaše/ulja/začini)", "Base narrow (bottles/oils/spices)")
+        txt = txt.replace("Donji uski (flase/ulja/zacini)", "Base narrow (bottles/oils/spices)")
+        txt = txt.replace("Donji otvoreni (bez vrata)", "Base open (no doors)")
+        txt = txt.replace("Donji (1 vrata)", "Base (1 door)")
+        txt = txt.replace("Donji (2 vrata)", "Base (2 doors)")
+        txt = txt.replace("Donji (vrata + fioka)", "Base (doors + drawer)")
+        txt = txt.replace("Donji (sudopera)", "Base (sink)")
+        return txt
+
+    if col in {"Pozicija", "Position"}:
+        mapping = {
+            "LEVO": "LEFT",
+            "DESNO": "RIGHT",
+            "GORE": "TOP",
+            "DOLE": "BOTTOM",
+            "CENTAR": "CENTER",
+            "SREDINA": "CENTER",
+            "PREDNJA": "FRONT",
+            "ZADNJA": "BACK",
+            "NAPRED": "FRONT",
+            "POZADI": "BACK",
+        }
+        return mapping.get(txt.upper(), txt)
+
+    if col in {"Kategorija", "Category"}:
+        mapping = {
+            "okov": "hardware",
+            "potrosni": "consumable",
+            "warning": "warning",
+        }
+        return mapping.get(txt.lower(), txt)
+
+    if col in {"Naziv", "Name"} and txt.startswith("UPOZORENJE"):
+        return txt.replace("UPOZORENJE", "WARNING")
+
+    if col in {"Deo", "Naziv", "Materijal", "Element", "Part", "Name", "Material", "Type / Code"}:
+        replacements = [
+            ("Iverica", "Chipboard"),
+            ("Šper ploča", "Plywood"),
+            ("Sper ploca", "Plywood"),
+            ("Puno drvo", "Solid wood"),
+            ("Akril", "Acrylic"),
+            ("Furnir", "Veneer"),
+            ("Lakobel", "Lacobel"),
+            ("Radna ploča", "Worktop"),
+            ("Radna ploča", "Worktop"),
+            ("Leva strana", "Left side"),
+            ("Leva stranica korpusa", "Left carcass side"),
+            ("Desna strana", "Right side"),
+            ("Desna stranica korpusa", "Right carcass side"),
+            ("Dno", "Bottom panel"),
+            ("Donja ploča korpusa", "Bottom carcass panel"),
+            ("Donja ploca korpusa", "Bottom carcass panel"),
+            ("Plafon", "Top panel"),
+            ("Gornja ploča korpusa", "Top carcass panel"),
+            ("Gornja ploca korpusa", "Top carcass panel"),
+            ("Srednja vertikala", "Center upright"),
+            ("Polica (podesiva)", "Adjustable shelf"),
+            ("Polica", "Shelf"),
+            ("Horizontalna pregrada", "Horizontal divider"),
+            ("Leđna ploča", "Back panel"),
+            ("Ledjna ploca", "Back panel"),
+            ("Leđna ploča — Krak 1", "Back panel - Arm 1"),
+            ("Leđna ploča — Krak 2", "Back panel - Arm 2"),
+            ("Front vrata", "Door front"),
+            ("Vrata (ispod ploče za kuvanje)", "Doors below hob"),
+            ("Vrata (ispod sudopere)", "Doors below sink"),
+            ("Vrata rerne", "Oven front"),
+            ("Front za rernu", "Oven front"),
+            ("Vrata", "Doors"),
+            ("Front fioke (kuhinjska jedinica)", "Drawer front below oven"),
+            ("Front fioke (ispod rerne)", "Drawer front below oven"),
+            ("Front fioke (unif.)", "Drawer front"),
+            ("Front fioke", "Drawer front"),
+            ("Front uskog izvlačnog modula", "Narrow pull-out front"),
+            ("Ugaoni front", "Corner front"),
+            ("Klizna vrata — američki plakar", "Sliding doors - American wardrobe"),
+            ("Klizna vrata — ormar", "Sliding wardrobe doors"),
+            ("Staklena vrata", "Glass doors"),
+            ("Front sortirnika", "Waste sorter front"),
+            ("Donji servisni front", "Lower service front"),
+            ("Front — mašina za sudove", "Dishwasher front"),
+            ("Front integrisanog frižidera", "Integrated fridge front"),
+            ("Gornji front frižidera", "Upper fridge front"),
+            ("Donji front zamrzivača", "Lower freezer front"),
+            ("Završna bočna ploča", "End side panel"),
+            ("Zavrsna bocna ploca", "End side panel"),
+            ("Bočna ploča", "Drawer box side"),
+            ("Bocna ploca", "Drawer box side"),
+            ("Bočna stranica sanduka fioke", "Drawer box side"),
+            ("Bocna stranica sanduka fioke", "Drawer box side"),
+            ("Prednja strana sanduka", "Drawer box front"),
+            ("Prednja strana sanduka fioke", "Drawer box front"),
+            ("Zadnja strana sanduka", "Drawer box back"),
+            ("Zadnja strana sanduka fioke", "Drawer box back"),
+            ("Dno sanduka", "Drawer box bottom"),
+            ("Dno sanduka fioke", "Drawer box bottom"),
+            ("Vezna letva — MZS (ugradna)", "Cross rail - built-in dishwasher"),
+            ("Sokla (lajsna)", "Plinth (toe kick)"),
+            ("Radna ploča", "Worktop"),
+            ("Radna ploča", "Worktop"),
+            ("Nosač radne ploče", "Worktop support"),
+            ("Nosač radne ploce", "Worktop support"),
+            ("Ledja / prolaz", "Back panel / opening"),
+            ("Zona prikljucka", "Connection zone"),
+            ("Ventilacija kolone", "Tall-unit ventilation"),
+            ("Drvena tipla", "Wooden dowel"),
+            ("Konfirmat vijak", "Confirmat screw"),
+            ("Klizač za fioku", "Drawer slide"),
+            ("Klizac za fioku", "Drawer slide"),
+            ("Nosač police (klin)", "Shelf support pin"),
+            ("Nosac police (klin)", "Shelf support pin"),
+            ("Ručka / pull", "Handle / pull"),
+            ("Stopica (nogica)", "Cabinet leg"),
+            ("Uski izvlačni mehanizam", "Narrow pull-out mechanism"),
+            ("Klipsa za soklu", "Plinth clip"),
+            ("Spojnica susednih korpusa", "Connector for adjacent cabinets"),
+            ("Vijak / ekser za leđa", "Screw / pin for back panel"),
+            ("Vijak / ekser za leđa", "Screw / pin for back panel"),
+            ("Vijak / ugaonik za radnu ploču", "Screw / bracket for worktop"),
+            ("Vijak za klizač", "Screw for drawer slide"),
+            ("Vijak za rucku", "Handle screw"),
+            ("Zaptivna lajsna / silikon uz zid", "Sealing trim / silicone along wall"),
+            ("Po izboru korisnika", "Selected by the customer"),
+            ("Podesiva h=100 mm", "Adjustable h=100 mm"),
+            ("Providna / sivi", "Transparent / grey"),
+            ("Providan / sivi", "Transparent / grey"),
+            ("Sortirnik / pull-out set", "Waste sorter / pull-out set"),
+            ("2x kanta + nosac", "2x bins + holder"),
+            ("2x kanta + nosač", "2x bins + holder"),
+            ("Baterija za sudoperu", "Sink tap"),
+            ("Ugradna sudopera", "Built-in sink"),
+            ("Sifon + preliv + spojnice", "Trap + overflow + connectors"),
+            ("Sifon i odvodni set", "Trap and drain set"),
+            ("Slavina", "Tap"),
+            ("Sudopera", "Sink"),
+            ("Postolje / nosač — MZS", "Dishwasher platform / support"),
+            ("Postolje / nosač - MZS", "Dishwasher platform / support"),
+            ("Postolje / nosac — MZS", "Dishwasher platform / support"),
+            ("Postolje / nosac - MZS", "Dishwasher platform / support"),
+            ("Donja maska — MZS", "Dishwasher lower filler"),
+            ("Donja maska - MZS", "Dishwasher lower filler"),
+            ("Zidna lajsna ili sanitarni silikon", "Wall trim or sanitary silicone"),
+            ("Spojnica korpusa + vijak", "Cabinet connector + screw"),
+            ("Vijak / ugaonik za radnu ploču", "Screw / bracket for worktop"),
+            ("M4 x 50mm vijak za rucku", "M4 x 50 mm handle screw"),
+            ("Tipl + vijak 8x80 mm", "Wall plug + screw 8x80 mm"),
+            ("Nosač + šina za viseće elemente", "Bracket + rail for wall units"),
+            ("Blum CLIP-top 110° (71B...)", "Blum CLIP-top 110° (71B...)"),
+            ("Kupuje se kao gotov kupovni izvlačni program", "Purchased as a ready-made pull-out system"),
+            ("Osnovno pričvršćenje leđa", "Basic back-panel fixing"),
+            ("Osnovni set", "Basic set"),
+            ("Zavrsno zaptivanje", "Final sealing"),
+            ("Ledjna ploca", "Leđna ploča"),
+            ("Nosač radne ploce", "Nosač radne ploče"),
+            ("Vijak za rucku", "Vijak za ručku"),
+            ("M4 x 50mm vijak za rucku", "M4 x 50mm vijak za ručku"),
+            ("Zastita", "Zaštita"),
+            ("iskljucivo", "isključivo"),
+            ("pricvrscenje", "pričvršćenje"),
+            ("nosace", "nosače"),
+            ("nosaca", "nosača"),
+            ("klizaca", "klizača"),
+            ("busenje:", "bušenje:"),
+            ("O35mm dubina", "Ø35mm dubina"),
+            ("ukljuceni", "uključeni"),
+            ("montazna ploca", "montažna ploča"),
+            ("radne ploce", "radne ploče"),
+            ("ploce na nosace", "ploče na nosače"),
+            ("po rucki", "po ručki"),
+            ("sinu ili", "šinu ili"),
+            ("za pricvrscenje", "za pričvršćenje"),
+            ("duzina", "dužina"),
+        ]
+        out = txt
+        for src, dst in replacements:
+            out = out.replace(src, dst)
+        return out
+
+    if col in {"Napomena", "Napomena za servis", "Instrukcija", "Stavka", "Sta radis", "Šta radiš", "Polje", "Note", "Instruction", "Item", "Field"}:
+        replacements = [
+            ("Element koristi nepoznat template_id '", "The unit uses an unknown template_id '"),
+            ("Proveri module_templates.json ili zameni element važećim template-om pre eksporta.", "Check module_templates.json or replace the unit with a valid template before export."),
+            ("Proveri module_templates.json ili zameni element važećim templateom pre eksporta.", "Check module_templates.json or replace the unit with a valid template before export."),
+            ("Element referiše na nepostojeći zid '", "The unit references a non-existent wall '"),
+            ("Postavi wall_key na jedan od važećih zidova: ", "Set wall_key to one of the valid walls: "),
+            ("Element ima nevažeće dimenzije", "The unit has invalid dimensions"),
+            ("Proveri širinu, visinu i dubinu elementa pre eksporta.", "Check the unit width, height, and depth before export."),
+            ("Preporuka:", "Recommendation:"),
+            ("Kupovni vodoinstalaterski set za sudoperu", "Purchased plumbing set for the sink"),
+            ("Kupuje se posebno prema izboru korisnika", "Purchased separately according to customer choice"),
+            ("Kupuje se kao gotov proizvod; otvor se reže u radnoj ploči prema šablonu", "Purchased as a ready-made product; the opening is cut into the worktop according to the template"),
+            ("Kupuje se kao gotov proizvod; otvor se reze u radnoj ploci prema sablonu", "Purchased as a ready-made product; the opening is cut into the worktop according to the template"),
+            ("Osnovno pricvrscenje", "Basic fixing"),
+            ("Osnovno pričvršćenje", "Basic fixing"),
+            ("Za pricvrscenje", "For fixing"),
+            ("Kupuje se posebno", "Purchased separately"),
+            ("Kupuje se kao gotov proizvod", "Purchased as a ready-made product"),
+            ("po izboru korisnika", "according to customer choice"),
+            ("Front fuga je ", "Front gap is "),
+            ("(van preporuke 1.0–4.0 mm).", "(outside the recommended 1.0-4.0 mm range)."),
+            ("Postavi front_gap na 2.0 mm za stabilnu montažu.", "Set front_gap to 2.0 mm for stable assembly."),
+            ("Dubina visećeg elementa ", "Wall unit depth "),
+            (" je velika za ergonomiju.", " is too deep for ergonomic use."),
+            ("Preporuka je 300–380 mm dubine za gornje elemente.", "Recommended wall-unit depth is 300-380 mm."),
+            ("Dubina donjeg elementa ", "Base unit depth "),
+            (" je mala za standardne uređaje/sudoperu.", " is too small for standard appliances or a sink."),
+            ("Preporuka je min 560 mm za kuhinjske donje module.", "Recommended minimum depth for kitchen base units is 560 mm."),
+            ("Dubina visokog elementa ", "Tall unit depth "),
+            (" je mala za stabilan kuhinjski korpus.", " is too small for a stable tall cabinet."),
+            ("Preporuka je min 560 mm za visoke elemente.", "Recommended minimum depth for tall units is 560 mm."),
+            ("Visoki element ", "Tall unit "),
+            (" je blizu/iznad raspoložive visine.", " is close to or above the available height."),
+            ("Smanji visinu ili proveri realnu visinu plafona i stopice.", "Reduce the height or verify the real ceiling and leg height."),
+            ("Element drugog reda nema pun oslonac na gornjem elementu ispod sebe.", "The second-row wall unit does not have full support on the wall unit below."),
+            ("Poravnaj ga tako da cela širina leži na elementu ispod.", "Align it so the full width sits on the unit below."),
+            ("Popuna iznad visokog nema pun oslonac na visokom elementu ispod sebe.", "The infill above the tall unit does not have full support on the tall unit below."),
+            ("Poravnaj je tako da cela širina leži na elementu ispod.", "Align it so the full width sits on the unit below."),
+            ("Fioke na dubini ", "Drawer unit at depth "),
+            (" mogu imati ograničen izbor klizača.", " may have a limited choice of drawer slides."),
+            ("Koristi kraće klizače (npr. 350/400) ili povećaj dubinu korpusa.", "Use shorter slides (for example 350/400) or increase cabinet depth."),
+            ("Lift-up front širine ", "Lift-up front with width "),
+            (" može biti pretežak.", " may be too heavy."),
+            ("Razdvoj front na 2 segmenta ili koristi jači/međupodupirač.", "Split the front into 2 segments or use stronger hardware/support."),
+            ("Širina za mašinu za sudove ", "Dishwasher niche width "),
+            (" je manja od standardnih 600 mm.", " is smaller than the standard 600 mm."),
+            ("Povećaj širinu na najmanje 600 mm.", "Increase the width to at least 600 mm."),
+            ("Širina za frižider ", "Fridge niche width "),
+            ("Širina za rernu/ploču ", "Oven/hob niche width "),
+            ("Samostalna ploča za kuvanje širine ", "Standalone hob width "),
+            (" je manja od minimalnih 450 mm.", " is below the minimum 450 mm."),
+            ("Standardne ploče su 45 cm, 60 cm ili 90 cm — povećaj širinu.", "Standard hobs are 45 cm, 60 cm or 90 cm - increase the width."),
+            ("Širina visoke appliance kolone ", "Tall appliance column width "),
+            ("Sudoperski element širine ", "Sink base unit width "),
+            (" je suviše mali za stabilan laički workflow.", " is too small for a stable standard workflow."),
+            ("Koristi najmanje 600 mm širine.", "Use at least 600 mm of width."),
+            ("Ugaoni element širine ", "Corner unit width "),
+            (" je rizičan za stabilan raspored i pristup uglu.", " is risky for a stable layout and corner access."),
+            ("Povećaj širinu na najmanje 800 mm.", "Increase the width to at least 800 mm."),
+            ("Ugaoni element nije naslonjen na unutrasnji ugao zida A.", "The corner unit is not aligned to the inside corner of Wall A."),
+            ("Postavi ga kao poslednji element desno, uz unutrasnji ugao.", "Place it as the last unit on the right, against the inside corner."),
+            ("Ugaoni element nije naslonjen na unutrasnji ugao zida ", "The corner unit is not aligned to the inside corner of Wall "),
+            ("Postavi ga kao prvi element ", "Place it as the first unit "),
+            (" uz unutrasnji ugao.", " against the inside corner."),
+            ("Širina modula za napu/mikrotalasnu ", "Hood/microwave unit width "),
+            ("Dubina modula za napu/mikrotalasnu ", "Hood/microwave unit depth "),
+            (" je mala za uređaj i ventilaciju.", " is too small for the appliance and ventilation."),
+            ("Povećaj dubinu na najmanje 300 mm.", "Increase the depth to at least 300 mm."),
+            ("Dubina samostojećeg uređaja ", "Freestanding appliance depth "),
+            (" je manja od praktičnog minimuma 580 mm.", " is below the practical minimum of 580 mm."),
+            ("Povećaj dubinu na najmanje 580 mm.", "Increase the depth to at least 580 mm."),
+            ("Dubina samostojećeg frižidera ", "Freestanding fridge depth "),
+            (" je manja od 600 mm.", " is below 600 mm."),
+            ("Povećaj dubinu na najmanje 600 mm.", "Increase the depth to at least 600 mm."),
+            ("Dubina visoke appliance kolone ", "Tall appliance column depth "),
+            (" je manja od 560 mm.", " is below 560 mm."),
+            ("Povećaj dubinu na najmanje 560 mm.", "Increase the depth to at least 560 mm."),
+            ("Jednokrilni front širine ", "Single-door front width "),
+            (" može biti nestabilan i težak za podešavanje.", " may be unstable and hard to adjust."),
+            ("Podeli element na 2 vrata ili smanji širinu.", "Split the unit into 2 doors or reduce the width."),
+            ("Jednokrilna vrata su preblizu levom zidu na strani sarke.", "The single door is too close to the left wall on the hinge side."),
+            ("Promeni stranu rucke ili dodaj filer 30-50 mm uz levi zid.", "Change the handle side or add a 30-50 mm filler next to the left wall."),
+            ("Jednokrilna vrata su preblizu desnom zidu na strani sarke.", "The single door is too close to the right wall on the hinge side."),
+            ("Promeni stranu rucke ili dodaj filer 30-50 mm uz desni zid.", "Change the handle side or add a 30-50 mm filler next to the right wall."),
+            ("Bar jedna fioka je niža od 80 mm, što je rizično za front i rukovanje.", "At least one drawer front is lower than 80 mm, which is risky for the front and handling."),
+            ("Povećaj najmanju fioku na barem 80 mm.", "Increase the smallest drawer to at least 80 mm."),
+            ("Zbir visina fioka ", "Total drawer heights "),
+            (" je vrlo blizu visine modula ", " are very close to the unit height "),
+            ("Ostavi tehničku rezervu 10–20 mm za fuge i frontove.", "Leave a 10-20 mm technical allowance for gaps and fronts."),
+            ("Vrata u kombinaciji vrata + fioka imaju samo ", "In the doors + drawer combination, the doors are only "),
+            (" mm visine.", " mm high."),
+            ("Povećaj vrata na najmanje 180 mm.", "Increase the doors to at least 180 mm."),
+            ("Vrata u kombinaciji vrata + fioka uzimaju skoro celu visinu modula (", "In the doors + drawer combination, the doors take almost the full unit height ("),
+            ("Ostavi barem 120 mm za fioku i tehničke fuge.", "Leave at least 120 mm for the drawer and technical gaps."),
+            ("Proveri pristup instalaciji i ostavi servisni prostor.", "Check installation access and leave service space."),
+            ("Raised dishwasher", "Raised dishwasher"),
+            ("raised dishwasher", "raised dishwasher"),
+            ("Donja maska iznad sokle za raised dishwasher; ", "Lower filler above plinth for raised dishwasher; "),
+            ("Postolje/podizanje mašine za sudove ", "Dishwasher platform / lift "),
+            ("Postolje/podizanje mašine za sudove", "Dishwasher platform / lift"),
+            ("donja maska ", "lower filler "),
+            ("uz kontinualnu soklu", "with continuous plinth"),
+            ("Donji elementi na zidu ", "Base units on Wall "),
+            (" nisu u istoj ravni za kontinualnu radnu ploču.", " are not aligned for a continuous worktop."),
+            (" nisu u istoj ravni za kontinualnu radnu plocu.", " are not aligned for a continuous worktop."),
+            ("Top-level raspon je ", "Top-level range is "),
+            ("Poravnaj visine svih BASE elemenata pre radne ploče ili koristi poseban segment/raskid ploče.", "Align all BASE unit heights before the worktop or use a separate segment / worktop break."),
+            ("Poravnaj visine svih BASE elemenata pre radne ploce ili koristi poseban segment/raskid ploce.", "Align all BASE unit heights before the worktop or use a separate segment / worktop break."),
+            ("Potrebna dužina radne ploče za zid ", "Required worktop length for wall "),
+            ("Potrebna duzina radne ploce za zid ", "Required worktop length for wall "),
+            (" a najveća standardna nabavna dužina je ", " while the longest standard purchase length is "),
+            (" a najveca standardna nabavna duzina je ", " while the longest standard purchase length is "),
+            ("Dodaj spoj/raskid ploče, koristi duži komercijalni format ili naruči specijalnu radnu ploču.", "Add a worktop joint/break, use a longer commercial stock length, or order a custom worktop."),
+            ("Dodaj spoj/raskid ploce, koristi duzi komercijalni format ili naruci specijalnu radnu plocu.", "Add a worktop joint/break, use a longer commercial stock length, or order a custom worktop."),
+            ("Izrez za sudoperu izlazi van radne ploče/modula", "The sink cut-out extends outside the worktop/unit"),
+            ("Izrez za sudoperu izlazi van radne ploce/modula", "The sink cut-out extends outside the worktop/unit"),
+            ("Izrez za ploču za kuvanje izlazi van radne ploče/modula", "The hob cut-out extends outside the worktop/unit"),
+            ("Izrez za plocu za kuvanje izlazi van radne ploce/modula", "The hob cut-out extends outside the worktop/unit"),
+            ("Smanji izrez ili ga pomeri tako da ostane unutar širine i dubine modula.", "Reduce the cut-out or move it so it stays within the unit width and depth."),
+            ("Smanji izrez ili ga pomeri tako da ostane unutar sirine i dubine modula.", "Reduce the cut-out or move it so it stays within the unit width and depth."),
+            ("Filer panel širine ", "Filler panel width "),
+            ("Filer panel sirine ", "Filler panel width "),
+            (" je širok za standardnu popunu prostora.", " is wide for a standard filler application."),
+            (" je sirok za standardnu popunu prostora.", " is wide for a standard filler application."),
+            ("Razmotri pravi završni panel ili poseban uski modul umesto širokog filera.", "Consider a proper end panel or a dedicated narrow unit instead of a wide filler."),
+            ("Razmotri pravi zavrsni panel ili poseban uski modul umesto sirokog filera.", "Consider a proper end panel or a dedicated narrow unit instead of a wide filler."),
+            ("Element izlazi van zida ", "The unit extends beyond Wall "),
+            (" > duzina zida ", " > wall length "),
+            ("Pomeri element ulevo ili smanjite mu sirinu da stane u raspored zida.", "Move the unit left or reduce its width so it fits the wall layout."),
+            ("Elementi se preklapaju u zoni ", "Units overlap in zone "),
+            (" na zidu ", " on Wall "),
+            ("Pomeri elemente tako da im se X-rasponi ne preklapaju.", "Move the units so their X ranges do not overlap."),
+            ("Ugaoni element i susedni modul nalezu bez servisnog razmaka: ", "The corner unit and adjacent module touch without a service gap: "),
+            ("Proveri frontove i rucke u otvaranju; po potrebi dodaj filer ili tehnicki razmak.", "Check door fronts and handles when opening; add a filler or technical gap if needed."),
+            ("Jednokrilni sused '", "Single-door adjacent unit '"),
+            ("' otvara vrata ka uglu pored ugaonog modula.", "' opens toward the corner next to the corner unit."),
+            ("Promeni stranu rucke ili koristi dvokrilni/fiokar pored ugla.", "Change the handle side or use a double-door or drawer unit next to the corner."),
+            ("' je preširok uz ugaoni modul (", "' is too wide next to the corner unit ("),
+            ("Koristi max ", "Use a maximum of "),
+            ("dvokrilni element, fiokar ili ostavi filer uz ugao.", "a double-door unit, a drawer unit, or leave a filler near the corner."),
+            ("Nema podataka.", "No data."),
+            ("Nema podataka po modulima.", "No unit data."),
+            ("Segment zida ", "Wall segment "),
+            ("raspon ", "range "),
+            ("1 segment na zidu ", "1 segment on wall "),
+            ("ukupna dužina base zone ", "total base-zone length "),
+            ("ukupna duzina base zone ", "total base-zone length "),
+            ("radna ploča počinje na x=", "worktop starts at x="),
+            ("radna ploca pocinje na x=", "worktop starts at x="),
+            ("radna ploča dužine ", "worktop length "),
+            ("radna ploca duzine ", "worktop length "),
+            ("Ugaono spajanje s Zidom A", "Corner joint with Wall A"),
+            ("rezati/stepenasto obradi levu stranu", "cut / stepped-machine the left side"),
+            ("rezati/stepenasto obradi desnu stranu", "cut / stepped-machine the right side"),
+            ("dubine Zida A", "of Wall A depth"),
+            ("Dužina segmenta: ", "Segment length: "),
+            ("Duzina segmenta: ", "Segment length: "),
+            ("Gornji vez", "Top rail"),
+            ("pričvršćuje radnu ploču", "secures the worktop"),
+            ("pricvrscuje radnu plocu", "secures the worktop"),
+            ("prednja ivica kantovana", "front edge edged"),
+            ("radna ploča", "worktop"),
+            ("radnoj ploci", "worktop"),
+            ("radna ploca", "worktop"),
+            ("zidu ", "wall "),
+            ("ploču za kuvanje", "hob"),
+            ("ploča za kuvanje", "hob"),
+            ("sudoperu", "sink"),
+            ("sudopere", "sink"),
+            ("slavina", "tap"),
+            ("sifon", "trap"),
+            ("ugradnu mikrotalasnu", "built-in microwave"),
+            ("ugradnu rernu", "built-in oven"),
+            ("ugradne MZS", "built-in dishwasher"),
+            ("ugradnog frižidera", "integrated fridge"),
+            ("frontovi", "fronts"),
+            ("korpuse", "carcasses"),
+            ("okove", "hardware"),
+            ("uredjaje", "appliances"),
+            ("servis", "workshop"),
+            ("secenje", "cutting"),
+            ("kantovanje", "edging"),
+            ("obradu", "machining"),
+            ("obrade", "machining"),
+            ("montazu", "assembly"),
+            ("kuce", "site"),
+            ("lice mesta", "on site"),
+            ("zidne elemente", "wall units"),
+            ("visoke", "tall units"),
+            ("proveriti", "verify"),
+            ("proveri", "check"),
+            ("izabrati", "choose"),
+            ("dodaj BASE elemente", "add BASE units"),
+        ]
+        out = txt
+        for src, dst in replacements:
+            out = out.replace(src, dst)
+        out = out.replace("Zid ", "Wall ")
+        out = out.replace("Modul ", "Module ")
+        out = out.replace("lajsna", "trim")
+        return out
+
+    return txt
+
+
+def _format_material_role(material: Any, thickness: Any, role: str, lang: str = "sr") -> str:
+    _lang = str(lang or "sr").lower().strip()
+    mat = str(material or "").strip()
+    thk = str(thickness or "").strip()
+    role_map_sr = {"carcass": "Korpus", "front": "Front", "back": "Leđa"}
+    role_map_en = {"carcass": "Carcass", "front": "Front", "back": "Back"}
+    role_label = (role_map_en if _lang == "en" else role_map_sr).get(role, role)
+    if not mat:
+        return f"{role_label} / {thk} mm" if thk else role_label
+    if role == "back":
+        if mat.upper() == "HDF":
+            mat = "HDF" if _lang == "en" else "HDF"
+        elif mat.lower() == "lesonit":
+            mat = "Lesonit"
+    mat_label = f"{mat} {role_label}"
+    return f"{mat_label} / {thk} mm" if thk else mat_label
+
+
+def _material_role_from_part_name(part_name: Any) -> str:
+    part = str(part_name or "").lower()
+    if any(k in part for k in ("leđ", "ledj", "ledn", "back")):
+        return "back"
+    if any(k in part for k in ("front", "vrata")):
+        return "front"
+    return "carcass"
+
+
+def _translate_export_df(df: pd.DataFrame | None, lang: str = "sr") -> pd.DataFrame | None:
+    if df is None or df.empty:
+        return df
+    out = df.copy()
+    for col in (
+        "Zid", "Wall",
+        "Modul", "Module",
+        "Deo", "Part",
+        "Pozicija", "Position",
+        "Kategorija", "Category",
+        "Naziv", "Name",
+        "Materijal", "Material",
+        "Element",
+        "Type / Code",
+        "Napomena", "Napomena za servis", "Note",
+        "Instrukcija", "Instruction",
+        "Stavka", "Item",
+        "Sta radis",
+        "Šta radiš",
+        "Polje", "Field",
+    ):
+        if col in out.columns:
+            out[col] = out[col].map(lambda v, _c=col: _translate_export_text(v, lang, _c))
+    return out
+
+
+def _sanitize_export_value(value: Any) -> Any:
+    if pd.isna(value):
+        return ""
+    if value is None:
+        return ""
+    txt = str(value).strip()
+    if txt.lower() in {"nan", "none", "null"}:
+        return ""
+    return value
+
+
+def _sanitize_export_df(
+    df: pd.DataFrame | None,
+    *,
+    require_positive_dims: bool = False,
+    part_col: str = "Deo",
+    material_col: str = "Materijal",
+    width_candidates: tuple[str, ...] = ("Dužina [mm]", "CUT_W [mm]", "width_mm"),
+    height_candidates: tuple[str, ...] = ("Sirina [mm]", "CUT_H [mm]", "height_mm"),
+) -> pd.DataFrame:
+    if df is None or df.empty:
+        return pd.DataFrame() if df is None else df.copy()
+    out = df.copy()
+    out = out.replace([pd.NA], "")
+    out = out.where(pd.notna(out), "")
+    for col in out.columns:
+        out[col] = out[col].map(_sanitize_export_value)
+    if require_positive_dims:
+        _part_ok = out[part_col].astype(str).str.strip().ne("") if part_col in out.columns else pd.Series(True, index=out.index)
+        _mat_ok = out[material_col].astype(str).str.strip().ne("") if material_col in out.columns else pd.Series(True, index=out.index)
+        _w_ok = pd.Series(True, index=out.index)
+        _h_ok = pd.Series(True, index=out.index)
+        for _wc in width_candidates:
+            if _wc in out.columns:
+                _w_ok = pd.to_numeric(out[_wc], errors="coerce").fillna(0).gt(0)
+                break
+        for _hc in height_candidates:
+            if _hc in out.columns:
+                _h_ok = pd.to_numeric(out[_hc], errors="coerce").fillna(0).gt(0)
+                break
+        out = out[_part_ok & _mat_ok & _w_ok & _h_ok].copy()
+    return out.reset_index(drop=True)
+
+
+def get_final_cutlist_dataset(kitchen: Dict[str, Any], lang: str = "sr") -> Dict[str, Any]:
+    _lang = str(lang or "sr").lower().strip()
+    raw_sections = generate_cutlist(kitchen)
+    sections: Dict[str, pd.DataFrame] = {}
+    for key, df in (raw_sections or {}).items():
+        _needs_dims = key in {"carcass", "backs", "fronts", "drawer_boxes", "worktop", "plinth"}
+        sections[key] = _translate_export_df(
+            _sanitize_export_df(df, require_positive_dims=_needs_dims),
+            _lang,
+        )
+    service_packet_raw = build_service_packet(kitchen, sections, lang=_lang)
+    service_packet: Dict[str, pd.DataFrame] = {}
+    for key, df in (service_packet_raw or {}).items():
+        _needs_dims = key in {"service_cuts", "service_edge"}
+        service_packet[key] = _translate_export_df(
+            _sanitize_export_df(
+                df,
+                require_positive_dims=_needs_dims,
+                part_col="Deo",
+                material_col="Materijal",
+                width_candidates=("CUT_W [mm]", "Dužina [mm]", "width_mm"),
+                height_candidates=("CUT_H [mm]", "Sirina [mm]", "height_mm"),
+            ),
+            _lang,
+        )
+    summary = generate_cutlist_summary(sections, lang=_lang)
+    for key, df in list(summary.items()):
+        summary[key] = _translate_export_df(
+            _sanitize_export_df(
+                df,
+                require_positive_dims=key in {"summary_all", "summary_detaljna", "summary_carcass", "summary_fronts", "summary_backs"},
+                part_col="Deo",
+                material_col="Materijal",
+                width_candidates=("Dužina [mm]",),
+                height_candidates=("Sirina [mm]",),
+            ),
+            _lang,
+        )
+    return {
+        "sections": sections,
+        "service_packet": service_packet,
+        "summary": summary,
+    }
+
+
+def _format_pdf_table_cell(value: Any, column_name: str | None = None) -> str:
+    try:
+        if pd.isna(value):
+            value = ""
+    except Exception:
+        pass
+    txt = str(value or "")
+    if txt.strip().lower() in {"nan", "none", "null"}:
+        txt = ""
+    col = str(column_name or "").strip().lower()
+    if col in {"zid", "wall", "cut_w [mm]", "cut_h [mm]", "kant", "edge"} and not txt.strip():
+        return "-"
+    note_cols = {
+        "napomena",
+        "napomena za servis",
+        "obrada / napomena",
+        "instrukcija",
+        "objašnjenje",
+        "objasnjenje",
+        "note",
+        "workshop note",
+        "instruction",
+        "explanation",
+    }
+    if col in {"sta radis", "šta radiš"} and txt:
+        txt = txt.replace("Sta radis", "Šta radiš")
+    if col in note_cols:
+        txt = txt.replace(" | ", "<br/>")
+        txt = txt.replace(" Preporuka: ", "<br/>Preporuka: ")
+        txt = txt.replace(" Recommendation: ", "<br/>Recommendation: ")
+        txt = txt.replace(". Finalni rez", ".<br/>Finalni rez")
+        txt = txt.replace(". Final cut", ".<br/>Final cut")
+    return txt
 
 
 def build_service_packet(
     kitchen: Dict[str, Any],
     sections: Dict[str, pd.DataFrame] | None = None,
+    lang: str = "sr",
 ) -> Dict[str, pd.DataFrame]:
     """Workshop-oriented packet: cuts, edging, processing, shopping, checklist."""
+    _lang = str(lang or "sr").lower().strip()
+    def _t(sr: str, en: str) -> str:
+        return en if _lang == "en" else sr
     sections = sections or generate_cutlist(kitchen)
     packet: Dict[str, pd.DataFrame] = {}
+    _profile_key = (kitchen.get("manufacturing", {}) or {}).get("profile", "EU_SRB")
+    _profile = MANUFACTURING_PROFILES.get(_profile_key, MANUFACTURING_PROFILES["EU_SRB"])
+    front_gap = float(_profile.get("front_gap_mm", 2.0))
 
-    header_df = build_project_header(kitchen)
+    header_df = build_project_header(kitchen, lang=_lang)
     packet["project_header"] = header_df
 
     board_frames = []
@@ -2534,7 +3476,10 @@ def build_service_packet(
             .reset_index(drop=True)
         )
         service_cuts.insert(0, "RB", range(1, len(service_cuts) + 1))
-        service_cuts["Napomena za servis"] = "U servisu seci po CUT merama i proveri kantovanje u posebnoj tabeli"
+        service_cuts["Napomena za servis"] = _t(
+            "U servisu seci po CUT merama i proveri kantovanje u posebnoj tabeli",
+            "In the workshop, cut strictly by CUT dimensions and verify edging in the separate table",
+        )
         packet["service_cuts"] = service_cuts
 
         edge_df = board_df[
@@ -2585,23 +3530,23 @@ def build_service_packet(
             for _r in proc_df.to_dict("records"):
                 _nap = str(_r.get("Napomena", "") or "")
                 _nap_l = _nap.lower()
-                _tip = "Posebna obrada"
-                _izv = "Servis"
-                _osnov = "Po meri iz projekta"
+                _tip = _t("Posebna obrada", "Special machining")
+                _izv = _t("Servis", "Workshop")
+                _osnov = _t("Po meri iz projekta", "According to project dimensions")
                 if "utor" in _nap_l:
-                    _tip = "Utor za ledja"
+                    _tip = _t("Utor za ledja", "Back panel groove")
                 elif "sudoper" in _nap_l:
-                    _tip = "Otvor za sudoperu"
-                    _osnov = "Po šablonu proizvođača"
+                    _tip = _t("Otvor za sudoperu", "Sink cut-out")
+                    _osnov = _t("Po šablonu proizvođača", "According to the manufacturer's template")
                 elif "napa" in _nap_l or "ventil" in _nap_l:
-                    _tip = "Ventilacija / otvor"
-                    _osnov = "Po šablonu proizvođača"
+                    _tip = _t("Ventilacija / otvor", "Ventilation / opening")
+                    _osnov = _t("Po šablonu proizvođača", "According to the manufacturer's template")
                 elif "kabl" in _nap_l:
-                    _tip = "Prolaz za kabl"
-                    _izv = "Kuća / lice mesta"
+                    _tip = _t("Prolaz za kabl", "Cable pass-through")
+                    _izv = _t("Kuća / lice mesta", "On site")
                 elif "odvod" in _nap_l or "dovod" in _nap_l or "instal" in _nap_l:
-                    _tip = "Instalacioni prolaz"
-                    _izv = "Kuća / lice mesta"
+                    _tip = _t("Instalacioni prolaz", "Service pass-through")
+                    _izv = _t("Kuća / lice mesta", "On site")
                 proc_rows.append(_proc_row(
                     str(_r.get("PartCode", "")),
                     str(_r.get("Zid", "")),
@@ -2623,39 +3568,101 @@ def build_service_packet(
             _zid = f"Zid {str((_m or {}).get('wall_key', 'A') or 'A').upper()}"
             if _tid == "SINK_BASE":
                 proc_rows.append(_proc_row(
-                    f"M{_mid:02d}", _zid, _lbl, "Radna ploca", "-", "-", 1,
-                    "Otvor za sudoperu", "Servis", "Po šablonu proizvođača",
-                    "Izrezati otvor za sudoperu u radnoj ploci prema sablonu proizvodjaca sudopere.",
+                    f"M{_mid:02d}", _zid, _lbl, _t("Radna ploča", "Worktop"), "-", "-", 1,
+                    _t("Otvor za sudoperu", "Sink cut-out"), _t("Servis", "Workshop"), _t("Po šablonu proizvođača", "According to the manufacturer's template"),
+                    _t("Izrezati otvor za sudoperu u radnoj ploči prema šablonu proizvođača sudopere.", "Cut the sink opening in the worktop according to the sink manufacturer's template."),
                 ))
             elif _tid in {"BASE_COOKING_UNIT", "BASE_HOB"}:
                 proc_rows.append(_proc_row(
-                    f"M{_mid:02d}", _zid, _lbl, "Radna ploca", "-", "-", 1,
-                    "Otvor za plocu", "Servis", "Po šablonu proizvođača",
-                    "Izrezati otvor za plocu za kuvanje u radnoj ploci prema sablonu proizvodjaca.",
+                    f"M{_mid:02d}", _zid, _lbl, _t("Radna ploča", "Worktop"), "-", "-", 1,
+                    _t("Otvor za ploču", "Hob cut-out"), _t("Servis", "Workshop"), _t("Po šablonu proizvođača", "According to the manufacturer's template"),
+                    _t("Izrezati otvor za ploču za kuvanje u radnoj ploči prema šablonu proizvođača.", "Cut the hob opening in the worktop according to the manufacturer's template."),
                 ))
             elif _tid == "WALL_HOOD":
                 proc_rows.append(_proc_row(
-                    f"M{_mid:02d}", _zid, _lbl, "Ledja / prolaz", "-", "-", 1,
-                    "Ventilacija / otvor", "Servis", "Po šablonu proizvođača",
-                    "Obezbediti otvor i prolaz za odvod nape prema modelu i osi instalacije.",
+                    f"M{_mid:02d}", _zid, _lbl, _t("Ledja / prolaz", "Back panel / opening"), "-", "-", 1,
+                    _t("Ventilacija / otvor", "Ventilation / opening"), _t("Servis", "Workshop"), _t("Po šablonu proizvođača", "According to the manufacturer's template"),
+                    _t("Obezbediti otvor i prolaz za odvod nape prema modelu i osi instalacije.", "Provide the opening and duct path for the hood according to the model and the installation axis."),
+                ))
+            elif _tid == "FILLER_PANEL":
+                proc_rows.append(_proc_row(
+                    f"M{_mid:02d}", _zid, _lbl, _t("Filer panel", "Filler panel"), "-", "-", 1,
+                    _t("Vidljiva dekorativna ploča", "Visible decorative panel"), _t("Servis", "Workshop"), _t("Po meri iz projekta", "According to project dimensions"),
+                    _t("Obraditi kao usku završnu popunu; proveriti vidljive ivice i montažni zazor prema zidu/frontu.", "Treat as a narrow finishing filler; verify visible edges and installation clearance toward the wall/front."),
+                ))
+            elif _tid == "END_PANEL":
+                proc_rows.append(_proc_row(
+                    f"M{_mid:02d}", _zid, _lbl, _t("Završna bočna ploča", "End side panel"), "-", "-", 1,
+                    _t("Vidljiva dekorativna ploča", "Visible decorative panel"), _t("Servis", "Workshop"), _t("Po meri iz projekta", "According to project dimensions"),
+                    _t("Obraditi kao završnu bočnu stranu; proveriti smer goda, vidljive ivice i eventualni prepust.", "Treat as the finished end side; verify grain direction, visible edges, and any reveal."),
                 ))
             elif _tid == "WALL_MICRO":
                 proc_rows.append(_proc_row(
-                    f"M{_mid:02d}", _zid, _lbl, "Ledja / prolaz", "-", "-", 1,
-                    "Prolaz za kabl", "Kuća / lice mesta", "Po šablonu proizvođača",
-                    "Obezbediti prolaz za kabl i ventilacioni razmak za ugradnu mikrotalasnu.",
+                    f"M{_mid:02d}", _zid, _lbl, _t("Ledja / prolaz", "Back panel / opening"), "-", "-", 1,
+                    _t("Prolaz za kabl", "Cable pass-through"), _t("Kuća / lice mesta", "On site"), _t("Po šablonu proizvođača", "According to the manufacturer's template"),
+                    _t("Obezbediti prolaz za kabl i ventilacioni razmak za ugradnu mikrotalasnu.", "Provide a cable pass-through and the required ventilation gap for the built-in microwave."),
                 ))
             elif _tid == "BASE_DISHWASHER":
+                _dish = dishwasher_installation_metrics(kitchen, _m)
+                _raised = bool(_dish.get("dishwasher_raised_mode", False))
+                _platform_h = int(_dish.get("dishwasher_platform_height", 0))
+                _lower_fill_h = int(_dish.get("dishwasher_lower_filler_height", 0))
+                _lower_fill_cut_h = int(max(0.0, float(_lower_fill_h) - 2 * front_gap))
                 proc_rows.append(_proc_row(
-                    f"M{_mid:02d}", _zid, _lbl, "Zona prikljucka", "-", "-", 1,
-                    "Instalacioni prolaz", "Kuća / lice mesta", "Po meri iz projekta",
-                    "Proveriti prolaz creva i kabla za MZS bez konflikta sa korpusom i susednim elementima.",
+                    f"M{_mid:02d}", _zid, _lbl, _t("Zona prikljucka", "Connection zone"), "-", "-", 1,
+                    _t("Instalacioni prolaz", "Service pass-through"), _t("Kuća / lice mesta", "On site"), _t("Po meri iz projekta", "According to project dimensions"),
+                    _t(
+                        "Proveriti prolaz creva i kabla za MZS bez konflikta sa korpusom i susednim elementima.",
+                        "Check the hose and cable routing for the built-in dishwasher so it does not conflict with the cabinet or adjacent units.",
+                    ) + (
+                        "" if not _raised else
+                        _t(
+                            f" Raised mode: podici mašinu na postolje {_platform_h} mm i za servis koristiti CUT visinu donje maske {_lower_fill_cut_h} mm iznad kontinuirane sokle.",
+                            f" Raised mode: lift the appliance on a {_platform_h} mm platform and use the lower filler CUT height {_lower_fill_cut_h} mm above the continuous plinth.",
+                        )
+                    ),
                 ))
             elif _tid in {"TALL_FRIDGE", "TALL_FRIDGE_FREEZER"}:
                 proc_rows.append(_proc_row(
-                    f"M{_mid:02d}", _zid, _lbl, "Ventilacija kolone", "-", "-", 1,
-                    "Ventilacija / otvor", "Servis", "Po šablonu proizvođača",
-                    "Obezbediti ulaz/izlaz vazduha za integrisani rashladni uredjaj prema preporuci proizvodjaca.",
+                    f"M{_mid:02d}", _zid, _lbl, _t("Ventilacija kolone", "Tall-unit ventilation"), "-", "-", 1,
+                    _t("Ventilacija / otvor", "Ventilation / opening"), _t("Servis", "Workshop"), _t("Po šablonu proizvođača", "According to the manufacturer's template"),
+                    _t("Obezbediti ulaz/izlaz vazduha za integrisani rashladni uređaj prema preporuci proizvođača.", "Provide the intake and exhaust ventilation for the integrated cooling appliance according to the manufacturer's recommendations."),
+                ))
+
+        _wt_df = sections.get("worktop", pd.DataFrame())
+        if _wt_df is not None and not _wt_df.empty:
+            for _idx, _r in enumerate(_wt_df.to_dict("records"), start=1):
+                if str(_r.get("Deo", "") or "").strip().lower() not in {"radna ploča", "radna ploca", "worktop"}:
+                    continue
+                _zid = str(_r.get("Zid", "") or "")
+                _mod = str(_r.get("Modul", "") or _zid or f"Worktop {_idx}")
+                _req_raw = _r.get("Required length [mm]", 0)
+                _buy_raw = _r.get("Purchase length [mm]", 0)
+                _req = int(float(_req_raw)) if pd.notna(_req_raw) and str(_req_raw).strip() else 0
+                _buy = int(float(_buy_raw)) if pd.notna(_buy_raw) and str(_buy_raw).strip() else 0
+                _joint = str(_r.get("Joint type", "") or "").strip()
+                _cutouts = str(_r.get("Cutouts", "") or "").strip()
+                _field_cut = str(_r.get("Field cut", "") or "").strip().upper() == "TRUE"
+                _nap = _t(
+                    f"Zidna mera / finished dimension: {_req} mm. CUT osnova / purchase segment: {_buy} mm. Servis radi isključivo po CUT merama. Finalni rez na licu mesta.",
+                    f"Wall requirement / finished dimension: {_req} mm. CUT basis / purchase segment: {_buy} mm. Workshop works strictly by CUT dimensions. Final cut is done on site.",
+                )
+                if _joint:
+                    _nap += " " + _t(f"Spoj u uglu: {_joint}.", f"Corner joint: {_joint}.")
+                if _cutouts:
+                    _nap += " " + _t(f"Izrezi: {_cutouts}.", f"Cut-outs: {_cutouts}.")
+                proc_rows.append(_proc_row(
+                    f"W{_idx:02d}",
+                    _zid,
+                    _mod,
+                    _t("Radna ploča", "Worktop"),
+                    _r.get("Dužina [mm]", ""),
+                    _r.get("Sirina [mm]", ""),
+                    _r.get("Kol.", 1),
+                    _t("Priprema i finalni rez", "Preparation and final cut"),
+                    _t("Servis + lice mesta", "Workshop + on site") if _field_cut else _t("Servis", "Workshop"),
+                    _t("Po geometriji zida i šablonu", "According to wall geometry and template"),
+                    _nap,
                 ))
 
         if proc_rows:
@@ -2677,17 +3684,17 @@ def build_service_packet(
             _kat = str(_row.get("Kategorija", "")).lower()
             _mod = str(_row.get("Modul", ""))
             if any(_kw in _naziv for _kw in ("zidni nosac", "anker za zid", "anti-tip", "zidni ")):
-                return "Montaza na zid"
+                return _t("Montaza na zid", "Wall installation")
             if _mod == "Projekat":
-                return "Projektni potrosni materijal"
+                return _t("Projektni potrosni materijal", "Project consumables")
             if _kat == "okov":
-                return "Okovi i mehanizmi po elementu"
+                return _t("Okovi i mehanizmi po elementu", "Hardware and mechanisms by unit")
             if _kat == "potrosni":
-                return "Sitni materijal po elementu"
-            return "Kupuje se posebno"
+                return _t("Sitni materijal po elementu", "Consumables by unit")
+            return _t("Kupuje se posebno", "Purchased separately")
 
         shop_df["Grupa"] = shop_df.apply(_shopping_group, axis=1)
-        shop_df.loc[_ready_mask, "Grupa"] = "Kupuje se gotovo"
+        shop_df.loc[_ready_mask, "Grupa"] = _t("Kupuje se gotovo", "Purchased ready-made")
         shop_df = (
             shop_df.groupby(["Grupa", "Naziv", "Tip / Šifra"], as_index=False)
             .agg({"Kol.": "sum", "Napomena": "first"})
@@ -2696,61 +3703,61 @@ def build_service_packet(
         )
 
         extra_rows = [
-            {"Grupa": "Alat koji treba kod kuce", "Naziv": "Aku srafilica / odvijac", "Tip / Šifra": "-", "Kol.": 1,
-             "Napomena": "Treba za sklapanje korpusa i montazu okova"},
-            {"Grupa": "Alat koji treba kod kuce", "Naziv": "Metar + libela", "Tip / Šifra": "-", "Kol.": 1,
-             "Napomena": "Treba za proveru mera, ravni i nivelacije"},
-            {"Grupa": "Alat koji treba kod kuce", "Naziv": "Stege", "Tip / Šifra": "-", "Kol.": 2,
-             "Napomena": "Pomazu da delovi ostanu poravnati tokom sklapanja"},
+            {"Grupa": _t("Alat koji treba kod kuće", "Tools needed on site"), "Naziv": _t("Aku šrafilica / odvijač", "Cordless drill / driver"), "Tip / Šifra": "-", "Kol.": 1,
+             "Napomena": _t("Treba za sklapanje korpusa i montažu okova", "Needed for cabinet assembly and hardware installation")},
+            {"Grupa": _t("Alat koji treba kod kuće", "Tools needed on site"), "Naziv": _t("Metar + libela", "Tape measure + spirit level"), "Tip / Šifra": "-", "Kol.": 1,
+             "Napomena": _t("Treba za proveru mera, ravni i nivelacije", "Needed to verify dimensions, plumb and levelling")},
+            {"Grupa": _t("Alat koji treba kod kuće", "Tools needed on site"), "Naziv": _t("Stege", "Clamps"), "Tip / Šifra": "-", "Kol.": 2,
+             "Napomena": _t("Pomazu da delovi ostanu poravnati tokom sklapanja", "They help keep parts aligned during assembly")},
         ]
         if any(str((m or {}).get("zone", "")).lower() in ("wall", "wall_upper", "tall") for m in (kitchen.get("modules", []) or [])):
             extra_rows.append({
-                "Grupa": "Za montazu na zid",
-                "Naziv": "Tipli / ankeri za zid",
+                "Grupa": _t("Za montažu na zid", "For wall installation"),
+                "Naziv": _t("Tipli / ankeri za zid", "Wall plugs / anchors"),
                 "Tip / Šifra": "-",
                 "Kol.": 1,
-                "Napomena": "Izabrati prema tipu zida na licu mesta",
+                "Napomena": _t("Izabrati prema tipu zida na licu mesta", "Choose according to the actual wall type on site"),
             })
         shop_df = pd.concat([shop_df, pd.DataFrame(extra_rows)], ignore_index=True)
         packet["shopping_list"] = shop_df
-        ready_df = shop_df[shop_df["Grupa"].astype(str) == "Kupuje se gotovo"].copy()
+        ready_df = shop_df[shop_df["Grupa"].astype(str) == _t("Kupuje se gotovo", "Purchased ready-made")].copy()
         if not ready_df.empty:
             packet["ready_made_items"] = ready_df.reset_index(drop=True)
 
     packet["user_guide"] = pd.DataFrame([
-        {"Korak": 1, "Sta radis": "Proveri projekat pre narucivanja", "Napomena": "Potvrdi zid, mere, verziju i da li je ovo poslednja izmena"},
-        {"Korak": 2, "Sta radis": "U servis nosis samo secenje, kantovanje i obradu", "Napomena": "Servis koristi samo tabele iz servis paketa"},
-        {"Korak": 3, "Sta radis": "Posebno kupujes gotove uredjaje, okove i alat", "Napomena": "To nije deo secenja i mora da se nabavi posebno"},
-        {"Korak": 4, "Sta radis": "Kod kuce razvrstas delove po modulu", "Napomena": "Prvo odvoji korpuse, zatim frontove, pa okove"},
-        {"Korak": 5, "Sta radis": "Prvo sklapas korpuse, pa vrata, fioke i uredjaje", "Napomena": "Visoke i zidne elemente obavezno pricvrsti za zid"},
+        {"Korak": 1, "Šta radiš": _t("Proveri projekat pre naručivanja", "Review the project before ordering"), "Napomena": _t("Potvrdi zid, mere, verziju i da li je ovo poslednja izmena", "Confirm the wall, dimensions, version and that this is the latest revision")},
+        {"Korak": 2, "Šta radiš": _t("U servis nosiš samo sečenje, kantovanje i obradu", "Take only cutting, edging and machining to the workshop"), "Napomena": _t("Servis koristi samo tabele iz servis paketa", "The workshop should work only from the workshop packet tables")},
+        {"Korak": 3, "Šta radiš": _t("Posebno kupuješ gotove uređaje, okove i alat", "Purchase ready-made appliances, hardware and tools separately"), "Napomena": _t("To nije deo sečenja i mora da se nabavi posebno", "These items are not part of cutting and must be sourced separately")},
+        {"Korak": 4, "Šta radiš": _t("Kod kuće razvrstaš delove po modulu", "Sort parts by unit on site"), "Napomena": _t("Prvo odvoji korpuse, zatim frontove, pa okove", "Separate carcass parts first, then fronts, then hardware")},
+        {"Korak": 5, "Šta radiš": _t("Prvo sklapaš korpuse, pa vrata, fioke i uređaje", "Assemble the carcasses first, then doors, drawers and appliances"), "Napomena": _t("Visoke i zidne elemente obavezno pričvrsti za zid", "Always secure tall and wall units to the wall")},
     ])
 
     packet["workshop_checklist"] = pd.DataFrame([
-        {"RB": 1, "Stavka": "Proveri da li su tacni materijal i debljine za korpus, front i ledja", "Status": ""},
-        {"RB": 2, "Stavka": "Proveri da li su upisane sve CUT mere i broj komada", "Status": ""},
-        {"RB": 3, "Stavka": "Proveri kantovanje po svakoj ivici pre predaje u servis", "Status": ""},
-        {"RB": 4, "Stavka": "Proveri da li su ubaceni frontovi, ledja, sokla i posebni paneli", "Status": ""},
-        {"RB": 5, "Stavka": "Proveri da li je sve sto se kupuje gotovo izdvojeno van secenja", "Status": ""},
-        {"RB": 6, "Stavka": "Proveri sve otvore i posebne obrade za instalacije i ventilaciju", "Status": ""},
-        {"RB": 7, "Stavka": "Proveri da shopping lista sadrzi okove, sitni materijal i alat", "Status": ""},
+        {"RB": 1, "Stavka": _t("Proveri da li su tačni materijal i debljine za korpus, front i leđa", "Check that the material and thickness values are correct for carcass, fronts and backs"), "Status": ""},
+        {"RB": 2, "Stavka": _t("Proveri da li su upisane sve CUT mere i broj komada", "Check that all CUT dimensions and quantities are listed"), "Status": ""},
+        {"RB": 3, "Stavka": _t("Proveri kantovanje po svakoj ivici pre predaje u servis", "Check edge banding on every edge before sending to the workshop"), "Status": ""},
+        {"RB": 4, "Stavka": _t("Proveri da li su ubačeni frontovi, leđa, sokla i posebni paneli", "Check that fronts, backs, plinths and special panels are included"), "Status": ""},
+        {"RB": 5, "Stavka": _t("Proveri da li je sve što se kupuje gotovo izdvojeno van sečenja", "Check that all ready-made purchased items are separated from cut parts"), "Status": ""},
+        {"RB": 6, "Stavka": _t("Proveri sve otvore i posebne obrade za instalacije i ventilaciju", "Check all openings and special machining for services and ventilation"), "Status": ""},
+        {"RB": 7, "Stavka": _t("Proveri da lista kupovine sadrži okove, sitni materijal i alat", "Check that the shopping list includes hardware, consumables and tools"), "Status": ""},
     ])
     packet["home_checklist"] = pd.DataFrame([
-        {"RB": 1, "Stavka": "Prebroj sve isečene ploce i uporedi ih sa listom", "Status": ""},
-        {"RB": 2, "Stavka": "Razvrstaj delove po elementu pre pocetka sklapanja", "Status": ""},
-        {"RB": 3, "Stavka": "Proveri da li su kupljeni svi okovi, uredjaji i alat", "Status": ""},
-        {"RB": 4, "Stavka": "Prvo sastavi korpuse, zatim vrata i fioke, pa tek onda uredjaje", "Status": ""},
-        {"RB": 5, "Stavka": "Visoke i zidne elemente obavezno pricvrsti za zid", "Status": ""},
+        {"RB": 1, "Stavka": _t("Prebroj sve isečene ploče i uporedi ih sa listom", "Count all cut panels and compare them against the list"), "Status": ""},
+        {"RB": 2, "Stavka": _t("Razvrstaj delove po elementu pre početka sklapanja", "Sort parts by unit before starting assembly"), "Status": ""},
+        {"RB": 3, "Stavka": _t("Proveri da li su kupljeni svi okovi, uređaji i alat", "Check that all hardware, appliances and tools have been purchased"), "Status": ""},
+        {"RB": 4, "Stavka": _t("Prvo sastavi korpuse, zatim vrata i fioke, pa tek onda uređaje", "Assemble the carcasses first, then doors and drawers, and only then the appliances"), "Status": ""},
+        {"RB": 5, "Stavka": _t("Visoke i zidne elemente obavezno pričvrsti za zid", "Always secure tall and wall units to the wall"), "Status": ""},
     ])
 
     packet["service_instructions"] = pd.DataFrame([
-        {"RB": 1, "Stavka": "Secenje", "Instrukcija": "Seci iskljucivo po CUT merama iz servis paketa."},
-        {"RB": 2, "Stavka": "Kantovanje", "Instrukcija": "Kantuj samo ivice oznacene u tabeli kantovanja i proveri tip ABS-a."},
-        {"RB": 3, "Stavka": "Obrade", "Instrukcija": "Posebne otvore, utore i ventilaciju radi samo tamo gde su eksplicitno navedeni."},
-        {"RB": 4, "Stavka": "Radna ploca", "Instrukcija": "Otvor za sudoperu ili plocu radi po sablonu proizvodjaca, ne po slobodnoj proceni."},
-        {"RB": 5, "Stavka": "Ko izvodi", "Instrukcija": "Kolona 'Izvodi' jasno razlikuje da li posao radi servis ili se obrada potvrđuje kod kuce / na licu mesta."},
-        {"RB": 6, "Stavka": "Po kom pravilu", "Instrukcija": "Kolona 'Osnov izvođenja' pokazuje da li se radi po meri iz projekta ili po šablonu proizvođača uređaja."},
-        {"RB": 7, "Stavka": "Instalacije", "Instrukcija": "Ako pozicija instalacija odstupa od projekta, obrade potvrditi pre secenja ili na licu mesta."},
-        {"RB": 8, "Stavka": "Kontrola", "Instrukcija": "Pre isporuke proveriti broj komada, oznake delova i da li su svi paneli/frontovi ukljuceni."},
+        {"RB": 1, "Stavka": _t("Sečenje", "Cutting"), "Instrukcija": _t("Seci isključivo po CUT merama iz servis paketa.", "Cut strictly by the CUT dimensions from the workshop packet.")},
+        {"RB": 2, "Stavka": _t("Kantovanje", "Edging"), "Instrukcija": _t("Kantuj samo ivice označene u tabeli kantovanja i proveri tip ABS-a.", "Apply edging only to the edges marked in the edging table and verify the ABS type.")},
+        {"RB": 3, "Stavka": _t("Obrade", "Machining"), "Instrukcija": _t("Posebne otvore, utore i ventilaciju radi samo tamo gde su eksplicitno navedeni.", "Make special openings, grooves and ventilation cuts only where they are explicitly specified.")},
+        {"RB": 4, "Stavka": _t("Radna ploča", "Worktop"), "Instrukcija": _t("Otvor za sudoperu ili ploču radi po šablonu proizvođača, ne po slobodnoj proceni.", "Cut the sink or hob opening according to the manufacturer's template, not by estimation.")},
+        {"RB": 5, "Stavka": _t("Ko izvodi", "Who performs it"), "Instrukcija": _t("Kolona 'Izvodi' jasno razlikuje da li posao radi servis ili se obrada potvrđuje kod kuće / na licu mesta.", "The 'Operations' column clearly shows whether the workshop performs the job or whether it must be confirmed on site.")},
+        {"RB": 6, "Stavka": _t("Po kom pravilu", "Execution basis"), "Instrukcija": _t("Kolona 'Osnov izvođenja' pokazuje da li se radi po meri iz projekta ili po šablonu proizvođača uređaja.", "The 'Execution basis' column shows whether the work follows project dimensions or the appliance manufacturer's template.")},
+        {"RB": 7, "Stavka": _t("Instalacije", "Services"), "Instrukcija": _t("Ako pozicija instalacija odstupa od projekta, obrade potvrditi pre sečenja ili na licu mesta.", "If the service positions differ from the project, confirm all machining before cutting or on site.")},
+        {"RB": 8, "Stavka": _t("Kontrola", "Final check"), "Instrukcija": _t("Pre isporuke proveriti broj komada, oznake delova i da li su svi paneli/frontovi uključeni.", "Before delivery, verify the piece count, part labels and that all panels/fronts are included.")},
     ])
 
     return packet
@@ -2759,10 +3766,83 @@ def build_service_packet(
 def build_cutlist_pdf_bytes(
     kitchen: Dict[str, Any],
     cutlist_sections: Dict[str, pd.DataFrame],
-    project_title: str = "Krojna lista PRO – M1 (један зид)",
+    project_title: str = "Krojna lista PRO - M1 (jedan zid)",
+    lang: str = "sr",
 ) -> bytes:
     _register_fonts()
-    service_packet = build_service_packet(kitchen, cutlist_sections)
+    _lang = str(lang or "sr").lower().strip()
+    def _t(sr: str, en: str) -> str:
+        return en if _lang == "en" else sr
+
+    def _pdf_clean_text(value: Any) -> str:
+        txt = str(value or "")
+        replacements = {
+            "â€“": "-",
+            "â€”": "-",
+            "â€œ": "\"",
+            "â€": "\"",
+            "â€˜": "'",
+            "â€™": "'",
+            "Ä": "č",
+            "Ä‡": "ć",
+            "Å¾": "ž",
+            "Å¡": "š",
+            "Ä‘": "đ",
+            "ÄŒ": "Č",
+            "Ä†": "Ć",
+            "Å½": "Ž",
+            "Å ": "Š",
+            "Ä": "Đ",
+            "LeÄ‘a": "Leđa",
+            "LeÄ‘na ploÄa": "Leđna ploča",
+            "BoÄna ploÄa": "Bočna ploča",
+            "ploÄa": "ploča",
+            "seÄenje": "sečenje",
+            "seÄi": "seci",
+            "ureÄ‘aji": "uređaji",
+            "sliÄno": "slično",
+            "potroÅ¡ni": "potrošni",
+            "MontaÅ¾na": "Montažna",
+            "montaÅ¾u": "montažu",
+            "vodiÄ": "vodič",
+            "kuÄ‡nog": "kućnog",
+            "potvrÄ‘uje": "potvrđuje",
+            "izvoÄ‘enja": "izvođenja",
+            "Å¡ablonu": "šablonu",
+            "proizvoÄ‘aÄa": "proizvođača",
+            "ureÄ‘aja": "uređaja",
+            "plocasti": "pločasti",
+            "ploca": "ploča",
+            "radna ploca": "radna ploča",
+            "Radna ploca": "Radna ploča",
+            "uredjaji": "uređaji",
+            "uredjaja": "uređaja",
+            "kucnog": "kućnog",
+            "kuce": "kuće",
+            "vodic": "vodič",
+            "kriticna": "kritična",
+            "Kriticna": "Kritična",
+            "secenje": "sečenje",
+            "Secenje": "Sečenje",
+            "srafilica": "šrafilica",
+            "sifra": "šifra",
+            "sablonu": "šablonu",
+            "proizvodjaca": "proizvođača",
+            "montaza": "montaža",
+            "Montaza": "Montaža",
+            "ledja": "leđa",
+            "Ledja": "Leđa",
+            "ubaceni": "ubačeni",
+            "precvrsti": "pričvrsti",
+            "pricvrsti": "pričvrsti",
+        }
+        for src, dst in replacements.items():
+            txt = txt.replace(src, dst)
+        return txt
+
+    service_packet = build_service_packet(kitchen, cutlist_sections, lang=lang)
+    display_sections = {k: _translate_export_df(v, _lang) for k, v in (cutlist_sections or {}).items()}
+    display_service_packet = {k: _translate_export_df(v, _lang) for k, v in (service_packet or {}).items()}
 
     # Pick a font that supports Cyrillic
     try:
@@ -2778,11 +3858,11 @@ def build_cutlist_pdf_bytes(
     profile = MANUFACTURING_PROFILES.get(profile_key, MANUFACTURING_PROFILES["EU_SRB"])
     mats = kitchen.get("materials", {}) or {}
 
-    materials_line = (
-        f"{mats.get('carcass_material','')}/{mats.get('carcass_thk',18)}, "
-        f"{mats.get('front_material','')}/{mats.get('front_thk',19)}, "
-        f"{mats.get('back_material','')}/{mats.get('back_thk',3)}"
-    )
+    materials_line = " | ".join([
+        _format_material_role(mats.get('carcass_material', ''), mats.get('carcass_thk', 18), 'carcass', _lang),
+        _format_material_role(mats.get('front_material', ''), mats.get('front_thk', 19), 'front', _lang),
+        _format_material_role(mats.get('back_material', ''), mats.get('back_thk', 3), 'back', _lang),
+    ])
 
     buf = BytesIO()
     doc = SimpleDocTemplate(
@@ -2822,19 +3902,72 @@ def build_cutlist_pdf_bytes(
     )
 
     # ---- Helper: napravi ReportLab tabelu iz DataFrame-a ----
+    # Landscape A4: 297mm - 2*10mm margina = 277mm upotrebljive sirine
+    _PAGE_W_MM = 277.0
+    # Podrazumevane sirine kolona po imenu (u mm)
+    _COL_W: Dict[str, float] = {
+        "RB": 10, "PartCode": 22, "Zid": 14, "Modul": 44, "Deo": 44,
+        "Pozicija": 16, "SklopKorak": 14, "Kom": 11, "Kol.": 11,
+        "Dužina [mm]": 18, "Sirina [mm]": 18, "Deb.": 11, "Deb. [mm]": 11,
+        "Visina [mm]": 16, "CUT_W [mm]": 18, "CUT_H [mm]": 18,
+        "Materijal": 36, "Smer goda": 16, "Orijentacija": 20,
+        "L1": 9, "L2": 9, "K1": 9, "K2": 9, "Kant": 16,
+        "Napomena": 32, "Napomena za servis": 32,
+        "Tip obrade": 18, "Izvodi": 14, "Osnov izvođenja": 20,
+        "Obrada / napomena": 28, "Stavka": 28, "Instrukcija": 50,
+        "Polje": 40, "Vrednost": 60,
+        "ID": 10, "TYPE": 12, "Element": 30, "Naziv": 36,
+        "Tip / Šifra": 28, "Kategorija": 20,
+    }
+
     def _df_to_table(df: pd.DataFrame, cols: List[str]) -> Table:
-        _available_cols = [c for c in cols if c in df.columns]
-        data = [_available_cols] + df[_available_cols].astype(str).fillna("").values.tolist()
-        tbl = Table(data, repeatRows=1)
+        _table_df = df.copy()
+        for _fin_col, _cut_col in (("Dužina [mm]", "CUT_W [mm]"), ("Sirina [mm]", "CUT_H [mm]")):
+            if _fin_col in _table_df.columns and _cut_col in _table_df.columns:
+                _table_df[_fin_col] = _table_df[_fin_col].where(
+                    _table_df[_fin_col].notna() & (_table_df[_fin_col].astype(str).str.strip().str.lower() != "nan") & (_table_df[_fin_col].astype(str).str.strip() != ""),
+                    _table_df[_cut_col],
+                )
+        _available_cols = [c for c in cols if c in _table_df.columns]
+        _is_summary_table = _available_cols == [
+            "RB", "Deo", "Kom", "Dužina [mm]", "Sirina [mm]", "Deb.",
+            "Materijal", "Orijentacija", "L1", "L2", "K1", "K2",
+        ]
+        # Izracunaj colWidths — skaliraj na ukupnu sirinu stranice
+        if _is_summary_table:
+            _summary_w = {
+                "RB": 7, "Deo": 28, "Kom": 9, "Dužina [mm]": 15, "Sirina [mm]": 15,
+                "Deb.": 7, "Materijal": 21, "Orijentacija": 9, "L1": 6, "L2": 6, "K1": 6, "K2": 6,
+            }
+            _raw_w = [_summary_w.get(c, _COL_W.get(c, 20)) for c in _available_cols]
+        else:
+            _raw_w = [_COL_W.get(c, 20) for c in _available_cols]
+        _total_raw = sum(_raw_w)
+        _scale = _PAGE_W_MM / _total_raw if _total_raw > 0 else 1.0
+        _cw = [w * _scale * mm for w in _raw_w]
+        # Stilovi za Paragraph unutar celija (tekst se prelama umesto da izlazi van)
+        _font_size = 6.0 if _is_summary_table else 7
+        _leading = 7.0 if _is_summary_table else 8.5
+        _pad_lr = 0.8 if _is_summary_table else 3
+        _th = ParagraphStyle("th_tbl", fontName=FONT_BOLD, fontSize=_font_size, leading=_leading,
+                             wordWrap="CJK")
+        _td = ParagraphStyle("td_tbl", fontName=FONT_REGULAR, fontSize=_font_size, leading=_leading,
+                             wordWrap="CJK")
+        header = [Paragraph(_pdf_clean_text(c), _th) for c in _available_cols]
+        rows = []
+        for row_vals in _table_df[_available_cols].fillna("").astype(object).values.tolist():
+            rows.append([
+                Paragraph(_pdf_clean_text(_format_pdf_table_cell(v, c)), _td)
+                for c, v in zip(_available_cols, row_vals)
+            ])
+        data = [header] + rows
+        tbl = Table(data, repeatRows=1, colWidths=_cw)
         tbl.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EEEEEE")),
             ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
-            ("FONT", (0, 0), (-1, 0), FONT_BOLD),
-            ("FONT", (0, 1), (-1, -1), FONT_REGULAR),
-            ("FONTSIZE", (0, 0), (-1, -1), 7.5),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 3),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), _pad_lr),
+            ("RIGHTPADDING", (0, 0), (-1, -1), _pad_lr),
             ("TOPPADDING", (0, 0), (-1, -1), 2),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
             # Alternirajuce boje redova
@@ -2843,26 +3976,67 @@ def build_cutlist_pdf_bytes(
         ]))
         return tbl
 
+    def _rl_image_from_uri(uri: str, width_mm: float) -> RLImage | None:
+        txt = str(uri or "").strip()
+        if not txt.startswith("data:image/"):
+            return None
+        try:
+            header, payload = txt.split(",", 1)
+            raw = base64.b64decode(payload)
+            return RLImage(BytesIO(raw), width=width_mm * mm)
+        except Exception as ex:
+            _LOG.debug("Failed to decode preview image URI: %s", ex)
+            return None
+
     story: List[Any] = []
 
     # ---- Zaglavlje dokumenta ----
-    story.append(Paragraph(project_title, s_title))
+    story.append(Paragraph(_pdf_clean_text(project_title), s_title))
     story.append(Paragraph(
-        f"Profil: {profile.get('label', profile_key)} | Standard: {kitchen.get('standard', 'SRB')} | "
-        f"Generisano: {datetime.now().strftime('%d.%m.%Y %H:%M')}",
+        _pdf_clean_text(
+            f"{_t('Profil', 'Profile')}: {profile.get('label', profile_key)} | {_t('Standard', 'Standard')}: {kitchen.get('standard', 'SRB')} | "
+            f"{_t('Generisano', 'Generated')}: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        ),
         s_norm
     ))
-    story.append(Paragraph(f"Materijali: {materials_line}", s_norm))
+    story.append(Paragraph(_pdf_clean_text(f"{_t('Materijali', 'Materials')}: {materials_line}"), s_norm))
     story.append(Spacer(1, 4 * mm))
 
+    # ---- Kratko uputstvo za laika ----
+    story.append(Paragraph(_pdf_clean_text(_t("Kako koristiš ovaj dokument", "How to use this document")), s_h2))
+    _howto_df = pd.DataFrame([
+        {"Korak": 1, "Šta radiš": _t("Prvo proveri osnovne mere i materijale", "First check the main dimensions and materials"), "Napomena": _t("Ako ovde vidiš grešku, nemoj naručivati sečenje.", "If you see an error here, do not order cutting yet.")},
+        {"Korak": 2, "Šta radiš": _t("U servis nosi samo deo 'Za servis'", "Take only the 'For workshop' section to the workshop"), "Napomena": _t("Servis radi po CUT merama i napomenama iz tog dela.", "The workshop works by CUT dimensions and notes from that section.")},
+        {"Korak": 3, "Šta radiš": _t("Posebno kupi gotove uređaje, okove i alat", "Purchase ready-made appliances, hardware and tools separately"), "Napomena": _t("To nije deo sečenja i ne izrađuje se iz pločastog materijala.", "These items are not cut from board material.")},
+        {"Korak": 4, "Šta radiš": _t("Za sklapanje prati deo 'Za montažu'", "Use the 'For assembly' section during assembly"), "Napomena": _t("Radi redom: korpusi, frontovi, fioke, uređaji, završna provera.", "Follow the order: carcasses, fronts, drawers, appliances, final check.")},
+    ])
+    story.append(_df_to_table(_howto_df, ["Korak", "Šta radiš", "Napomena"]))
+    story.append(Spacer(1, 5 * mm))
+
+    story.append(Paragraph(_pdf_clean_text(_t("Legenda za početnika", "Beginner legend")), s_h2))
+    _legend_df = pd.DataFrame([
+        {"Pojam": _t("Deo", "Part"), "Objašnjenje": _t("Naziv ploče ili dela elementa.", "The name of the panel or unit part.")},
+        {"Pojam": _t("Kom", "Qty"), "Objašnjenje": _t("Koliko komada tog dela treba.", "How many pieces of that part are needed.")},
+        {"Pojam": _t("Deb.", "Thk."), "Objašnjenje": _t("Debljina ploče u milimetrima.", "Panel thickness in millimeters.")},
+        {"Pojam": _t("Dužina / Širina", "Length / Width"), "Objašnjenje": _t("Gotove mere dela.", "Finished part dimensions.")},
+        {"Pojam": _t("Materijal", "Material"), "Objašnjenje": _t("Od čega se deo izrađuje.", "What the part is made of.")},
+        {"Pojam": _t("Orijentacija", "Orientation"), "Objašnjenje": _t("Smer ploče ili dezena.", "Board or grain direction.")},
+        {"Pojam": _t("Kant", "Edge"), "Objašnjenje": _t("Koje ivice se kantuju.", "Which edges get edge banding.")},
+        {"Pojam": "L1 / L2 / K1 / K2", "Objašnjenje": _t("L1/L2 su duže ivice, K1/K2 su kraće ivice.", "L1/L2 are long edges, K1/K2 are short edges.")},
+        {"Pojam": "1 / 0", "Objašnjenje": _t("1 = kantuje se, 0 = ne kantuje se.", "1 = edged, 0 = not edged.")},
+        {"Pojam": "CUT", "Objašnjenje": _t("Mera za servis pre završne obrade, gde je primenljivo.", "Workshop size before final processing, where applicable.")},
+    ])
+    story.append(_df_to_table(_legend_df, ["Pojam", "Objašnjenje"]))
+    story.append(Spacer(1, 5 * mm))
+
     # ---- Radni nalog / project header ----
-    story.append(Paragraph("Radni nalog / project header", s_h2))
-    _hdr_df = service_packet.get("project_header", pd.DataFrame())
+    story.append(Paragraph(_pdf_clean_text(_t("Radni nalog", "Work order")), s_h2))
+    _hdr_df = display_service_packet.get("project_header", pd.DataFrame())
     if _hdr_df is not None and not _hdr_df.empty:
         story.append(_df_to_table(_hdr_df, ["Polje", "Vrednost"]))
     story.append(Spacer(1, 4 * mm))
 
-    # ---- Tehnicki crtez ----
+    # ---- Katalog prikaz ----
     try:
         from visualization import _render as _viz_render  # type: ignore
 
@@ -2871,10 +4045,10 @@ def build_cutlist_pdf_bytes(
         _viz_render(
             ax=_ax,
             kitchen=kitchen,
-            view_mode="tehnicki",
+            view_mode="katalog",
             show_grid=False,
             grid_mm=50,
-            show_bounds=True,
+            show_bounds=False,
             kickboard=True,
             ceiling_filler=False,
         )
@@ -2887,7 +4061,7 @@ def build_cutlist_pdf_bytes(
         _img = RLImage(_img_buf, width=270 * mm, height=70 * mm)
         story.append(_img)
     except Exception as _viz_err:
-        story.append(Paragraph(f"[Tehnicki crtez nije dostupan: {_viz_err}]", s_norm))
+        story.append(Paragraph(_pdf_clean_text(f"[{_t('Katalog slika nije dostupna', 'Catalog image is not available')}: {_viz_err}]"), s_norm))
 
     story.append(Spacer(1, 5 * mm))
 
@@ -2899,13 +4073,13 @@ def build_cutlist_pdf_bytes(
     wt_mm = int(round(float(wt.get("thickness", 0.0)) * 10.0))
     radna_visina = foot_mm + base_h + wt_mm
 
-    story.append(Paragraph("Koordinate projekta", s_h2))
+    story.append(Paragraph(_t("Koordinate projekta", "Project coordinates"), s_h2))
     _coord_data = [
-        ["Zid (duz. x vis.)", f"{wall.get('length_mm', 0):.0f} x {wall.get('height_mm', 0):.0f} mm"],
-        ["Stopice", f"{foot_mm} mm"],
-        ["Korpus donjih el.", f"{base_h} mm"],
-        ["Radna ploca debljina", f"{wt_mm} mm"],
-        ["Radna visina (ukupno)", f"{radna_visina} mm"],
+        [_t("Zid (duž. x vis.)", "Wall (L x H)"), f"{wall.get('length_mm', 0):.0f} x {wall.get('height_mm', 0):.0f} mm"],
+        [_t("Stopice", "Legs"), f"{foot_mm} mm"],
+        [_t("Korpus donjih el.", "Base carcass height"), f"{base_h} mm"],
+        [_t("Debljina radne ploče", "Worktop thickness"), f"{wt_mm} mm"],
+        [_t("Radna visina (ukupno)", "Working height (total)"), f"{radna_visina} mm"],
     ]
     _ct = Table(_coord_data)
     _ct.setStyle(TableStyle([
@@ -2921,99 +4095,160 @@ def build_cutlist_pdf_bytes(
     story.append(_ct)
     story.append(Spacer(1, 5 * mm))
 
+    # ---- Sekcijski marker: za korisnika ----
+    story.append(Paragraph(_t("ZA KORISNIKA", "FOR CUSTOMER"), s_h2))
+    story.append(Paragraph(
+        _t(
+            "Ovde proveravaš osnovne mere, važne panele i da li je projekat spreman za dalje korake.",
+            "Use this section to review the main dimensions, important panels and overall project readiness.",
+        ),
+        s_norm,
+    ))
+    story.append(Spacer(1, 2 * mm))
+
     # ---- Sumarna krojna lista (identično PDF strana 4) ----
-    _summary_pdf = generate_cutlist_summary(cutlist_sections)
+    _summary_pdf = generate_cutlist_summary(cutlist_sections, lang=_lang)
     df_sum_all = _summary_pdf.get("summary_all", pd.DataFrame())
 
-    story.append(Paragraph("Sumarna krojna lista — ploce", s_h2))
-    story.append(Paragraph("Dimenzije su gotove mere (posle kanta).", s_norm))
-    if df_sum_all is None or df_sum_all.empty:
-        story.append(Paragraph("Nema stavki.", s_norm))
-    else:
-        _cols_sum = ["RB", "Deo", "Kom", "Duzina [mm]", "Sirina [mm]", "Deb.",
+    story.append(Paragraph(_t("Sumarna krojna lista — ploče", "Summary cut list - panels"), s_h2))
+    story.append(Paragraph(_t("Dimenzije su gotove mere, posle kantovanja.", "Dimensions are finished sizes, after edging."), s_norm))
+    if df_sum_all is not None and not df_sum_all.empty:
+        df_sum_all = df_sum_all.copy()
+        if "Materijal" in df_sum_all.columns and "Deo" in df_sum_all.columns and "Deb." in df_sum_all.columns:
+            df_sum_all["Materijal"] = df_sum_all.apply(
+                lambda _r: _format_material_role(
+                    _r.get("Materijal", ""),
+                    _r.get("Deb.", ""),
+                    _material_role_from_part_name(_r.get("Deo", "")),
+                    _lang,
+                ),
+                axis=1,
+            )
+        _cols_sum = ["RB", "Deo", "Kom", "Dužina [mm]", "Sirina [mm]", "Deb.",
                      "Materijal", "Orijentacija", "L1", "L2", "K1", "K2"]
         story.append(_df_to_table(df_sum_all, _cols_sum))
-
-    story.append(Spacer(1, 8 * mm))
+        story.append(Spacer(1, 8 * mm))
 
     # ---- Sokla ----
-    story.append(Paragraph("Sokla (lajsna)", s_h2))
-    df_pl = cutlist_sections.get("plinth", pd.DataFrame())
-    if df_pl is None or df_pl.empty:
-        story.append(Paragraph("Nema sokle (dodaj BASE elemente).", s_norm))
-    else:
-        _cols_pl = ["ID", "Zid", "Deo", "Materijal", "Deb. [mm]", "Duzina [mm]", "Visina [mm]", "Kol.", "Napomena"]
+    df_pl = display_sections.get("plinth", pd.DataFrame())
+    if df_pl is not None and not df_pl.empty:
+        story.append(Paragraph(_t("Sokla (lajsna)", "Plinth / toe kick"), s_h2))
+        _cols_pl = ["ID", "Zid", "Deo", "Materijal", "Deb. [mm]", "Dužina [mm]", "Visina [mm]", "Kol.", "Napomena"]
         story.append(_df_to_table(df_pl, _cols_pl))
-
-    story.append(Spacer(1, 8 * mm))
+        story.append(Spacer(1, 8 * mm))
 
     # ---- Detaljna krojna lista po modulima (identično PDF strane 5-7) ----
     df_det = _summary_pdf.get("summary_detaljna", pd.DataFrame())
-    story.append(Paragraph("Detaljna krojna lista — po modulima", s_h2))
-    story.append(Paragraph("Svaki deo prikazan po modulu. Dimenzije su gotove mere (posle kanta).", s_norm))
-    if df_det is None or df_det.empty:
-        story.append(Paragraph("Nema podataka.", s_norm))
-    else:
-        _cols_det = ["PartCode", "Zid", "Modul", "Deo", "Pozicija", "SklopKorak", "Kom", "Duzina [mm]", "Sirina [mm]", "Deb.",
+    if df_det is not None and not df_det.empty:
+        story.append(Paragraph(_t("Detaljna krojna lista — po modulima", "Detailed cut list - by units"), s_h2))
+        story.append(Paragraph(_t("Svaki deo je prikazan po modulu. Dimenzije su gotove mere, posle kantovanja.", "Each part is shown by unit. Dimensions are finished sizes, after edging."), s_norm))
+        df_det = df_det.copy()
+        if "Materijal" in df_det.columns and "Deo" in df_det.columns and "Deb." in df_det.columns:
+            df_det["Materijal"] = df_det.apply(
+                lambda _r: _format_material_role(
+                    _r.get("Materijal", ""),
+                    _r.get("Deb.", ""),
+                    _material_role_from_part_name(_r.get("Deo", "")),
+                    _lang,
+                ),
+                axis=1,
+            )
+        _cols_det = ["PartCode", "Zid", "Modul", "Deo", "Pozicija", "SklopKorak", "Kom", "Dužina [mm]", "Sirina [mm]", "Deb.",
                      "Materijal", "Orijentacija", "L1", "L2", "K1", "K2"]
         story.append(_df_to_table(df_det, _cols_det))
-
-    story.append(Spacer(1, 8 * mm))
+        story.append(Spacer(1, 8 * mm))
 
     # ---- Servis paket ----
-    story.append(Paragraph("Servis paket za plocasti materijal", s_h2))
-    story.append(Paragraph("Ovo se nosi u servis: secenje po CUT merama, kantovanje po tabeli i obrade po napomenama.", s_norm))
-    _svc_cuts = service_packet.get("service_cuts", pd.DataFrame())
+    story.append(Paragraph(_t("ZA SERVIS", "FOR WORKSHOP"), s_h2))
+    story.append(Paragraph(
+        _t(
+            "Ovaj deo nosiš u servis. Servis radi po CUT merama, kantovanju i napomenama iz ovih tabela.",
+            "Take this section to the workshop. The workshop works by CUT dimensions, edging notes and machining notes from these tables.",
+        ),
+        s_norm,
+    ))
+    story.append(Spacer(1, 2 * mm))
+    story.append(Paragraph(_t("Servis paket za pločasti materijal", "Workshop packet for board material"), s_h2))
+    story.append(Paragraph(_t("Ovo se nosi u servis: sečenje po CUT merama, kantovanje po tabeli i obrade po napomenama.", "This goes to the workshop: cutting by CUT dimensions, edging by table, and machining by notes."), s_norm))
+    _svc_legend_df = pd.DataFrame([
+        {"Pojam": "CUT", "Objašnjenje": _t("Mera po kojoj servis seče ploču pre završne obrade.", "Size used by the workshop before final processing.")},
+        {"Pojam": _t("Kant", "Edge"), "Objašnjenje": _t("Ivica koja dobija kant traku.", "Edge that receives edge banding.")},
+        {"Pojam": _t("Kol.", "Qty"), "Objašnjenje": _t("Koliko komada servis treba da pripremi.", "How many pieces the workshop should prepare.")},
+        {"Pojam": _t("Napomena", "Note"), "Objašnjenje": _t("Dodatno objašnjenje za sečenje, kantovanje ili obradu.", "Extra instruction for cutting, edging or machining.")},
+    ])
+    story.append(_df_to_table(_svc_legend_df, ["Pojam", "Objašnjenje"]))
+    story.append(Spacer(1, 3 * mm))
+    _svc_cuts = display_service_packet.get("service_cuts", pd.DataFrame())
     if _svc_cuts is not None and not _svc_cuts.empty:
-        story.append(Paragraph("Tabela za secenje", s_norm))
+        story.append(Paragraph(_t("Tabela za sečenje", "Cutting table"), s_norm))
         story.append(_df_to_table(_svc_cuts, ["RB", "Zid", "Materijal", "Deb.", "CUT_W [mm]", "CUT_H [mm]", "Kant", "Kol.", "Napomena za servis"]))
         story.append(Spacer(1, 3 * mm))
-    _svc_edge = service_packet.get("service_edge", pd.DataFrame())
+    _svc_edge = display_service_packet.get("service_edge", pd.DataFrame())
     if _svc_edge is not None and not _svc_edge.empty:
-        story.append(Paragraph("Tabela za kantovanje", s_norm))
+        story.append(Paragraph(_t("Tabela za kantovanje", "Edging table"), s_norm))
         story.append(_df_to_table(_svc_edge, ["PartCode", "Zid", "Modul", "Deo", "Kol.", "CUT_W [mm]", "CUT_H [mm]", "Kant", "Napomena"]))
         story.append(Spacer(1, 3 * mm))
-    _svc_proc = service_packet.get("service_processing", pd.DataFrame())
+    _svc_proc = display_service_packet.get("service_processing", pd.DataFrame())
     if _svc_proc is not None and not _svc_proc.empty:
-        story.append(Paragraph("Tabela za obradu", s_norm))
+        _wt_spec = _svc_proc[
+            _svc_proc["Deo"].astype(str).str.lower().isin(["radna ploča", "radna ploca", "worktop"])
+        ].copy() if "Deo" in _svc_proc.columns else pd.DataFrame()
+        if _wt_spec is not None and not _wt_spec.empty:
+            story.append(Paragraph(_t("Specifikacija radne ploče", "Worktop specification"), s_h2))
+            story.append(Paragraph(
+                _t(
+                    "Servis radi isključivo po CUT merama. Finalni rez i prilagođavanje rade se na licu mesta.",
+                    "The workshop works strictly by CUT dimensions. Final trimming and fitting are done on site.",
+                ),
+                s_norm,
+            ))
+            _wt_cols = ["Zid", "Modul", "Kol.", "Tip obrade", "Izvodi", "Osnov izvođenja", "Obrada / napomena"]
+            story.append(_df_to_table(_wt_spec, _wt_cols))
+            story.append(Spacer(1, 3 * mm))
+        story.append(Paragraph(_t("Tabela za obradu", "Machining table"), s_norm))
         story.append(_df_to_table(_svc_proc, ["PartCode", "Zid", "Modul", "Deo", "CUT_W [mm]", "CUT_H [mm]", "Tip obrade", "Izvodi", "Osnov izvođenja", "Kol.", "Obrada / napomena"]))
         story.append(Spacer(1, 3 * mm))
-    _svc_instr = service_packet.get("service_instructions", pd.DataFrame())
+    _svc_instr = display_service_packet.get("service_instructions", pd.DataFrame())
     if _svc_instr is not None and not _svc_instr.empty:
-        story.append(Paragraph("Instrukcije za servis", s_norm))
+        story.append(Paragraph(_t("Instrukcije za servis", "Workshop instructions"), s_norm))
         story.append(_df_to_table(_svc_instr, ["RB", "Stavka", "Instrukcija"]))
         story.append(Spacer(1, 3 * mm))
-    story.append(Paragraph("Napomena: uredjaji, sudopera, slavina, sifon i slicno se kupuju kao gotovi proizvodi i ne ulaze u secenje.", s_norm))
+    story.append(Paragraph(_t("Napomena: uređaji, sudopera, slavina, sifon i slično kupuju se kao gotovi proizvodi i ne ulaze u sečenje.", "Note: appliances, sink, tap, trap, and similar items are purchased as ready-made products and are not part of the cutting list."), s_norm))
     story.append(Spacer(1, 8 * mm))
 
     # ---- Montazna mapa po modulu ----
-    story.append(Paragraph("Montazna mapa po modulu (orijentacija delova)", s_h2))
+    story.append(Paragraph(_t("ZA MONTAŽU", "FOR ASSEMBLY"), s_h2))
+    story.append(Paragraph(
+        _t(
+            "Ovde pratiš redosled sklapanja, raspored delova i završne kontrolne liste.",
+            "Use this section for assembly order, part orientation and final checklists.",
+        ),
+        s_norm,
+    ))
+    story.append(Spacer(1, 2 * mm))
+    story.append(Paragraph(_t("Montažna mapa po modulu (orijentacija delova)", "Assembly map by unit (part orientation)"), s_h2))
     _all_for_map = []
     for _k in ("carcass", "backs", "fronts", "drawer_boxes", "worktop", "plinth"):
-        _dfk = cutlist_sections.get(_k, pd.DataFrame())
+        _dfk = display_sections.get(_k, pd.DataFrame())
         if _dfk is not None and not _dfk.empty:
             _all_for_map.append(_dfk.copy())
-    if not _all_for_map:
-        story.append(Paragraph("Nema podataka.", s_norm))
-    else:
+    if _all_for_map:
         _mm = pd.concat(_all_for_map, ignore_index=True)
         if "ID" in _mm.columns:
             _mm["ID"] = pd.to_numeric(_mm["ID"], errors="coerce")
             _mm = _mm[_mm["ID"].notna()].copy()
-        if _mm.empty:
-            story.append(Paragraph("Nema podataka po modulima.", s_norm))
-        else:
+        if not _mm.empty:
             _mm["ID"] = _mm["ID"].astype(int)
             _mm["_korak"] = pd.to_numeric(_mm.get("SklopKorak", "-"), errors="coerce").fillna(99).astype(int)
             for _mid in sorted(_mm["ID"].unique().tolist()):
                 _mrows = _mm[_mm["ID"] == _mid].sort_values(["_korak", "PartCode"]).copy()
-                _modul = str(_mrows.iloc[0].get("Modul", f"Modul {_mid}"))
+                _modul = str(_mrows.iloc[0].get("Modul", _t(f"Modul {_mid}", f"Module {_mid}")))
                 story.append(Paragraph(f"#{_mid} - {_modul}", s_norm))
 
                 _map_data = [
-                    ["", "GORE", ""],
-                    ["LEVO", "CENTAR", "DESNO"],
-                    ["", "DOLE", ""],
+                    ["", _t("GORE", "TOP"), ""],
+                    [_t("LEVO", "LEFT"), _t("CENTAR", "CENTER"), _t("DESNO", "RIGHT")],
+                    ["", _t("DOLE", "BOTTOM"), ""],
                 ]
                 _map_tbl = Table(_map_data, colWidths=[18 * mm, 22 * mm, 18 * mm], rowHeights=[8 * mm, 10 * mm, 8 * mm])
                 _map_tbl.setStyle(TableStyle([
@@ -3045,68 +4280,219 @@ def build_cutlist_pdf_bytes(
 
     story.append(Spacer(1, 8 * mm))
 
+    # ---- Po elementima: detalji i sklapanje ----
+    _mods = kitchen.get("modules", []) or []
+    if _all_for_map and _mods:
+        story.append(PageBreak())
+        story.append(Paragraph(_t("Po elementima - detalji i sklapanje", "By unit - details and assembly"), s_h2))
+        story.append(Paragraph(
+            _t(
+                "Za svaki element su povezani slika, oznake delova, tabela i redosled sklapanja.",
+                "Each unit links the image, part labels, table and assembly order.",
+            ),
+            s_norm,
+        ))
+        story.append(Spacer(1, 2 * mm))
+        story.append(Paragraph(_t("Legenda oznaka", "Label legend"), s_norm))
+        story.append(Paragraph(_t("C = korpus, B = leđa, F = front, D = fioka", "C = carcass, B = back, F = front, D = drawer"), s_norm))
+        story.append(Paragraph(_kant_legend(_lang), s_norm))
+        story.append(Spacer(1, 4 * mm))
+
+        _parts_all = pd.concat(_all_for_map, ignore_index=True)
+        if "ID" in _parts_all.columns:
+            _parts_all["ID"] = pd.to_numeric(_parts_all["ID"], errors="coerce")
+            _parts_all = _parts_all[_parts_all["ID"].notna()].copy()
+            _parts_all["ID"] = _parts_all["ID"].astype(int)
+
+        for _m in _mods:
+            _mid = int(_m.get("id", 0) or 0)
+            _mparts = _parts_all[_parts_all["ID"] == _mid].copy() if not _parts_all.empty else pd.DataFrame()
+            if _mparts.empty:
+                continue
+
+            _mlbl = str(_m.get("label", "") or "")
+            _mtid = str(_m.get("template_id", "") or "")
+            _mz = str(_m.get("zone", "") or "").lower()
+            _mw = int(_m.get("w_mm", 0) or 0)
+            _mh = int(_m.get("h_mm", 0) or 0)
+            _md = int(_m.get("d_mm", 0) or 0)
+            _wall = str(_m.get("wall_key", "") or "")
+
+            story.append(Paragraph(_pdf_clean_text(f"#{_mid} - {_mlbl}"), s_h2))
+            story.append(Paragraph(
+                _pdf_clean_text(
+                    _t(
+                        f"Tip: {_mtid}  |  Dimenzije: {_mw} x {_mh} x {_md} mm" + (f"  |  Zid: {_wall}" if _wall else ""),
+                        f"Type: {_mtid}  |  Dimensions: {_mw} x {_mh} x {_md} mm" + (f"  |  Wall: {_wall}" if _wall else ""),
+                    )
+                ),
+                s_norm,
+            ))
+            story.append(Spacer(1, 1 * mm))
+
+            try:
+                from visualization import render_element_preview  # local import to avoid circular import
+                _uri_2d, _uri_3d = render_element_preview(
+                    _m,
+                    kitchen,
+                    label_mode="part_codes",
+                    part_rows=_mparts.to_dict("records"),
+                )
+                _img2d = _rl_image_from_uri(_uri_2d, 72)
+                _img3d = _rl_image_from_uri(_uri_3d, 72)
+                _img_rows = []
+                if _img2d:
+                    _img_rows.append([Paragraph("2D", s_norm)])
+                    _img_rows.append([_img2d])
+                if _img3d:
+                    _img_rows.append([Paragraph("3D", s_norm)])
+                    _img_rows.append([_img3d])
+                if _img_rows:
+                    _img_tbl = Table(_img_rows, colWidths=[75 * mm])
+                    _img_tbl.setStyle(TableStyle([
+                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                        ("TOPPADDING", (0, 0), (-1, -1), 0),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                    ]))
+                    story.append(_img_tbl)
+                    story.append(Paragraph(_t("Oznake na slici prate istu oznaku kao u tabeli i koracima.", "Image labels use the same labels as the table and steps."), s_norm))
+                    story.append(Spacer(1, 2 * mm))
+            except Exception as ex:
+                _LOG.debug("By-unit preview render failed for module id=%s: %s", _mid, ex)
+
+            _map_parts = _mparts[["PartCode", "Deo", "Pozicija", "SklopKorak", "Kol."]].copy()
+            _map_parts["Oznaka"] = _map_parts["PartCode"].map(_short_part_code)
+            _map_parts["Deo"] = _map_parts["Deo"].map(lambda v: _friendly_part_name(v, _lang))
+            _map_parts["Pozicija"] = _map_parts["Pozicija"].map(lambda v: _friendly_position_name(v, _lang))
+            _map_parts = _map_parts.sort_values(["SklopKorak", "PartCode"]).reset_index(drop=True)
+            story.append(Paragraph(_t("Mapa delova za sklapanje", "Assembly parts map"), s_norm))
+            story.append(_df_to_table(_map_parts.rename(columns={"Oznaka": _t("Oznaka", "Label"), "Deo": _t("Deo", "Part"), "Pozicija": _t("Gde ide", "Where it goes"), "SklopKorak": _t("Korak", "Step"), "Kol.": _t("Kom.", "Qty")}), [_t("Oznaka", "Label"), _t("Deo", "Part"), _t("Gde ide", "Where it goes"), _t("Korak", "Step"), _t("Kom.", "Qty")]))
+            story.append(Spacer(1, 2 * mm))
+
+            _cuts = _mparts.copy()
+            _cuts["Oznaka"] = _cuts["PartCode"].map(_short_part_code)
+            _cuts["Deo"] = _cuts["Deo"].map(lambda v: _friendly_part_name(v, _lang))
+            for _fin_col, _cut_col in (("Dužina [mm]", "CUT_W [mm]"), ("Sirina [mm]", "CUT_H [mm]")):
+                if _cut_col in _cuts.columns:
+                    if _fin_col not in _cuts.columns:
+                        _cuts[_fin_col] = _cuts[_cut_col]
+                    else:
+                        _cuts[_fin_col] = _cuts[_fin_col].where(
+                            _cuts[_fin_col].notna() & (_cuts[_fin_col].astype(str).str.strip() != ""),
+                            _cuts[_cut_col],
+                        )
+            story.append(Paragraph(_t("Rezovi", "Cut parts"), s_norm))
+            story.append(_df_to_table(_cuts.rename(columns={"Oznaka": _t("Oznaka", "Label"), "Deo": _t("Deo", "Part"), "Kol.": _t("Kom.", "Qty"), "Dužina [mm]": _t("Dužina [mm]", "Length [mm]"), "Sirina [mm]": _t("Širina [mm]", "Width [mm]"), "Deb.": _t("Deb.", "Thk."), "Kant": _t("Kant", "Edge")}), [_t("Oznaka", "Label"), _t("Deo", "Part"), "Pozicija", "SklopKorak", _t("Dužina [mm]", "Length [mm]"), _t("Širina [mm]", "Width [mm]"), _t("Deb.", "Thk."), _t("Kom.", "Qty"), _t("Kant", "Edge")]))
+            story.append(Spacer(1, 2 * mm))
+
+            _role_notes: list[str] = []
+            for _, _pr in _mparts.iterrows():
+                _note = _part_role_note(
+                    _friendly_part_name(_pr.get("Deo", ""), _lang),
+                    _pr.get("Materijal", ""),
+                    _pr.get("Deb.", ""),
+                    _lang,
+                )
+                if _note and _note not in _role_notes:
+                    _role_notes.append(_note)
+            if _role_notes:
+                story.append(Paragraph(_t("Važne napomene o delovima", "Important part notes"), s_norm))
+                for _note in _role_notes:
+                    story.append(Paragraph(_pdf_clean_text(f"• {_note}"), s_norm))
+                story.append(Spacer(1, 1 * mm))
+
+            story.append(Paragraph(_t("Potreban alat i okov", "Required tools and hardware"), s_norm))
+            for _line in _module_tool_hardware_lines(_mtid, _mz, _lang):
+                story.append(Paragraph(_pdf_clean_text(f"• {_line}"), s_norm))
+            story.append(Spacer(1, 1 * mm))
+
+            story.append(Paragraph(_t("Proveri pre sklapanja", "Check before assembly"), s_norm))
+            for _line in _module_preassembly_lines(_mtid, _mz, _lang):
+                story.append(Paragraph(_pdf_clean_text(f"• {_line}"), s_norm))
+            story.append(Spacer(1, 1 * mm))
+
+            story.append(Paragraph(_t("Uputstvo za montažu", "Assembly instructions"), s_norm))
+            for _line in assembly_instructions(_mtid, _mz, m=_m, kitchen=kitchen, lang=_lang):
+                _txt = _pdf_clean_text(_line)
+                if not str(_txt).strip():
+                    story.append(Spacer(1, 1 * mm))
+                elif str(_txt).strip().startswith("--"):
+                    story.append(Paragraph(_txt.replace("--", "").strip(), s_h2))
+                else:
+                    story.append(Paragraph(_txt, s_norm))
+
+            story.append(Spacer(1, 4 * mm))
+            story.append(HRFlowable(width="100%", thickness=0.4, color=colors.grey))
+            story.append(Spacer(1, 4 * mm))
+
     # ---- Okovi ----
-    story.append(Paragraph("Okovi i potrosni materijal", s_h2))
-    df_hw = cutlist_sections.get("hardware", pd.DataFrame())
-    if df_hw is None or df_hw.empty:
-        story.append(Paragraph("Nema stavki.", s_norm))
-    else:
-        _cols_hw = ["PartCode", "Modul", "Kategorija", "Naziv", "Tip / Šifra", "Kol.", "SklopKorak", "Napomena"]
-        story.append(_df_to_table(df_hw, _cols_hw))
+    story.append(Paragraph(_t("Okovi i potrošni materijal", "Hardware and consumables"), s_h2))
+    df_hw = display_sections.get("hardware", pd.DataFrame())
+    if df_hw is not None and not df_hw.empty:
         if "Kategorija" in df_hw.columns:
             _wdf = df_hw[df_hw["Kategorija"].astype(str).str.lower() == "warning"]
             if _wdf is not None and not _wdf.empty:
-                story.append(Spacer(1, 4 * mm))
-                story.append(Paragraph("Kriticna upozorenja pre proizvodnje", s_h2))
+                story.append(Paragraph(_t("Kritična upozorenja pre proizvodnje", "Critical warnings before production"), s_h2))
                 _cols_w = ["Modul", "Naziv", "Napomena"]
                 story.append(_df_to_table(_wdf, _cols_w))
+                story.append(Spacer(1, 4 * mm))
+        _cols_hw = ["PartCode", "Modul", "Kategorija", "Naziv", "Tip / Šifra", "Kol.", "SklopKorak", "Napomena"]
+        story.append(_df_to_table(df_hw, _cols_hw))
 
     # ---- Shopping list ----
-    story.append(Spacer(1, 8 * mm))
-    story.append(Paragraph("Shopping list za laika", s_h2))
-    _shop_df = service_packet.get("shopping_list", pd.DataFrame())
-    if _shop_df is None or _shop_df.empty:
-        story.append(Paragraph("Nema stavki.", s_norm))
-    else:
+    _shop_df = display_service_packet.get("shopping_list", pd.DataFrame())
+    if _shop_df is not None and not _shop_df.empty:
+        story.append(Spacer(1, 8 * mm))
+        story.append(Paragraph(_t("Lista kupovine", "Shopping list"), s_h2))
+        story.append(Paragraph(_t("Ovde su stvari koje kupuješ posebno i ne idu na sečenje.", "These are items you purchase separately and they are not part of cutting."), s_norm))
         story.append(_df_to_table(_shop_df, ["Grupa", "Naziv", "Tip / Šifra", "Kol.", "Napomena"]))
 
-    _ready_df = service_packet.get("ready_made_items", pd.DataFrame())
+    _ready_df = display_service_packet.get("ready_made_items", pd.DataFrame())
     if _ready_df is not None and not _ready_df.empty:
         story.append(Spacer(1, 4 * mm))
-        story.append(Paragraph("Ovo se kupuje gotovo - ne ulazi u secenje", s_h2))
+        story.append(Paragraph(_t("Kupuje se kao gotov proizvod — ne ulazi u sečenje", "Purchased ready-made - not included in cutting"), s_h2))
         story.append(_df_to_table(_ready_df, ["Grupa", "Naziv", "Tip / Šifra", "Kol.", "Napomena"]))
 
-    _guide_df = service_packet.get("user_guide", pd.DataFrame())
+    _guide_df = display_service_packet.get("user_guide", pd.DataFrame())
     if _guide_df is not None and not _guide_df.empty:
         story.append(Spacer(1, 4 * mm))
-        story.append(Paragraph("Kratak vodic za korisnika", s_h2))
-        story.append(_df_to_table(_guide_df, ["Korak", "Sta radis", "Napomena"]))
+        story.append(Paragraph(_t("Kratak vodič za korisnika", "Quick user guide"), s_h2))
+        story.append(_df_to_table(_guide_df, ["Korak", "Šta radiš", "Napomena"]))
 
     story.append(Spacer(1, 8 * mm))
-    story.append(Paragraph("Checklist pre servisa i sklapanja", s_h2))
-    _wcl = service_packet.get("workshop_checklist", pd.DataFrame())
+    story.append(Paragraph(_t("Kontrolna lista pre servisa i sklapanja", "Checklist before workshop and assembly"), s_h2))
+    _wcl = display_service_packet.get("workshop_checklist", pd.DataFrame())
     if _wcl is not None and not _wcl.empty:
-        story.append(Paragraph("Pre odlaska u servis", s_norm))
+        story.append(Paragraph(_t("Pre odlaska u servis", "Before going to the workshop"), s_norm))
         story.append(_df_to_table(_wcl, ["RB", "Stavka", "Status"]))
         story.append(Spacer(1, 3 * mm))
-    _hcl = service_packet.get("home_checklist", pd.DataFrame())
+    _hcl = display_service_packet.get("home_checklist", pd.DataFrame())
     if _hcl is not None and not _hcl.empty:
-        story.append(Paragraph("Pre kucnog sklapanja", s_norm))
+        story.append(Paragraph(_t("Pre kućnog sklapanja", "Before home assembly"), s_norm))
         story.append(_df_to_table(_hcl, ["RB", "Stavka", "Status"]))
 
     doc.build(story)
     return buf.getvalue()
 
 
-def generate_cutlist_pdf(kitchen: Dict[str, Any], title: str = "Krojna lista PRO – M1 (jedan zid)") -> bytes:
+def generate_cutlist_pdf(
+    kitchen: Dict[str, Any],
+    title: str = "Krojna lista PRO - M1 (jedan zid)",
+    lang: str = "sr",
+) -> bytes:
     """Returns PDF bytes."""
-    sections = generate_cutlist(kitchen)
-    return build_cutlist_pdf_bytes(kitchen, sections, project_title=title)
+    if str(lang or "sr").lower().strip() == "en" and title in {"Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
+        title = "Cut List PRO - M1 (single wall)"
+    final_ds = get_final_cutlist_dataset(kitchen, lang=lang)
+    sections = final_ds["sections"]
+    return build_cutlist_pdf_bytes(kitchen, sections, project_title=title, lang=lang)
 
 
 def generate_cutlist_excel(
     kitchen: Dict[str, Any],
     title: str = "Krojna lista PRO",
+    lang: str = "sr",
 ) -> bytes:
     """
     Generiše Excel fajl (.xlsx) sa kompletnom krojnom listom.
@@ -3126,8 +4512,15 @@ def generate_cutlist_excel(
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
 
-    sections = generate_cutlist(kitchen)
-    service_packet = build_service_packet(kitchen, sections)
+    _lang = str(lang or "sr").lower().strip()
+    def _t(sr: str, en: str) -> str:
+        return en if _lang == "en" else sr
+    if _lang == "en" and title == "Krojna lista PRO":
+        title = "Cut List PRO"
+
+    final_ds = get_final_cutlist_dataset(kitchen, lang=_lang)
+    sections = final_ds["sections"]
+    service_packet = final_ds["service_packet"]
     mats = kitchen.get("materials", {}) or {}
     wall = kitchen.get("wall", {}) or {}
 
@@ -3158,121 +4551,122 @@ def generate_cutlist_excel(
     _wl   = wall.get("length_mm", 0)
     _wh   = wall.get("height_mm", 0)
     _info = (
-        f"Zid: {_wl}×{_wh} mm   |   "
-        f"Korpus: {mats.get('carcass_material','?')} / {mats.get('carcass_thk','?')} mm   |   "
-        f"Front: {mats.get('front_material','?')} / {mats.get('front_thk','?')} mm   |   "
-        f"Generisano: {_now}"
+        f"{_t('Zid', 'Wall')}: {_wl}×{_wh} mm   |   "
+        f"{_format_material_role(mats.get('carcass_material','?'), mats.get('carcass_thk','?'), 'carcass', _lang)}   |   "
+        f"{_format_material_role(mats.get('front_material','?'), mats.get('front_thk','?'), 'front', _lang)}   |   "
+        f"{_format_material_role((mats.get('back_material') or ''), (mats.get('back_thk') or ''), 'back', _lang)}   |   "
+        f"{_t('Generisano', 'Generated')}: {_now}"
     )
 
     # ── Specifikacija kolona ─────────────────────────────────────────────────
     # (df_field, excel_header, col_width)
     SEC_COLS = [
         ("PartCode",    "PartCode",      12),
-        ("Zid",         "Zid",           10),
-        ("Modul",       "Modul",        22),
-        ("Deo",         "Deo",          24),
-        ("Pozicija",    "Pozicija",      9),
-        ("SklopKorak",  "Korak",         7),
-        ("Materijal",   "Materijal",    12),
+        ("Zid",         _t("Zid", "Wall"),           10),
+        ("Modul",       _t("Modul", "Module"),        22),
+        ("Deo",         _t("Deo", "Part"),          24),
+        ("Pozicija",    _t("Pozicija", "Position"),      9),
+        ("SklopKorak",  _t("Korak", "Step"),         7),
+        ("Materijal",   _t("Materijal", "Material"),    12),
         ("Deb.",        "Deb.",          6),
-        ("Kol.",        "Kol.",          5),
-        ("CUT_W [mm]",  "CUT Duz.",      9),
-        ("CUT_H [mm]",  "CUT Sir.",      9),
-        ("Duzina [mm]", "FIN Duz.",      9),
-        ("Sirina [mm]", "FIN Sir.",      9),
-        ("Smer goda",   "Smer goda",     8),
-        ("Kant",        "Kant",         24),
+        ("Kol.",        _t("Kol.", "Qty"),          5),
+        ("CUT_W [mm]",  _t("CUT Duž.", "CUT Length"),      9),
+        ("CUT_H [mm]",  _t("CUT Sir.", "CUT Width"),      9),
+        ("Dužina [mm]", _t("FIN Duž.", "FIN Length"),      9),
+        ("Sirina [mm]", _t("FIN Sir.", "FIN Width"),      9),
+        ("Smer goda",   _t("Smer goda", "Grain"),     8),
+        ("Kant",        _t("Kant", "Edge"),         24),
         ("L1",          "L1",            4),
         ("L2",          "L2",            4),
         ("K1",          "K1",            4),
         ("K2",          "K2",            4),
-        ("Napomena",    "Napomena",     30),
+        ("Napomena",    _t("Napomena", "Note"),     30),
     ]
     HARDWARE_COLS = [
         ("PartCode",    "PartCode",      12),
-        ("Zid",         "Zid",           10),
-        ("Modul",       "Modul",         22),
-        ("Kategorija",  "Kategorija",    12),
-        ("Naziv",       "Naziv",         20),
-        ("Tip / Šifra", "Tip / Sifra",   20),
-        ("Kol.",        "Kol.",           6),
-        ("SklopKorak",  "Korak",          7),
-        ("Napomena",    "Napomena",      32),
+        ("Zid",         _t("Zid", "Wall"),           10),
+        ("Modul",       _t("Modul", "Module"),         22),
+        ("Kategorija",  _t("Kategorija", "Category"),    12),
+        ("Naziv",       _t("Naziv", "Name"),         20),
+        ("Tip / Šifra", _t("Tip / Sifra", "Type / Code"),   20),
+        ("Kol.",        _t("Kol.", "Qty"),           6),
+        ("SklopKorak",  _t("Korak", "Step"),          7),
+        ("Napomena",    _t("Napomena", "Note"),      32),
     ]
     PROJECT_COLS = [
-        ("Polje", "Polje", 24),
-        ("Vrednost", "Vrednost", 60),
+        ("Polje", _t("Polje", "Field"), 24),
+        ("Vrednost", _t("Vrednost", "Value"), 60),
     ]
     SERVICE_CUTS_COLS = [
         ("RB", "RB", 6),
-        ("Zid", "Zid", 10),
-        ("Materijal", "Materijal", 18),
+        ("Zid", _t("Zid", "Wall"), 10),
+        ("Materijal", _t("Materijal", "Material"), 18),
         ("Deb.", "Deb.", 8),
-        ("CUT_W [mm]", "CUT Duzina", 12),
-        ("CUT_H [mm]", "CUT Sirina", 12),
-        ("Kant", "Kant", 24),
-        ("Kol.", "Kol.", 8),
-        ("Napomena za servis", "Napomena za servis", 42),
+        ("CUT_W [mm]", _t("CUT Dužina", "CUT Length"), 12),
+        ("CUT_H [mm]", _t("CUT Sirina", "CUT Width"), 12),
+        ("Kant", _t("Kant", "Edge"), 24),
+        ("Kol.", _t("Kol.", "Qty"), 8),
+        ("Napomena za servis", _t("Napomena za servis", "Workshop note"), 42),
     ]
     SERVICE_EDGE_COLS = [
         ("PartCode", "PartCode", 12),
-        ("Zid", "Zid", 10),
-        ("Modul", "Modul", 22),
-        ("Deo", "Deo", 24),
-        ("Kol.", "Kol.", 6),
-        ("CUT_W [mm]", "CUT Duzina", 10),
-        ("CUT_H [mm]", "CUT Sirina", 10),
-        ("Kant", "Kant", 24),
-        ("Napomena", "Napomena", 36),
+        ("Zid", _t("Zid", "Wall"), 10),
+        ("Modul", _t("Modul", "Module"), 22),
+        ("Deo", _t("Deo", "Part"), 24),
+        ("Kol.", _t("Kol.", "Qty"), 6),
+        ("CUT_W [mm]", _t("CUT Dužina", "CUT Length"), 10),
+        ("CUT_H [mm]", _t("CUT Sirina", "CUT Width"), 10),
+        ("Kant", _t("Kant", "Edge"), 24),
+        ("Napomena", _t("Napomena", "Note"), 36),
     ]
     SERVICE_PROC_COLS = [
         ("PartCode", "PartCode", 12),
-        ("Zid", "Zid", 10),
-        ("Modul", "Modul", 22),
-        ("Deo", "Deo", 24),
-        ("CUT_W [mm]", "CUT Duzina", 10),
-        ("CUT_H [mm]", "CUT Sirina", 10),
-        ("Tip obrade", "Tip obrade", 18),
-        ("Izvodi", "Izvodi", 12),
-        ("Osnov izvođenja", "Osnov izvođenja", 20),
-        ("Kol.", "Kol.", 6),
-        ("Obrada / napomena", "Obrada / napomena", 30),
+        ("Zid", _t("Zid", "Wall"), 10),
+        ("Modul", _t("Modul", "Module"), 22),
+        ("Deo", _t("Deo", "Part"), 24),
+        ("CUT_W [mm]", _t("CUT Dužina", "CUT Length"), 10),
+        ("CUT_H [mm]", _t("CUT Sirina", "CUT Width"), 10),
+        ("Tip obrade", _t("Tip obrade", "Processing type"), 18),
+        ("Izvodi", _t("Izvodi", "Operations"), 12),
+        ("Osnov izvođenja", _t("Osnov izvođenja", "Execution basis"), 20),
+        ("Kol.", _t("Kol.", "Qty"), 6),
+        ("Obrada / napomena", _t("Obrada / napomena", "Processing / note"), 30),
     ]
     SERVICE_INSTR_COLS = [
         ("RB", "RB", 6),
-        ("Stavka", "Stavka", 20),
-        ("Instrukcija", "Instrukcija", 70),
+        ("Stavka", _t("Stavka", "Item"), 20),
+        ("Instrukcija", _t("Instrukcija", "Instruction"), 70),
     ]
     SHOP_COLS = [
-        ("Grupa", "Grupa", 20),
-        ("Naziv", "Naziv", 24),
-        ("Tip / Šifra", "Tip / Sifra", 22),
-        ("Kol.", "Kol.", 8),
-        ("Napomena", "Napomena", 40),
+        ("Grupa", _t("Grupa", "Group"), 20),
+        ("Naziv", _t("Naziv", "Name"), 24),
+        ("Tip / Šifra", _t("Tip / Sifra", "Type / Code"), 22),
+        ("Kol.", _t("Kol.", "Qty"), 8),
+        ("Napomena", _t("Napomena", "Note"), 40),
     ]
     GUIDE_COLS = [
-        ("Korak", "Korak", 8),
-        ("Sta radis", "Sta radis", 36),
-        ("Napomena", "Napomena", 48),
+        ("Korak", _t("Korak", "Step"), 8),
+        ("Šta radiš", _t("Šta radiš", "What you do"), 36),
+        ("Napomena", _t("Napomena", "Note"), 48),
     ]
     CHECK_COLS = [
         ("RB", "RB", 6),
-        ("Stavka", "Stavka", 70),
-        ("Status", "Status", 14),
+        ("Stavka", _t("Stavka", "Item"), 70),
+        ("Status", _t("Status", "Status"), 14),
     ]
     SUM_COLS = [
-        ("Materijal",   "Materijal",    14),
+        ("Materijal",   _t("Materijal", "Material"),    14),
         ("Deb.",        "Deb.",          6),
-        ("CUT_W [mm]",  "CUT Duzina",    9),
-        ("CUT_H [mm]",  "CUT Sirina",    9),
-        ("Duzina [mm]", "FIN Duzina",    9),
-        ("Sirina [mm]", "FIN Sirina",    9),
-        ("Kol.",        "Kol.",          6),
-        ("Kant",        "Kant",         24),
+        ("CUT_W [mm]",  _t("CUT Dužina", "CUT Length"),    9),
+        ("CUT_H [mm]",  _t("CUT Sirina", "CUT Width"),    9),
+        ("Dužina [mm]", _t("FIN Dužina", "FIN Length"),    9),
+        ("Sirina [mm]", _t("FIN Sirina", "FIN Width"),    9),
+        ("Kol.",        _t("Kol.", "Qty"),          6),
+        ("Kant",        _t("Kant", "Edge"),         24),
     ]
     NUM_FIELDS = {
         "Deb.", "Kol.", "CUT_W [mm]", "CUT_H [mm]",
-        "Duzina [mm]", "Sirina [mm]", "L1", "L2", "K1", "K2",
+        "Dužina [mm]", "Sirina [mm]", "L1", "L2", "K1", "K2",
     }
 
     # ── Pomoćna funkcija za pisanje jednog lista ─────────────────────────────
@@ -3314,7 +4708,7 @@ def generate_cutlist_excel(
         # Prazna sekcija
         if df is None or df.empty:
             ws.merge_cells(start_row=4, start_column=1, end_row=4, end_column=n)
-            c = ws.cell(4, 1, "— nema podataka —")
+            c = ws.cell(4, 1, _t("— nema podataka —", "— no data —"))
             c.font      = _info_font()
             c.alignment = Alignment(horizontal="center")
             return
@@ -3350,21 +4744,42 @@ def generate_cutlist_excel(
                 else:
                     c.alignment = Alignment(horizontal="left", vertical="center", indent=1)
 
+    def _extract_worktop_spec_df(proc_df: pd.DataFrame) -> pd.DataFrame:
+        cols = ["Zid", "Modul", "Kol.", "Tip obrade", "Izvodi", "Osnov izvođenja", "Obrada / napomena"]
+        if proc_df is None or proc_df.empty or "Deo" not in proc_df.columns:
+            return pd.DataFrame(columns=cols)
+        mask = proc_df["Deo"].astype(str).str.lower().isin(["radna ploča", "radna ploca", "worktop"])
+        out = proc_df.loc[mask, [c for c in cols if c in proc_df.columns]].copy()
+        for col in cols:
+            if col not in out.columns:
+                out[col] = ""
+        return out[cols]
+
     # ── Kreira workbook ─────────────────────────────────────────────────────
     wb = openpyxl.Workbook()
     wb.remove(wb.active)   # ukloni default prazan sheet
 
+    # ── Uvodni sheet: kako koristiti dokument ───────────────────────────────
+    ws_intro = wb.create_sheet(_t("Kako koristiti", "How to use"), 0)
+    _intro_df = pd.DataFrame([
+        {"Korak": 1, "Šta radiš": _t("Prvo proveri osnovne mere i materijale", "First check the main dimensions and materials"), "Napomena": _t("Ako ovde vidiš grešku, nemoj slati dokument u servis.", "If you see an error here, do not send the document to the workshop.")},
+        {"Korak": 2, "Šta radiš": _t("Za servis koristi samo sheet-ove za rezanje, kantovanje i obradu", "Use only the cutting, edging and machining sheets for the workshop"), "Napomena": _t("Servis radi po CUT merama i napomenama iz tih tabela.", "The workshop works by CUT dimensions and notes from those sheets.")},
+        {"Korak": 3, "Šta radiš": _t("Posebno kupi gotove uređaje, okove i alat", "Purchase ready-made appliances, hardware and tools separately"), "Napomena": _t("To nije deo sečenja i ne izrađuje se iz pločastog materijala.", "These items are not cut from board material.")},
+        {"Korak": 4, "Šta radiš": _t("Za sklapanje koristi vodič i checkliste", "Use the guide and checklists during assembly"), "Napomena": _t("Radi redom: korpusi, frontovi, fioke, uređaji, završna provera.", "Follow the order: carcasses, fronts, drawers, appliances, final check.")},
+    ])
+    _write_sheet(ws_intro, _intro_df, GUIDE_COLS, f"{title}  |  {_t('Kako koristiti dokument', 'How to use this document')}")
+
     # ── Sheet 1: Pregled ─────────────────────────────────────────────────────
-    ws_sum = wb.create_sheet("Pregled")
+    ws_sum = wb.create_sheet(_t("Pregled", "Overview"))
     all_dfs = [df for df in sections.values() if df is not None and not df.empty]
     if all_dfs:
         combined = pd.concat(all_dfs, ignore_index=True)
         # Osiguraj da kolone postoje
-        for col in ["Duzina [mm]", "Sirina [mm]", "Kant"]:
+        for col in ["Dužina [mm]", "Sirina [mm]", "Kant"]:
             if col not in combined.columns:
                 combined[col] = ""
         grp = [c for c in
-               ["Materijal", "Deb.", "CUT_W [mm]", "CUT_H [mm]", "Duzina [mm]", "Sirina [mm]", "Kant"]
+               ["Materijal", "Deb.", "CUT_W [mm]", "CUT_H [mm]", "Dužina [mm]", "Sirina [mm]", "Kant"]
                if c in combined.columns]
         summary = (
             combined
@@ -3378,57 +4793,170 @@ def generate_cutlist_excel(
         )
     else:
         summary = pd.DataFrame(columns=[f for f, _, _ in SUM_COLS])
-    _write_sheet(ws_sum, summary, SUM_COLS, f"{title}  |  Pregled svih ploca")
+    _write_sheet(ws_sum, summary, SUM_COLS, f"{title}  |  {_t('Pregled svih ploča', 'Overview of all panels')}")
 
-    # ── Sheetovi 2–7: po sekcijama ────────────────────────────────────────────
+    # ── Sheet "Rezanje" — sumarna krojna lista po PDF formatu (strana 4) ──────
+    REZANJE_COLS = [
+        ("RB",           "RB",            4),
+        ("Deo",          _t("Deo", "Part"),          24),
+        ("Kom",          _t("Kom", "Qty"),           5),
+        ("Dužina [mm]",  _t("Dužina [mm]", "Length [mm]"),  10),
+        ("Sirina [mm]",  _t("Sirina [mm]", "Width [mm]"),  10),
+        ("Deb.",         "Deb. [mm]",     8),
+        ("Materijal",    _t("Materijal", "Material"),    16),
+        ("Smer goda",    _t("Orijent.", "Grain"),     10),
+        ("L1",           _t("Kant L1", "Edge L1"),       7),
+        ("L2",           _t("Kant L2", "Edge L2"),       7),
+        ("K1",           _t("Kant K1", "Edge K1"),       7),
+        ("K2",           _t("Kant K2", "Edge K2"),       7),
+    ]
+    DET_COLS = [
+        ("PartCode",     "PartCode",     12),
+        ("Modul",        _t("Modul", "Module"),        22),
+        ("Deo",          _t("Deo", "Part"),          24),
+        ("Kom",          _t("Kom", "Qty"),           5),
+        ("Dužina [mm]",  _t("Dužina [mm]", "Length [mm]"),  10),
+        ("Sirina [mm]",  _t("Sirina [mm]", "Width [mm]"),  10),
+        ("Deb.",         "Deb. [mm]",     8),
+        ("Materijal",    _t("Materijal", "Material"),    16),
+        ("Smer goda",    _t("Orijent.", "Grain"),     10),
+        ("L1",           _t("Kant L1", "Edge L1"),       7),
+        ("L2",           _t("Kant L2", "Edge L2"),       7),
+        ("K1",           _t("Kant K1", "Edge K1"),       7),
+        ("K2",           _t("Kant K2", "Edge K2"),       7),
+    ]
+    try:
+        _sum2 = final_ds["summary"]
+        ws_rez = wb.create_sheet(_t("Rezanje", "Cutting"))
+        _write_sheet(ws_rez, _sum2.get("summary_all"), REZANJE_COLS,
+                     f"{title}  |  {_t('Sumarna krojna lista ploča', 'Summary cut list of panels')}")
+        ws_det = wb.create_sheet(_t("Po modulima", "By units"))
+        _write_sheet(ws_det, _sum2.get("summary_detaljna"), DET_COLS,
+                     f"{title}  |  {_t('Detaljna krojna lista po modulima', 'Detailed cut list by units')}")
+    except Exception as _sex:
+        _LOG.warning("generate_cutlist_summary failed, preskacam Rezanje sheet: %s", _sex)
+
+    # ── Sheetovi po sekcijama (detalji) ──────────────────────────────────────
     SHEET_CFG = [
-        ("carcass",      "Korpus",    "Korpus — stranice, dno, plafon"),
-        ("backs",        "Ledne",     "Ledne ploce"),
-        ("fronts",       "Frontovi",  "Frontovi"),
-        ("drawer_boxes", "Fioke",     "Sanduk fioke"),
-        ("worktop",      "Radna",     "Radna ploca i nosaci"),
-        ("plinth",       "Sokla",     "Sokla i lajsne"),
+        ("carcass",      _t("Korpus", "Carcass"),    _t("Korpus — stranice, dno, plafon", "Carcass — sides, bottom, top")),
+        ("backs",        _t("Leđa", "Backs"),        _t("Leđne ploče", "Back panels")),
+        ("fronts",       _t("Frontovi", "Fronts"),   _t("Frontovi", "Fronts")),
+        ("drawer_boxes", _t("Fioke", "Drawers"),     _t("Sanduk fioke", "Drawer box")),
+        ("worktop",      _t("Radna", "Worktop"),     _t("Radna ploča i nosači", "Worktop and supports")),
+        ("plinth",       _t("Sokla", "Plinth"),      _t("Sokla i lajsne", "Plinths and trims")),
     ]
     for key, sheet_name, long_name in SHEET_CFG:
         ws = wb.create_sheet(sheet_name)
-        _write_sheet(ws, sections.get(key), SEC_COLS, f"{title}  |  {long_name}")
+        _write_sheet(ws, _translate_export_df(sections.get(key), _lang), SEC_COLS, f"{title}  |  {long_name}")
 
-    ws_hw = wb.create_sheet("Okovi")
-    _write_sheet(ws_hw, sections.get("hardware"), HARDWARE_COLS, f"{title}  |  Okovi i potrosni materijal")
+    ws_hw = wb.create_sheet(_t("Okovi", "Hardware"))
+    _write_sheet(ws_hw, _translate_export_df(sections.get("hardware"), _lang), HARDWARE_COLS, f"{title}  |  {_t('Okovi i potrošni materijal', 'Hardware and consumables')}")
 
-    ws_proj = wb.create_sheet("Radni nalog")
-    _write_sheet(ws_proj, service_packet.get("project_header"), PROJECT_COLS, f"{title}  |  Radni nalog")
+    ws_proj = wb.create_sheet(_t("Radni nalog", "Work order"))
+    _write_sheet(ws_proj, _translate_export_df(service_packet.get("project_header"), _lang), PROJECT_COLS, f"{title}  |  {_t('Radni nalog', 'Work order')}")
 
-    ws_sc = wb.create_sheet("Servis secenje")
-    _write_sheet(ws_sc, service_packet.get("service_cuts"), SERVICE_CUTS_COLS, f"{title}  |  Servis paket - secenje")
+    ws_sc = wb.create_sheet(_t("Servis sečenje", "Workshop cutting"))
+    _write_sheet(ws_sc, _translate_export_df(service_packet.get("service_cuts"), _lang), SERVICE_CUTS_COLS, f"{title}  |  {_t('Servis paket - sečenje', 'Workshop packet - cutting')}")
 
-    ws_se = wb.create_sheet("Servis kant")
-    _write_sheet(ws_se, service_packet.get("service_edge"), SERVICE_EDGE_COLS, f"{title}  |  Servis paket - kantovanje")
+    ws_se = wb.create_sheet(_t("Servis kant", "Workshop edging"))
+    _write_sheet(ws_se, _translate_export_df(service_packet.get("service_edge"), _lang), SERVICE_EDGE_COLS, f"{title}  |  {_t('Servis paket - kantovanje', 'Workshop packet - edging')}")
 
-    ws_sp = wb.create_sheet("Servis obrada")
-    _write_sheet(ws_sp, service_packet.get("service_processing"), SERVICE_PROC_COLS, f"{title}  |  Servis paket - obrada")
+    _svc_proc_df = _translate_export_df(service_packet.get("service_processing"), _lang)
 
-    ws_si = wb.create_sheet("Servis uputstvo")
-    _write_sheet(ws_si, service_packet.get("service_instructions"), SERVICE_INSTR_COLS, f"{title}  |  Instrukcije za servis")
+    ws_sp = wb.create_sheet(_t("Servis obrada", "Workshop machining"))
+    _write_sheet(ws_sp, _svc_proc_df, SERVICE_PROC_COLS, f"{title}  |  {_t('Servis paket - obrada', 'Workshop packet - machining')}")
 
-    ws_shop = wb.create_sheet("Shopping")
-    _write_sheet(ws_shop, service_packet.get("shopping_list"), SHOP_COLS, f"{title}  |  Shopping list")
+    ws_wt = wb.create_sheet(_t("Spec ploce", "Worktop spec"))
+    _write_sheet(
+        ws_wt,
+        _extract_worktop_spec_df(_svc_proc_df),
+        [
+            ("Zid", _t("Zid", "Wall"), 10),
+            ("Modul", _t("Modul", "Module"), 22),
+            ("Kol.", _t("Kol.", "Qty"), 8),
+            ("Tip obrade", _t("Tip obrade", "Processing type"), 18),
+            ("Izvodi", _t("Izvodi", "Operations"), 18),
+            ("Osnov izvođenja", _t("Osnov izvođenja", "Execution basis"), 18),
+            ("Obrada / napomena", _t("Obrada / napomena", "Processing / note"), 48),
+        ],
+        f"{title}  |  {_t('Specifikacija radne ploče', 'WORKTOP SPECIFICATION')}",
+    )
 
-    ws_ready = wb.create_sheet("Kupuje se")
-    _write_sheet(ws_ready, service_packet.get("ready_made_items"), SHOP_COLS, f"{title}  |  Ovo se kupuje gotovo")
+    ws_si = wb.create_sheet(_t("Servis uputstvo", "Workshop instructions"))
+    _write_sheet(ws_si, _translate_export_df(service_packet.get("service_instructions"), _lang), SERVICE_INSTR_COLS, f"{title}  |  {_t('Instrukcije za servis', 'Workshop instructions')}")
 
-    ws_guide = wb.create_sheet("Vodic")
-    _write_sheet(ws_guide, service_packet.get("user_guide"), GUIDE_COLS, f"{title}  |  Kratak vodic za laika")
+    ws_shop = wb.create_sheet(_t("Lista kupovine", "Shopping"))
+    _write_sheet(ws_shop, _translate_export_df(service_packet.get("shopping_list"), _lang), SHOP_COLS, f"{title}  |  {_t('Lista kupovine', 'Shopping list')}")
 
-    ws_wchk = wb.create_sheet("Checklist servis")
-    _write_sheet(ws_wchk, service_packet.get("workshop_checklist"), CHECK_COLS, f"{title}  |  Checklist pre servisa")
+    ws_ready = wb.create_sheet(_t("Kupuje se", "Ready-made"))
+    _write_sheet(ws_ready, _translate_export_df(service_packet.get("ready_made_items"), _lang), SHOP_COLS, f"{title}  |  {_t('Ovo se kupuje gotovo', 'Purchased ready-made')}")
 
-    ws_hchk = wb.create_sheet("Checklist dom")
-    _write_sheet(ws_hchk, service_packet.get("home_checklist"), CHECK_COLS, f"{title}  |  Checklist pre sklapanja")
+    ws_guide = wb.create_sheet(_t("Vodič", "Guide"))
+    _write_sheet(ws_guide, _translate_export_df(service_packet.get("user_guide"), _lang), GUIDE_COLS, f"{title}  |  {_t('Kratak vodič za korisnika', 'Quick user guide')}")
+
+    ws_wchk = wb.create_sheet(_t("Checklist servis", "Workshop checklist"))
+    _write_sheet(ws_wchk, _translate_export_df(service_packet.get("workshop_checklist"), _lang), CHECK_COLS, f"{title}  |  {_t('Kontrolna lista pre servisa', 'Checklist before workshop')}")
+
+    ws_hchk = wb.create_sheet(_t("Checklist dom", "Home checklist"))
+    _write_sheet(ws_hchk, _translate_export_df(service_packet.get("home_checklist"), _lang), CHECK_COLS, f"{title}  |  {_t('Kontrolna lista pre sklapanja', 'Checklist before assembly')}")
 
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+def generate_cutlist_csv(kitchen: Dict[str, Any], lang: str = "sr") -> bytes:
+    """Generise glavni CSV eksport iz istog finalnog dataseta kao PDF i XLSX."""
+    import csv
+    from io import StringIO
+
+    _lang = str(lang or "sr").lower().strip()
+    def _t(sr: str, en: str) -> str:
+        return en if _lang == "en" else sr
+    final_ds = get_final_cutlist_dataset(kitchen, lang=_lang)
+    summary = final_ds.get("summary", {}) or {}
+    df = summary.get("summary_detaljna", pd.DataFrame())
+    if df is None:
+        df = pd.DataFrame()
+
+    edge_thk = float(((kitchen.get("materials", {}) or {}).get("edge_abs_thk", 2.0)) or 2.0)
+
+    out = StringIO()
+    wr = csv.writer(out, delimiter=",", lineterminator="\n")
+    wr.writerow([
+        "module",
+        "part_name",
+        "material",
+        "length_mm",
+        "width_mm",
+        "qty",
+        "edge_front_mm",
+        "edge_back_mm",
+        "edge_left_mm",
+        "edge_right_mm",
+        "notes",
+    ])
+
+    if not df.empty:
+        sort_cols = [c for c in ("Modul", "Deo", "PartCode") if c in df.columns]
+        if sort_cols:
+            df = df.sort_values(sort_cols).reset_index(drop=True)
+        for _, row in df.iterrows():
+            wr.writerow([
+                _sanitize_export_value(row.get("Modul", "")),
+                _sanitize_export_value(row.get("Deo", "")),
+                _sanitize_export_value(row.get("Materijal", "")),
+                _sanitize_export_value(row.get("Dužina [mm]", "")),
+                _sanitize_export_value(row.get("Sirina [mm]", "")),
+                _sanitize_export_value(row.get("Kom", row.get("Kol.", ""))),
+                edge_thk if bool(row.get("L1", False)) else "",
+                edge_thk if bool(row.get("L2", False)) else "",
+                edge_thk if bool(row.get("K1", False)) else "",
+                edge_thk if bool(row.get("K2", False)) else "",
+                _sanitize_export_value(row.get("Napomena", "")),
+            ])
+
+    return out.getvalue().encode("utf-8-sig")
 
 
 # =========================================================
@@ -3443,16 +4971,15 @@ _TIP_ORDER: Dict[str, int] = {
     "Radna ploča": 3,
 }
 
-
-def generate_cutlist_summary(sections: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+def generate_cutlist_summary(sections: Dict[str, pd.DataFrame], lang: str = "sr") -> Dict[str, pd.DataFrame]:
     """
     Vraca sumarnu krojnu listu po PDF formatu:
       - summary_all: JEDNA objedinjena tabela svih ploča (identično strana 4 PDF-a)
-        Kolone: Deo | Kom | Duzina [mm] | Sirina [mm] | Deb. [mm] | Materijal | Orijent. | Kant L1 | Kant L2 | Kant K1 | Kant K2
+        Kolone: Deo | Kom | Dužina [mm] | Sirina [mm] | Deb. [mm] | Materijal | Orijent. | Kant L1 | Kant L2 | Kant K1 | Kant K2
         Dimenzije su FIN (gotove mere posle kanta), sortirano po Deo
 
       - summary_detaljna: detaljna lista sa Modul kolonom (identično strane 5-7 PDF-a)
-        Kolone: Modul | Deo | Kom | Duzina [mm] | Sirina [mm] | Deb. [mm] | Materijal | Orijent. | ...
+        Kolone: Modul | Deo | Kom | Dužina [mm] | Sirina [mm] | Deb. [mm] | Materijal | Orijent. | ...
 
       - summary_carcass / summary_fronts / summary_backs: backwards compat
     """
@@ -3473,9 +5000,10 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame]) -> Dict[str, pd.
         ("carcass", "Korpus"),
         ("backs",   "Leđna ploča"),
         ("fronts",  "Front"),
+        ("drawer_boxes", "Sanduk fioke"),
         ("worktop", "Radna ploča"),
     ]
-    _needed_all = {"Deo", "Materijal", "Deb.", "Duzina [mm]", "Sirina [mm]", "Kol."}
+    _needed_all = {"Deo", "Materijal", "Deb.", "Dužina [mm]", "Sirina [mm]", "Kol."}
 
     for sec_key, tip_label in _sec_to_tip:
         df = sections.get(sec_key)
@@ -3490,9 +5018,16 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame]) -> Dict[str, pd.
     if all_frames:
         combined = pd.concat(all_frames, ignore_index=True)
         # Grupisanje: Deo + dimenzije + materijal + kant flags (FIN dimenzije)
-        grp_cols = ["_Tip", "Deo", "Materijal", "Deb.", "Duzina [mm]", "Sirina [mm]",
+        grp_cols = ["_Tip", "Deo", "Materijal", "Deb.", "Dužina [mm]", "Sirina [mm]",
                     "Orijentacija", "Smer goda", "L1", "L2", "K1", "K2"]
         grp_cols = [c for c in grp_cols if c in combined.columns]
+        # VAŽNO: popuniti NaN u grp_cols pre groupby!
+        # Sekcije poput "backs" i "worktop" nemaju kolone "Smer goda" —
+        # pd.concat ih popunjava NaN-om, a groupby() po defaultu izbacuje
+        # redove sa NaN ključem, što uzrokuje nestajanje tih redova iz sumarnog prikaza.
+        for _gc in grp_cols:
+            if combined[_gc].dtype == object or combined[_gc].isna().any():
+                combined[_gc] = combined[_gc].fillna("").astype(str)
         try:
             agg_d = {"Kol.": "sum"}
             if "Kant" in combined.columns:
@@ -3503,7 +5038,7 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame]) -> Dict[str, pd.
             )
             # Sortiranje: Tip order → Materijal → Duzina desc
             agg["_sort"] = agg["_Tip"].map(_TIP_ORDER).fillna(99)
-            agg = agg.sort_values(["_sort", "Materijal", "Duzina [mm]"],
+            agg = agg.sort_values(["_sort", "Materijal", "Dužina [mm]"],
                                   ascending=[True, True, False])
             agg = agg.drop(columns=["_sort", "_Tip"]).reset_index(drop=True)
             # Preimenovati Kol. → Kom (kao u PDF-u)
@@ -3511,13 +5046,13 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame]) -> Dict[str, pd.
             # Dodati redni broj
             agg.insert(0, "RB", range(1, len(agg) + 1))
             # Uредiti kolone po PDF redosledu
-            _cols_order = ["RB", "Deo", "Kom", "Duzina [mm]", "Sirina [mm]", "Deb.",
+            _cols_order = ["RB", "Deo", "Kom", "Dužina [mm]", "Sirina [mm]", "Deb.",
                            "Materijal", "Smer goda", "Orijentacija", "L1", "L2", "K1", "K2", "Kant"]
             _cols_show = [c for c in _cols_order if c in agg.columns]
-            result["summary_all"] = agg[_cols_show]
+            result["summary_all"] = _translate_export_df(agg[_cols_show], lang)
         except Exception as ex:
             _LOG.debug("Failed summary_all aggregation, using combined fallback: %s", ex)
-            result["summary_all"] = combined.copy()
+            result["summary_all"] = _translate_export_df(combined.copy(), lang)
 
     # -------------------------------------------------------
     # summary_detaljna — detaljna lista sa Modul kolonom (PDF strane 5-7)
@@ -3531,16 +5066,19 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame]) -> Dict[str, pd.
 
     if det_frames:
         det = pd.concat(det_frames, ignore_index=True)
-        _det_needed = {"Modul", "Deo", "Kol.", "Duzina [mm]", "Sirina [mm]", "Deb.", "Materijal"}
+        _det_needed = {"ID", "Modul", "Deo", "Kol.", "Dužina [mm]", "Sirina [mm]", "Deb.", "Materijal"}
         if _det_needed.issubset(set(det.columns)):
             det = det.rename(columns={"Kol.": "Kom"})
-            det = det.sort_values(["Modul", "Deo"]).reset_index(drop=True)
-            _det_cols = ["PartCode", "Modul", "Deo", "Pozicija", "SklopKorak", "Kom", "Duzina [mm]", "Sirina [mm]", "Deb.",
+            # Compatibility: Cut List tab and PDF "by unit" views still expect ID and Kol.
+            det["Kol."] = det["Kom"]
+            _sort_cols = [c for c in ("ID", "Modul", "Deo") if c in det.columns]
+            det = det.sort_values(_sort_cols).reset_index(drop=True)
+            _det_cols = ["ID", "PartCode", "Modul", "Deo", "Pozicija", "SklopKorak", "Kom", "Kol.", "Dužina [mm]", "Sirina [mm]", "Deb.",
                          "Materijal", "Smer goda", "Orijentacija", "L1", "L2", "K1", "K2", "Kant", "Napomena"]
             _det_cols = [c for c in _det_cols if c in det.columns]
-            result["summary_detaljna"] = det[_det_cols]
+            result["summary_detaljna"] = _translate_export_df(det[_det_cols], lang)
         else:
-            result["summary_detaljna"] = det.copy()
+            result["summary_detaljna"] = _translate_export_df(det.copy(), lang)
 
     # -------------------------------------------------------
     # Backwards compat — odvojene sekcije
@@ -3553,22 +5091,22 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame]) -> Dict[str, pd.
         df = sections.get(sec_key)
         if df is None or df.empty:
             continue
-        needed = {"Materijal", "Deb.", "Duzina [mm]", "Sirina [mm]", "Kol."}
+        needed = {"Materijal", "Deb.", "Dužina [mm]", "Sirina [mm]", "Kol."}
         if not needed.issubset(set(df.columns)):
-            result[out_key] = df.copy()
+            result[out_key] = _translate_export_df(df.copy(), lang)
             continue
         try:
             agg2 = (
-                df.groupby(["Materijal", "Deb.", "Duzina [mm]", "Sirina [mm]"], as_index=False)
+                df.groupby(["Materijal", "Deb.", "Dužina [mm]", "Sirina [mm]"], as_index=False)
                 .agg({"Kol.": "sum"})
-                .sort_values(["Materijal", "Duzina [mm]"])
+                .sort_values(["Materijal", "Dužina [mm]"])
                 .reset_index(drop=True)
             )
             agg2.insert(0, "RB", range(1, len(agg2) + 1))
-            result[out_key] = agg2
+            result[out_key] = _translate_export_df(agg2, lang)
         except Exception as ex:
             _LOG.debug("Failed %s aggregation, using section fallback: %s", out_key, ex)
-            result[out_key] = df.copy()
+            result[out_key] = _translate_export_df(df.copy(), lang)
 
     return result
 
@@ -3590,12 +5128,27 @@ _APPLIANCE_KEYWORDS: Dict[str, str] = {
 }
 
 
-def generate_appliance_list(kitchen: Dict[str, Any]) -> pd.DataFrame:
+def generate_appliance_list(kitchen: Dict[str, Any], lang: str = "sr") -> pd.DataFrame:
     """
     Vraca DataFrame sa listom ugradnih uredjaja koji se NABAVLJAJU
     (ne seku se iz ploce — frizider, rerna, ploca za kuvanje, mašina itd.)
     """
     modules = kitchen.get("modules", []) or []
+    _lang = str(lang or "sr").lower().strip()
+    def _t(sr: str, en: str) -> str:
+        return en if _lang == "en" else sr
+    appliance_map = {
+        "Frizider sa zamrzivačem": "Fridge with freezer",
+        "Frizider": "Fridge",
+        "Rerna + ploča za kuvanje (kombo)": "Oven + hob (combo)",
+        "Rerna + mikrotalasna (kombo)": "Oven + microwave (combo)",
+        "Ploča za kuvanje": "Hob",
+        "Ugradna rerna": "Built-in oven",
+        "Mikrotalasna pećnica": "Microwave oven",
+        "Mašina za sudove": "Dishwasher",
+        "Aspirator / napa": "Cooker hood",
+        "Sudopera": "Sink",
+    }
     rows: List[Dict[str, Any]] = []
 
     for m in modules:
@@ -3604,9 +5157,9 @@ def generate_appliance_list(kitchen: Dict[str, Any]) -> pd.DataFrame:
             if kw in tid:
                 rows.append({
                     "ID":           m.get("id", "?"),
-                    "Uređaj":       naziv,
+                    "Uređaj":       appliance_map.get(naziv, naziv) if _lang == "en" else naziv,
                     "Oznaka":       m.get("label", tid),
-                    "Zona":         str(m.get("zone", "")).capitalize(),
+                    "Zona":         _t(str(m.get("zone", "")).capitalize(), str(m.get("zone", "")).capitalize()),
                     "Š [mm]":       m.get("w_mm", ""),
                     "V [mm]":       m.get("h_mm", ""),
                     "D [mm]":       m.get("d_mm", ""),
@@ -3619,13 +5172,16 @@ def generate_appliance_list(kitchen: Dict[str, Any]) -> pd.DataFrame:
 
 
 
-def generate_wardrobe_sections_csv(kitchen: Dict[str, Any]) -> bytes:
+def generate_wardrobe_sections_csv(kitchen: Dict[str, Any], lang: str = "sr") -> bytes:
     """Generise CSV za americke sekcije ormara (leva/centar/desna/spremnik)."""
     import csv
     from io import StringIO
+    _lang = str(lang or "sr").lower().strip()
+    def _t(sr: str, en: str) -> str:
+        return en if _lang == "en" else sr
 
     mats = kitchen.get("materials", {}) or {}
-    carcass_mat = str(mats.get("carcass_material", "Iverica"))
+    carcass_mat = str(mats.get("carcass_material", _t("Iverica", "Chipboard")))
     front_mat = str(mats.get("front_material", carcass_mat))
     dflt_thk = float(mats.get("carcass_thk", 18) or 18)
 
@@ -3656,7 +5212,7 @@ def generate_wardrobe_sections_csv(kitchen: Dict[str, Any]) -> bytes:
         mh = _safe_int(m.get("h_mm", 0), 0)
         md = _safe_int(m.get("d_mm", 0), 0)
         if mw <= 0 or mh <= 0 or md <= 0:
-            wr.writerow([mid, mlbl, "-", "validation", 0, mw, mh, md, "-", dflt_thk, "ERROR", "Nevalidne dimenzije modula"])
+            wr.writerow([mid, mlbl, "-", "validation", 0, mw, mh, md, "-", dflt_thk, "ERROR", _t("Nevalidne dimenzije modula", "Invalid module dimensions")])
             continue
 
         sec = p.get("american_sections") if isinstance(p.get("american_sections"), dict) else {}
@@ -3684,27 +5240,27 @@ def generate_wardrobe_sections_csv(kitchen: Dict[str, Any]) -> bytes:
                 nh = max(0, _safe_int(sp.get("hangers", 0), 0))
 
                 if ns > 0:
-                    wr.writerow([mid, mlbl, sname, "shelf", ns, max(40, sw - 16), 18, max(120, md - 20), carcass_mat, dflt_thk, "OK", "Polica"])
+                    wr.writerow([mid, mlbl, sname, "shelf", ns, max(40, sw - 16), 18, max(120, md - 20), carcass_mat, dflt_thk, "OK", _t("Polica", "Shelf")])
                 if nd > 0:
                     dh = max(80, int((sh * 0.30) / max(1, nd)))
-                    wr.writerow([mid, mlbl, sname, "drawer_front", nd, max(40, sw - 16), dh, 18, front_mat, dflt_thk, "OK", "Fioka front"])
-                    wr.writerow([mid, mlbl, sname, "drawer_box", nd, max(40, sw - 24), max(60, dh - 12), max(120, md - 40), carcass_mat, dflt_thk, "OK", "Fioka sanduk"])
+                    wr.writerow([mid, mlbl, sname, "drawer_front", nd, max(40, sw - 16), dh, 18, front_mat, dflt_thk, "OK", _t("Fioka front", "Drawer front")])
+                    wr.writerow([mid, mlbl, sname, "drawer_box", nd, max(40, sw - 24), max(60, dh - 12), max(120, md - 40), carcass_mat, dflt_thk, "OK", _t("Fioka sanduk", "Drawer box")])
                 if nh > 0:
-                    wr.writerow([mid, mlbl, sname, "hanger_rod", nh, max(60, sw - 20), 20, 20, "Metal", 20, "OK", "Sipka za vesanje"])
+                    wr.writerow([mid, mlbl, sname, "hanger_rod", nh, max(60, sw - 20), 20, 20, _t("Metal", "Metal"), 20, "OK", _t("Sipka za vesanje", "Hanging rail")])
 
                 used_h = (18 * max(0, ns)) + (max(80, int((sh * 0.30) / max(1, nd))) * max(0, nd))
                 if used_h > sh:
-                    wr.writerow([mid, mlbl, sname, "validation", 0, sw, sh, md, "-", dflt_thk, "WARN", "Police/Fioke prekoracile visinu sekcije"])
+                    wr.writerow([mid, mlbl, sname, "validation", 0, sw, sh, md, "-", dflt_thk, "WARN", _t("Police/Fioke prekoracile visinu sekcije", "Shelves/drawers exceeded the section height")])
         else:
             ns = max(0, _safe_int(p.get("n_shelves", 4), 4))
             nd = max(0, _safe_int(p.get("n_drawers", 2), 2))
             nh = max(0, _safe_int(p.get("hanger_sections", 1), 1))
             if ns > 0:
-                wr.writerow([mid, mlbl, "generic", "shelf", ns, max(40, mw - 16), 18, max(120, md - 20), carcass_mat, dflt_thk, "OK", "Polica"])
+                wr.writerow([mid, mlbl, "generic", "shelf", ns, max(40, mw - 16), 18, max(120, md - 20), carcass_mat, dflt_thk, "OK", _t("Polica", "Shelf")])
             if nd > 0:
                 dh = max(80, int((mh * 0.22) / max(1, nd)))
-                wr.writerow([mid, mlbl, "generic", "drawer_front", nd, max(40, mw - 16), dh, 18, front_mat, dflt_thk, "OK", "Fioka front"])
+                wr.writerow([mid, mlbl, "generic", "drawer_front", nd, max(40, mw - 16), dh, 18, front_mat, dflt_thk, "OK", _t("Fioka front", "Drawer front")])
             if nh > 0:
-                wr.writerow([mid, mlbl, "generic", "hanger_rod", nh, max(60, mw - 20), 20, 20, "Metal", 20, "OK", "Sipka za vesanje"])
+                wr.writerow([mid, mlbl, "generic", "hanger_rod", nh, max(60, mw - 20), 20, 20, _t("Metal", "Metal"), 20, "OK", _t("Sipka za vesanje", "Hanging rail")])
 
     return out.getvalue().encode("utf-8-sig")

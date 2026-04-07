@@ -5,6 +5,7 @@ from __future__ import annotations
 def render_elements_tab(
     ui,
     state,
+    tr_fn,
     sidebar_content,
     render_canvas_toolbar,
     nacrt_render,
@@ -34,17 +35,7 @@ def render_elements_tab(
         with ui.column().classes(
             'flex-1 h-full min-h-0 overflow-hidden flex flex-col bg-gray-100 relative'
         ):
-            render_canvas_toolbar(
-                ui=ui,
-                state=state,
-                nacrt_refresh=nacrt_render.refresh,
-                main_content_refresh=main_content_refresh,
-                set_view_mode=set_view_mode,
-                set_show_grid=set_show_grid,
-                set_grid_mm=set_grid_mm,
-                set_show_bounds=set_show_bounds,
-                set_ceiling_filler=set_ceiling_filler,
-            )
+            render_canvas_toolbar()
 
             @ui.refreshable
             def scene_kitchen_3d() -> None:

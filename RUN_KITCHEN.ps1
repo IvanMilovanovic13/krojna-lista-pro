@@ -1,2 +1,9 @@
 Set-Location C:\Users\Korisnik\krojna_lista_pro
-python app.py
+
+$venvPython = Join-Path $PSScriptRoot "venv\Scripts\python.exe"
+
+if (Test-Path $venvPython) {
+    & $venvPython app.py
+} else {
+    python app.py
+}

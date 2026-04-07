@@ -11,7 +11,7 @@ from ui_panels_helpers import format_user_error
 
 
 
-def render_nacrt(*, ui, state, plt, render_fn, wall_len_h, zone_baseline_and_height, ensure_room_walls, get_room_wall, nacrt_refresh, sidebar_refresh, logger, add_module_fn=None, templates=None) -> None:
+def render_nacrt(*, ui, state, tr_fn, plt, render_fn, wall_len_h, zone_baseline_and_height, ensure_room_walls, get_room_wall, nacrt_refresh, sidebar_refresh, logger, add_module_fn=None, templates=None) -> None:
     try:
         _design_wall_key = str(
             (state.room or {}).get('active_wall', (state.room or {}).get('kitchen_wall', 'A')) or 'A'
@@ -20,6 +20,7 @@ def render_nacrt(*, ui, state, plt, render_fn, wall_len_h, zone_baseline_and_hei
             ensure_room_walls(state.room)
             _design_wall = get_room_wall(state.room, _design_wall_key)
             state.kitchen.setdefault('wall', {})
+            state.kitchen['language'] = str(getattr(state, 'language', 'sr') or 'sr').lower().strip()
             state.kitchen['active_wall_key'] = _design_wall_key
             state.kitchen.setdefault('wall_lengths_mm', {})[_design_wall_key] = int(_design_wall.get('length_mm', state.kitchen.get('wall', {}).get('length_mm', 3000)) or 3000)
             state.kitchen.setdefault('wall_heights_mm', {})[_design_wall_key] = int(_design_wall.get('height_mm', state.kitchen.get('wall', {}).get('height_mm', 2600)) or 2600)
@@ -318,7 +319,7 @@ def render_nacrt(*, ui, state, plt, render_fn, wall_len_h, zone_baseline_and_hei
                     return
                 _zone = str(_mod.get('zone', 'base')).lower().strip()
                 if _zone in ('wall_upper', 'tall_top'):
-                    ui.notify('Ovaj element se pomera preko elementa ispod (nije direktan drag).', type='warning')
+                    ui.notify(tr_fn('canvas.notify_overlap_drag'), type='warning')
                     return
                 _drag.update({
                     "active": True,
@@ -444,10 +445,10 @@ def render_nacrt(*, ui, state, plt, render_fn, wall_len_h, zone_baseline_and_hei
                             d_mm=int(_zd.get('d_mm') or _defs.get('d_mm') or 560),
                             label=str(_tmpl.get('label', _tid)),
                         )
-                        ui.notify(f'Dodan: {_tmpl.get("label", _tid)}', type='positive')
+                        ui.notify(tr_fn('canvas.notify_added', label=_tmpl.get("label", _tid)), type='positive')
                     except Exception as _add_ex:
                         logger.debug("Canvas klik-dodaj greška: %s", _add_ex)
-                        ui.notify(format_user_error(_add_ex), type='negative')
+                        ui.notify(format_user_error(_add_ex, getattr(state, 'language', 'sr')), type='negative')
                 nacrt_refresh()
                 sidebar_refresh()
 
@@ -460,4 +461,4 @@ def render_nacrt(*, ui, state, plt, render_fn, wall_len_h, zone_baseline_and_hei
         )
 
     except Exception as e:
-        ui.label(CANVAS_ERR_FMT.format(err=e)).classes('text-red-500')
+        ui.label(tr_fn('canvas.err_draw', err=e)).classes('text-red-500')

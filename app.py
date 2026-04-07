@@ -1,8 +1,28 @@
 from __future__ import annotations
 
 import logging
-from nicegui import ui
+import pkgutil
+from pathlib import Path
+from importlib.util import find_spec
+
+if not hasattr(pkgutil, "find_loader"):
+    def _compat_find_loader(name: str):
+        return find_spec(name)
+    pkgutil.find_loader = _compat_find_loader
+
+from fastapi import HTTPException, Request
+from fastapi.responses import FileResponse
+from nicegui import app, ui
+from app_config import get_app_config, get_public_runtime_config
+from auth_models import restore_session_from_token
+from billing_webhooks import process_billing_webhook_payload
+from lemon_squeezy_service import get_billing_runtime_status
+from export_jobs import EXPORTS_DIR
+from project_store import cleanup_auth_artifacts, get_export_job, get_project_store_runtime_info, init_project_store
+from release_readiness import get_release_readiness_report
+from state_logic import ensure_runtime_state_initialized, refresh_current_session_access, seed_demo_project_store, state
 from ui_panels import render_toolbar, main_content
+from ui_public_site import render_login_page, render_pricing_page, render_register_page
 GLOBAL_UI_STYLE = '''
 <style>
   html, body, .nicegui-content {
@@ -44,7 +64,7 @@ GLOBAL_UI_STYLE = '''
     margin: 6px !important;
   }
 
-  .q-btn:not(.q-btn--round):not(.q-btn--fab) {
+  .q-btn:not(.q-btn--round):not(.q-btn--fab):not(.toolbar-btn) {
     min-height: 30px !important;
     height: auto !important;
     padding: 4px 12px !important;
@@ -59,19 +79,86 @@ GLOBAL_UI_STYLE = '''
     max-width: 100% !important;
   }
 
-  .q-btn:not(.q-btn--round):not(.q-btn--fab):hover {
+  .q-btn:not(.q-btn--round):not(.q-btn--fab):not(.toolbar-btn):hover {
     background: #f2f2f2 !important;
   }
 
-  .q-btn:not(.q-btn--round):not(.q-btn--fab):active,
-  .q-btn.q-btn--active:not(.q-btn--round):not(.q-btn--fab) {
+  .q-btn:not(.q-btn--round):not(.q-btn--fab):not(.toolbar-btn):active,
+  .q-btn.q-btn--active:not(.q-btn--round):not(.q-btn--fab):not(.toolbar-btn) {
     border: 2px solid #111111 !important;
   }
 
-  .q-btn:not(.q-btn--round):not(.q-btn--fab) .q-icon,
-  .q-btn:not(.q-btn--round):not(.q-btn--fab) .q-btn__content,
-  .q-btn:not(.q-btn--round):not(.q-btn--fab) .q-btn__content * {
+  .q-btn:not(.q-btn--round):not(.q-btn--fab):not(.toolbar-btn) .q-icon,
+  .q-btn:not(.q-btn--round):not(.q-btn--fab):not(.toolbar-btn) .q-btn__content,
+  .q-btn:not(.q-btn--round):not(.q-btn--fab):not(.toolbar-btn) .q-btn__content * {
     color: #111111 !important;
+  }
+
+  /* Toolbar dugmad — potpuno flat, bez bordera */
+  .toolbar-btn.q-btn {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 14px !important;
+    min-height: 42px !important;
+    height: 42px !important;
+    min-width: max-content !important;
+    font-weight: 500 !important;
+    color: #374151 !important;
+  }
+  .toolbar-btn.q-btn:hover {
+    background: #f3f4f6 !important;
+  }
+  .toolbar-btn.q-btn .q-btn__content {
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+  }
+  .toolbar-btn.q-btn .q-icon,
+  .toolbar-btn.q-btn .q-btn__content * {
+    color: inherit !important;
+  }
+  .toolbar-btn--active.q-btn {
+    color: #111827 !important;
+    font-weight: 600 !important;
+    border-bottom: 2px solid #111827 !important;
+  }
+  .toolbar-btn--action.q-btn {
+    border-left: 1px solid #e5e7eb !important;
+    padding: 0 14px !important;
+  }
+
+  /* Jezik select — isti izgled kao toolbar dugmad */
+  .toolbar-lang .q-field__control {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 12px !important;
+    min-height: 42px !important;
+    height: 42px !important;
+  }
+  .toolbar-lang .q-field__control:hover {
+    background: #f3f4f6 !important;
+  }
+  .toolbar-lang .q-field__native,
+  .toolbar-lang .q-field__input,
+  .toolbar-lang .q-select__dropdown-icon {
+    color: #374151 !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+  }
+  .toolbar-lang .q-field__marginal {
+    height: 42px !important;
+    color: #374151 !important;
+  }
+
+  .q-field__label {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    line-height: 1.15 !important;
+    max-width: 100% !important;
   }
 
   .q-btn:not(.q-btn--round):not(.q-btn--fab) .q-btn__content {
@@ -300,27 +387,165 @@ GLOBAL_UI_STYLE = '''
 </style>
 '''
 
+app.add_static_files('/assets', str(Path(__file__).resolve().parent / 'assets'))
 
-@ui.page('/')
-def index() -> None:
+
+def _render_app_shell() -> None:
+    ensure_runtime_state_initialized(allow_local_fallback=False)
+    refresh_current_session_access()
+    if not str(getattr(state, "current_user_email", "") or "").strip():
+        ui.navigate.to("/login")
+        return
+    if str(getattr(state, "current_auth_mode", "") or "").strip().lower() == "local":
+        ui.navigate.to("/login")
+        return
     ui.query('body').style('margin: 0; padding: 0;')
     ui.add_head_html(GLOBAL_UI_STYLE)
     render_toolbar()
     main_content()
 
 
+@ui.page('/')
+def index(request: Request) -> None:
+    render_login_page(request)
+
+
+@ui.page('/app')
+def app_entry() -> None:
+    _render_app_shell()
+
+
+@ui.page('/pricing')
+def pricing_page() -> None:
+    render_pricing_page()
+
+
+@ui.page('/login')
+def login_page(request: Request) -> None:
+    render_login_page(request)
+
+
+@ui.page('/register')
+def register_page() -> None:
+    render_register_page()
+
+
+@app.post('/api/billing/webhook')
+async def billing_webhook(request: Request) -> dict[str, str]:
+    payload_bytes = await request.body()
+    webhook_signature = str(request.headers.get('x-signature', '') or '')
+    provided_secret = str(request.headers.get('x-webhook-secret', '') or '')
+    return process_billing_webhook_payload(
+        payload=None,
+        provided_secret=provided_secret,
+        payload_bytes=payload_bytes,
+        webhook_signature=webhook_signature,
+    )
+
+
+@app.get('/exports/{job_id}/{filename}')
+async def protected_export_download(job_id: int, filename: str, token: str = "") -> FileResponse:
+    clean_token = str(token or "").strip()
+    if not clean_token:
+        raise HTTPException(status_code=401, detail="auth_required")
+
+    session = restore_session_from_token(clean_token)
+    if session is None:
+        raise HTTPException(status_code=401, detail="invalid_session")
+
+    tier = str(session.user.access_tier or "").strip().lower()
+    if tier not in {"paid", "admin", "local_beta"}:
+        raise HTTPException(status_code=403, detail="paid_access_required")
+
+    job = get_export_job(int(job_id), user_id=int(session.user.user_id))
+    if job is None:
+        raise HTTPException(status_code=404, detail="export_job_not_found")
+    if str(job.status or "").strip().lower() != "done":
+        raise HTTPException(status_code=409, detail="export_not_ready")
+
+    safe_name = Path(str(filename or "")).name
+    expected_ref = f"/exports/{int(job.id)}/{safe_name}"
+    if str(job.result_ref or "").strip() != expected_ref:
+        raise HTTPException(status_code=404, detail="export_result_mismatch")
+
+    job_dir_path = EXPORTS_DIR / str(int(job.id))
+    file_path = job_dir_path / safe_name
+    if (not file_path.exists() or not file_path.is_file()) and str(job_dir_path) != str(EXPORTS_DIR):
+        legacy_path = EXPORTS_DIR / safe_name
+        if legacy_path.exists() and legacy_path.is_file():
+            file_path = legacy_path
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="export_file_missing")
+
+    media_type = "application/octet-stream"
+    suffix = str(file_path.suffix or "").lower()
+    if suffix == ".pdf":
+        media_type = "application/pdf"
+    elif suffix == ".xlsx":
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    elif suffix == ".csv":
+        media_type = "text/csv"
+
+    return FileResponse(path=file_path, filename=safe_name, media_type=media_type)
+
+
+@app.get('/healthz')
+async def healthz() -> dict[str, str]:
+    cfg = get_app_config()
+    runtime = get_project_store_runtime_info()
+    return {
+        "ok": "true",
+        "app_env": str(cfg.app_env),
+        "database_backend": str(runtime.get("backend", "")),
+        "database_ready": str(runtime.get("ready", "")),
+    }
+
+
+@app.get('/readyz')
+async def readyz() -> dict[str, str]:
+    cfg = get_app_config()
+    runtime = get_project_store_runtime_info()
+    return {
+        "ok": "true" if str(runtime.get("ready", "")).lower() == "true" else "false",
+        "app_env": str(cfg.app_env),
+        "database_backend": str(runtime.get("backend", "")),
+        "database_ready": str(runtime.get("ready", "")),
+        "billing_configured": "true" if bool(str(cfg.lemon_squeezy_api_key or "").strip()) else "false",
+    }
+
+
+@app.get('/ops/runtime')
+async def ops_runtime() -> dict[str, object]:
+    return {
+        "app_config": get_public_runtime_config(),
+        "project_store": get_project_store_runtime_info(),
+        "stripe": get_billing_runtime_status(),
+    }
+
+
+@app.get('/ops/readiness')
+async def ops_readiness(target: str = "production") -> dict[str, object]:
+    return get_release_readiness_report(target=str(target))
+
+
 def run_app() -> None:
+    cfg = get_app_config()
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
     )
+    init_project_store()
+    cleanup_auth_artifacts()
+    seed_demo_project_store()
     ui.run(
-        title='krojna pista PRO',
-        port=8080,
+        title='krojna lista PRO',
+        host=str(cfg.host or '127.0.0.1'),
+        port=int(cfg.port),
         reload=False,
-        workers=0,
+        workers=int(cfg.web_workers),
+        storage_secret=str(cfg.secret_key),
     )
 
 
-if __name__ in {'__main__', '__mp_main__'}:
+if __name__ == '__main__':
     run_app()

@@ -7,7 +7,7 @@ from nicegui import ui
 
 from cutlist import build_cutlist_sections, generate_cutlist_excel, generate_cutlist_pdf
 from module_templates import get_templates
-from state_logic import state, reset_state, _max_allowed_h_for_zone, add_module_instance_local, update_module_local, delete_module_local, clear_all_local, _set_view_mode, _set_show_grid, _set_grid_mm, _set_show_bounds, _set_ceiling_filler, _set_wall_length, _set_wall_height, _set_foot_height, _set_base_height, _set_vertical_gap, _set_material, _set_front_color, _set_worktop_thickness, _set_worktop_width, _set_max_element_height, get_zone_depth_standard, set_zone_depth_standard, _get_depth_mode, _is_independent_depth, suggest_corner_neighbor_guidance, save_project_json, load_project_json
+from state_logic import state, reset_state, _max_allowed_h_for_zone, add_module_instance_local, update_module_local, delete_module_local, clear_all_local, _set_view_mode, _set_show_grid, _set_grid_mm, _set_show_bounds, _set_ceiling_filler, _set_wall_length, _set_wall_height, _set_foot_height, _set_base_height, _set_vertical_gap, _set_material, _set_front_color, _set_worktop_thickness, _set_worktop_width, _set_worktop_reserve_mm, _set_worktop_front_overhang_mm, _set_worktop_field_cut, _set_worktop_edge_protection, _set_worktop_edge_protection_type, _set_worktop_joint_type, _set_max_element_height, get_zone_depth_standard, set_zone_depth_standard, _get_depth_mode, _is_independent_depth, suggest_corner_neighbor_guidance, save_project_json, load_project_json, build_demo_project_json, save_local_recent_project, list_recent_projects, load_recent_project, list_user_store_projects, load_project_from_store, get_autosave_info, load_autosave_project, login_user_session, register_trial_user_session, restore_local_session_state, logout_current_session, build_forgot_password_message, reset_password_with_token, get_current_billing_summary, get_cutlist_access_state, build_checkout_start_message, build_customer_portal_message, get_release_readiness_summary, get_ops_runtime_summary, get_visible_audit_logs, _set_language
 from layout_engine import find_first_free_x, solve_layout
 from visualization import _render, _wall_len_h, _zone_baseline_and_height, render_element_preview
 from svg_icons import svg_for_tid
@@ -42,7 +42,10 @@ from ui_cutlist_tab import render_cutlist_tab
 from ui_canvas_toolbar import render_canvas_toolbar
 from ui_elements_tab import render_elements_tab
 from ui_nova_tab import render_nova_tab
+from ui_auth_tab import render_auth_tab
+from ui_admin_tab import render_admin_tab
 from ui_help_tab import render_help_tab
+from ui_access_gate import render_access_gate
 from ui_wizard_tab import render_wizard_tab
 from ui_add_above_dialogs import open_add_above_dialog, open_add_above_tall_dialog
 from ui_edit_panel import render_edit_panel
@@ -51,48 +54,33 @@ from ui_main_content import render_main_content_inner
 from ui_room_helpers import (
     ROOM_OPENING_TYPES,
     ROOM_FIXTURE_TYPES,
+    get_room_opening_types,
+    get_room_fixture_types,
     ensure_room_walls as _ensure_room_walls,
     get_room_wall as _get_room_wall,
 )
 from ui_assembly import assembly_instructions as _assembly_instructions
 from ui_image_utils import fig_to_data_uri_exact
 from i18n import (
-    BTN_RESET_POTVRDI,
-    BTN_DODAJ_NA_ZID,
-    BTN_OTKAZI,
-    BTN_POKUSAJ_PONOVO,
-    BTN_RESET_PROJEKTA,
-    DLG_RESET_DESC,
-    DLG_RESET_TITLE,
     ERR_TAB_RENDER,
-    LBL_BOJA_FRONTA,
-    LBL_DUBINA_MM,
-    LBL_IZNAD_KOG_GORNJEG,
-    LBL_NAZIV,
-    LBL_ODABERI_ELEMENT_IZ_LISTE,
-    LBL_SIRINA_MM,
-    LBL_SMER_GODA,
-    LBL_STRANA_RUCKE,
-    LBL_VISINA_MM,
-    MSG_NEMA_GORNJIH_1_RED,
-    MSG_PODESI_PROSTORIJU_PRVO,
-    TAB_POCETAK,
-    TAB_ELEMENTI,
-    TAB_KROJNA,
-    TAB_PODESAVANJA,
-    TAB_POMOC,
+    OPT_TEHNICKI,
+    get_language_options,
+    tr,
 )
 
 templates = get_templates()
 _LOG = logging.getLogger(__name__)
 
 
-def _set_sidebar_primary_action(handler=None, label: str = BTN_DODAJ_NA_ZID) -> None:
+def _set_sidebar_primary_action(handler=None, label: str | None = None) -> None:
+    _label = label
+    if not _label:
+        _label = _tr("elements.add_to_wall")
     _set_sidebar_primary_action_helper(
         ui=ui,
         logger=_LOG,
         impl=_set_sidebar_primary_action_impl,
-        label=label,
+        label=_label,
         handler=handler,
     )
 
@@ -101,9 +89,30 @@ def _run_sidebar_primary_action() -> None:
     _run_sidebar_primary_action_helper(
         ui=ui,
         impl=_run_sidebar_primary_action_impl,
-        label_fallback=BTN_DODAJ_NA_ZID,
-        notify_empty=LBL_ODABERI_ELEMENT_IZ_LISTE,
+        label_fallback=_tr("elements.add_to_wall"),
+        notify_empty=_tr("elements.select_from_list"),
     )
+
+
+def _tr(key: str, **fmt: object) -> str:
+    return tr(key, getattr(state, "language", "sr"), **fmt)
+
+
+def _change_language(lang: str) -> None:
+    _current = str(getattr(state, "language", "sr") or "sr").strip().lower()
+    _target = str(lang or "sr").strip().lower()
+    if _target == _current:
+        return
+    _set_language(lang)
+    render_toolbar.refresh()
+    if str(getattr(state, "active_tab", "") or "") == "elementi":
+        canvas_toolbar_panel.refresh()
+        sidebar_content.refresh()
+        return
+    if str(getattr(state, "active_tab", "") or "") == "nova":
+        nova_panel.refresh()
+        return
+    main_content.refresh()
 
 def _palette_tabs_current() -> list[dict]:
     # kitchen_layout se cuva kao state.kitchen_layout (atribut) i state.kitchen['layout']
@@ -123,36 +132,43 @@ def _palette_tab_map_current() -> dict:
 
 def _render_color_picker(
     color_ref: dict,
-    title: str = LBL_BOJA_FRONTA,
+    title: str | None = None,
     *,
     columns: int = 4,
     swatch_h: int = 28,
+    lang: str | None = None,
 ) -> None:
     _render_color_picker_wrapper(
         ui=ui,
         render_color_picker_fn=render_color_picker,
         presets=_FRONT_COLOR_PRESETS,
         color_ref=color_ref,
-        title=title,
+        title=title or _tr("elements.material_color"),
         columns=columns,
         swatch_h=swatch_h,
+        lang=lang or getattr(state, "language", "sr"),
     )
 
 
 @ui.refreshable
 def render_toolbar() -> None:
     tabs = [
-        ("wizard",    TAB_POCETAK,      "home"),
-        ("elementi",  TAB_ELEMENTI,     "grid_view"),
-        ("krojna",    TAB_KROJNA,       "table_rows"),
-        ("podesavanja", TAB_PODESAVANJA, "settings"),
-        ("pomoc",     TAB_POMOC,        "help"),
+        ("wizard",    _tr("tab.wizard"),    "home"),
+        ("podesavanja", _tr("tab.settings"), "settings"),
+        ("elementi",  _tr("tab.elements"),  "grid_view"),
+        ("pomoc",     _tr("tab.help"),      "help"),
     ]
+    if str(get_cutlist_access_state().get("allowed", "")).lower() == "true":
+        tabs.insert(3, ("krojna", _tr("tab.cutlist"), "table_rows"))
+    _tier = str(getattr(state, "current_access_tier", "") or "").strip().lower()
+    if _tier == "admin":
+        tabs.insert(5, ("ops", _tr("tab.ops"), "admin_panel_settings"))
 
     _toolbar_save, _toolbar_load = make_toolbar_actions(
         ui=ui,
         state=state,
         logger=_LOG,
+        tr_fn=_tr,
         save_project_json=save_project_json,
         load_project_json=load_project_json,
         main_content_refresh=main_content.refresh,
@@ -161,18 +177,34 @@ def render_toolbar() -> None:
     def _toolbar_reset() -> None:
         with ui.dialog() as _dlg:
             with ui.card().classes('p-6 min-w-96 gap-3'):
-                ui.label(DLG_RESET_TITLE).classes('text-lg font-bold')
-                ui.label(DLG_RESET_DESC).classes('text-sm text-gray-500')
+                ui.label(_tr("toolbar.reset")).classes('text-lg font-bold')
+                ui.label(_tr("nova.warn_clear")).classes('text-sm text-gray-500')
                 with ui.row().classes('w-full gap-2'):
-                    ui.button(BTN_RESET_POTVRDI, on_click=lambda: (
+                    ui.button(_tr("nova.confirm"), on_click=lambda: (
                         reset_state(),
                         _dlg.close(),
                         render_toolbar.refresh(),
                         main_content.refresh(),
-                        ui.notify(f'{BTN_RESET_PROJEKTA}: OK', type='positive'),
+                        ui.notify(f'{_tr("toolbar.reset")}: OK', type='positive'),
                     )).classes('flex-1 bg-white text-[#111] border border-[#111]')
-                    ui.button(BTN_OTKAZI, on_click=_dlg.close).classes('flex-1')
+                    ui.button(_tr("common.cancel"), on_click=_dlg.close).classes('flex-1')
             _dlg.open()
+
+    def _toolbar_logout() -> None:
+        ok, err = logout_current_session()
+        if ok:
+            render_toolbar.refresh()
+            main_content.refresh()
+            ui.notify(_tr("nova.auth_logout_ok"), type='positive')
+            ui.navigate.to("/login")
+        else:
+            ui.notify(err, type='negative', timeout=5000)
+
+    _session_email = str(getattr(state, "current_user_email", "") or "")
+    _session_tier = str(getattr(state, "current_access_tier", "") or "")
+    _session_label = ""
+    if _session_email:
+        _session_label = _tr("toolbar.session_fmt", email=_session_email, tier=_session_tier or "-")
 
     render_toolbar_layout(
         ui=ui,
@@ -182,6 +214,23 @@ def render_toolbar() -> None:
         on_save_click=_toolbar_save,
         on_load_click=_toolbar_load,
         on_reset_click=_toolbar_reset,
+        language_label=_tr("toolbar.language"),
+        language_options=get_language_options(),
+        current_language=getattr(state, "language", "sr"),
+        on_language_change=_change_language,
+        toolbar_app_name=_tr("toolbar.app_name"),
+        toolbar_app_sub=_tr("toolbar.app_sub"),
+        toolbar_save_label=_tr("toolbar.save"),
+        toolbar_load_label=_tr("toolbar.load"),
+        toolbar_reset_label=_tr("toolbar.reset"),
+        toolbar_save_tooltip=_tr("toolbar.save_tooltip"),
+        toolbar_load_tooltip=_tr("toolbar.load_tooltip"),
+        toolbar_reset_tooltip=_tr("toolbar.reset_tooltip"),
+        session_label=_session_label,
+        account_label=_tr("toolbar.account"),
+        logout_label=_tr("toolbar.logout"),
+        on_account_click=lambda: switch_tab("nalog"),
+        on_logout_click=_toolbar_logout,
     )
 
 
@@ -190,7 +239,7 @@ def switch_tab(key: str) -> None:
         ui=ui,
         state=state,
         key=key,
-        msg_podesi_prostoriju_prvo=MSG_PODESI_PROSTORIJU_PRVO,
+        msg_podesi_prostoriju_prvo=_tr("room.setup_first"),
         main_content_refresh=main_content.refresh,
         render_toolbar_refresh=render_toolbar.refresh,
         logger=_LOG,
@@ -204,6 +253,11 @@ def render_palette() -> None:
 def select_palette_tab(key: str) -> None:
     _tab_map = _palette_tab_map_current()
     state.active_group = key if key in _tab_map else (next(iter(_tab_map.keys()), "donji"))
+    _changed_view = str(getattr(state, "view_mode", "") or "") != str(OPT_TEHNICKI)
+    if _changed_view:
+        _set_view_mode(OPT_TEHNICKI)
+        main_content.refresh()
+        return
     sidebar_content.refresh()
 
 
@@ -248,16 +302,16 @@ def params_panel() -> None:
         sidebar_refresh=sidebar_content.refresh,
         set_sidebar_primary_action=_set_sidebar_primary_action,
         params_panel_refresh=params_panel.refresh,
-        l_odaberi_element=LBL_ODABERI_ELEMENT_IZ_LISTE,
-        l_sirina_mm=LBL_SIRINA_MM,
-        l_visina_mm=LBL_VISINA_MM,
-        l_dubina_mm=LBL_DUBINA_MM,
-        l_smer_goda=LBL_SMER_GODA,
-        l_naziv=LBL_NAZIV,
-        l_strana_rucke=LBL_STRANA_RUCKE,
-        l_iznad_kog_gornjeg=LBL_IZNAD_KOG_GORNJEG,
-        m_nema_gornjih_1_red=MSG_NEMA_GORNJIH_1_RED,
-        b_dodaj_na_zid=BTN_DODAJ_NA_ZID,
+        l_odaberi_element=_tr("elements.select_from_list"),
+        l_sirina_mm=_tr("params.width_mm"),
+        l_visina_mm=_tr("params.height_mm"),
+        l_dubina_mm=_tr("params.depth_mm"),
+        l_smer_goda=_tr("params.grain_label"),
+        l_naziv=_tr("params.name"),
+        l_strana_rucke=_tr("params.handle_side"),
+        l_iznad_kog_gornjeg=_tr("params.above_which_wall"),
+        m_nema_gornjih_1_red=_tr("elements.no_first_row_wall"),
+        b_dodaj_na_zid=_tr("elements.add_to_wall"),
     )
 
 
@@ -324,6 +378,7 @@ def nacrt() -> None:
     render_nacrt(
         ui=ui,
         state=state,
+        tr_fn=_tr,
         plt=plt,
         render_fn=_render,
         wall_len_h=_wall_len_h,
@@ -338,9 +393,57 @@ def nacrt() -> None:
     )
 
 
+@ui.refreshable
+def canvas_toolbar_panel() -> None:
+    render_canvas_toolbar(
+        ui=ui,
+        state=state,
+        tr_fn=_tr,
+        nacrt_refresh=nacrt.refresh,
+        main_content_refresh=main_content.refresh,
+        set_view_mode=_set_view_mode,
+        set_show_grid=_set_show_grid,
+        set_grid_mm=_set_grid_mm,
+        set_show_bounds=_set_show_bounds,
+        set_ceiling_filler=_set_ceiling_filler,
+    )
+
+
+@ui.refreshable
+def nova_panel() -> None:
+    render_nova_tab(
+        ui=ui,
+        state=state,
+        tr_fn=_tr,
+        main_content_refresh=main_content.refresh,
+        render_toolbar_refresh=render_toolbar.refresh,
+        switch_tab=switch_tab,
+        clear_all_local=clear_all_local,
+        save_project_json=save_project_json,
+        load_project_json=load_project_json,
+        build_demo_project_json=build_demo_project_json,
+        save_local_recent_project=save_local_recent_project,
+        list_recent_projects=list_recent_projects,
+        load_recent_project=load_recent_project,
+        list_user_store_projects=list_user_store_projects,
+        load_project_from_store=load_project_from_store,
+        get_autosave_info=get_autosave_info,
+        load_autosave_project=load_autosave_project,
+        login_user_session=login_user_session,
+        register_trial_user_session=register_trial_user_session,
+        restore_local_session_state=restore_local_session_state,
+        logout_current_session=logout_current_session,
+        build_forgot_password_message=build_forgot_password_message,
+        reset_password_with_token=reset_password_with_token,
+        get_current_billing_summary=get_current_billing_summary,
+        build_checkout_start_message=build_checkout_start_message,
+        build_customer_portal_message=build_customer_portal_message,
+    )
+
+
 def _build_pdf_bytes(kitchen: dict) -> bytes:
     # Jedinstvena PDF putanja: cutlist.generate_cutlist_pdf
-    return generate_cutlist_pdf(kitchen)
+    return generate_cutlist_pdf(kitchen, lang=str(getattr(state, 'language', 'sr') or 'sr'))
 
 
 @ui.refreshable
@@ -353,7 +456,7 @@ def main_content() -> None:
             ui.icon('error_outline').classes('text-6xl text-red-300')
             ui.label(ERR_TAB_RENDER).classes('text-lg font-bold text-red-500')
             ui.label(str(_mc_err)).classes('text-sm font-mono text-red-400 break-all max-w-xl text-center')
-            ui.button(f'↻ {BTN_POKUSAJ_PONOVO}', on_click=main_content.refresh).classes(
+            ui.button(f'↻ {_tr("common.retry")}', on_click=main_content.refresh).classes(
                 'mt-4 bg-white text-[#111] border border-[#111] px-6 py-2 rounded'
             )
 
@@ -362,8 +465,10 @@ def _main_content_inner() -> None:
     render_main_content_inner(
         ui=ui,
         state=state,
+        tr_fn=_tr,
         sidebar_content=sidebar_content,
-        render_canvas_toolbar=render_canvas_toolbar,
+        render_toolbar_refresh=render_toolbar.refresh,
+        render_canvas_toolbar=canvas_toolbar_panel,
         nacrt_render=nacrt,
         main_content_refresh=main_content.refresh,
         set_view_mode=_set_view_mode,
@@ -377,6 +482,7 @@ def _main_content_inner() -> None:
         get_zone_depth_standard=get_zone_depth_standard,
         render_elements_tab=render_elements_tab,
         render_cutlist_tab=render_cutlist_tab,
+        cutlist_tr=_tr,
         pd=pd,
         plt=plt,
         build_cutlist_sections=build_cutlist_sections,
@@ -388,6 +494,7 @@ def _main_content_inner() -> None:
         svg_for_tid=svg_for_tid,
         assembly_instructions=_assembly_instructions,
         render_settings_tab=render_settings_tab,
+        settings_tr=_tr,
         set_zone_depth_standard=set_zone_depth_standard,
         nacrt_refresh=nacrt.refresh,
         set_front_color=_set_front_color,
@@ -398,22 +505,54 @@ def _main_content_inner() -> None:
         set_worktop_thickness=_set_worktop_thickness,
         set_base_height=_set_base_height,
         set_worktop_width=_set_worktop_width,
+        set_worktop_reserve_mm=_set_worktop_reserve_mm,
+        set_worktop_front_overhang_mm=_set_worktop_front_overhang_mm,
+        set_worktop_field_cut=_set_worktop_field_cut,
+        set_worktop_edge_protection=_set_worktop_edge_protection,
+        set_worktop_edge_protection_type=_set_worktop_edge_protection_type,
+        set_worktop_joint_type=_set_worktop_joint_type,
         set_vertical_gap=_set_vertical_gap,
         set_max_element_height=_set_max_element_height,
         render_color_picker=_render_color_picker,
-        render_nova_tab=render_nova_tab,
+        render_nova_panel=nova_panel,
+        nova_tr=_tr,
         switch_tab=switch_tab,
         clear_all_local=clear_all_local,
         save_project_json=save_project_json,
         load_project_json=load_project_json,
+        build_demo_project_json=build_demo_project_json,
+        save_local_recent_project=save_local_recent_project,
+        list_recent_projects=list_recent_projects,
+        load_recent_project=load_recent_project,
+        list_user_store_projects=list_user_store_projects,
+        load_project_from_store=load_project_from_store,
+        get_autosave_info=get_autosave_info,
+        load_autosave_project=load_autosave_project,
+        login_user_session=login_user_session,
+        register_trial_user_session=register_trial_user_session,
+        restore_local_session_state=restore_local_session_state,
+        logout_current_session=logout_current_session,
+        build_forgot_password_message=build_forgot_password_message,
+        reset_password_with_token=reset_password_with_token,
+        get_current_billing_summary=get_current_billing_summary,
+        build_checkout_start_message=build_checkout_start_message,
+        build_customer_portal_message=build_customer_portal_message,
+        render_auth_tab=render_auth_tab,
+        render_admin_tab=render_admin_tab,
+        render_access_gate=render_access_gate,
         render_help_tab=render_help_tab,
+        help_tr=_tr,
         render_wizard_tab=render_wizard_tab,
+        wizard_tr=_tr,
         main_content=main_content,
         render_room_setup_step3=render_room_setup_step3,
         ensure_room_walls=_ensure_room_walls,
         get_room_wall=_get_room_wall,
-        room_opening_types=ROOM_OPENING_TYPES,
-        room_fixture_types=ROOM_FIXTURE_TYPES,
+        room_opening_types=get_room_opening_types(getattr(state, "language", "sr")),
+        room_fixture_types=get_room_fixture_types(getattr(state, "language", "sr")),
+        get_release_readiness_summary=get_release_readiness_summary,
+        get_ops_runtime_summary=get_ops_runtime_summary,
+        get_visible_audit_logs=get_visible_audit_logs,
     )
 
 
@@ -430,7 +569,7 @@ def sidebar_content() -> None:
         palette_tabs=_tabs,
         palette_tab_map=_tab_map,
         sidebar_primary_action=_get_sidebar_primary_action(),
-        btn_dodaj_na_zid=BTN_DODAJ_NA_ZID,
+        btn_dodaj_na_zid=_tr("elements.add_to_wall"),
         render_sidebar_content_layout=render_sidebar_content_layout,
         render_palette=render_palette,
         params_panel=params_panel,

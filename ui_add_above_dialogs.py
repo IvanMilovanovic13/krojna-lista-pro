@@ -7,7 +7,6 @@ from i18n import (
     BADGE_GORNJI_RED,
     BADGE_NADSTRESNI,
     BTN_DODAJ,
-    BTN_OTKAZI,
     LBL_DODAJ_IZNAD_VISOKOG,
     LBL_DODAJ_RED_IZNAD,
     LBL_DUBINA_LABEL_MM,
@@ -35,6 +34,7 @@ def open_add_above_tall_dialog(
     nacrt_refresh: Callable[[], None],
     sidebar_refresh: Callable[[], None],
 ) -> None:
+    _lang = str(getattr(state, 'language', 'sr') or 'sr').lower().strip()
     mods = state.kitchen.get('modules', []) or []
     tall_m = next((mm for mm in mods if int(mm.get('id', -1)) == tall_module_id), None)
     if not tall_m:
@@ -72,17 +72,19 @@ def open_add_above_tall_dialog(
                 label=LBL_TIP_ELEMENTA,
             ).classes('w-full').props('outlined dense')
 
-            with ui.row().classes('w-full gap-2'):
-                h_inp = ui.number(
-                    LBL_VISINA_MAX_FMT.format(max_h=max_h),
-                    value=def_h, min=150, max=max_h, step=10,
-                ).classes('flex-1').props('outlined dense')
+            with ui.grid().classes('w-full grid-cols-1 gap-2 md:grid-cols-2'):
+                with ui.column().classes('w-full gap-0.5 min-w-0'):
+                    ui.label(LBL_VISINA_MAX_FMT.format(max_h=max_h)).classes('text-[11px] text-gray-500')
+                    h_inp = ui.number(
+                        value=def_h, min=150, max=max_h, step=10,
+                    ).classes('w-full min-w-0').props('outlined dense suffix=mm')
 
                 def_d = int((templates.get(tt_tids[0], {}).get('defaults', {}) or {}).get('d_mm', 350))
-                d_inp = ui.number(
-                    LBL_DUBINA_LABEL_MM,
-                    value=def_d, min=150, max=700, step=10,
-                ).classes('flex-1').props('outlined dense')
+                with ui.column().classes('w-full gap-0.5 min-w-0'):
+                    ui.label(LBL_DUBINA_LABEL_MM).classes('text-[11px] text-gray-500')
+                    d_inp = ui.number(
+                        value=def_d, min=150, max=700, step=10,
+                    ).classes('w-full min-w-0').props('outlined dense suffix=mm')
 
             ui.label(LBL_SIRINA_POZ_AUTO.format(w=tall_w)).classes('text-xs text-gray-700 mt-1')
 
@@ -110,13 +112,13 @@ def open_add_above_tall_dialog(
                     nacrt_refresh()
                     sidebar_refresh()
                 except Exception as e:
-                    ui.notify(NOTIFY_ERR_SHORT_FMT.format(err=format_user_error(e)), type='negative')
+                    ui.notify(NOTIFY_ERR_SHORT_FMT.format(err=format_user_error(e, getattr(state, 'language', 'sr'))), type='negative')
 
             with ui.row().classes('w-full mt-3 gap-2'):
                 ui.button(BTN_DODAJ, on_click=_potvrdi).classes(
                     'flex-1 bg-white text-[#111] border border-[#111] font-bold'
                 )
-                ui.button(BTN_OTKAZI, on_click=dlg.close).classes('flex-1')
+                ui.button(tr("common.cancel", _lang), on_click=dlg.close).classes('flex-1')
 
     dlg.open()
 
@@ -132,6 +134,7 @@ def open_add_above_dialog(
     nacrt_refresh: Callable[[], None],
     sidebar_refresh: Callable[[], None],
 ) -> None:
+    _lang = str(getattr(state, 'language', 'sr') or 'sr').lower().strip()
     mods = state.kitchen.get('modules', []) or []
     wall_m = next((mm for mm in mods if int(mm.get('id', -1)) == wall_module_id), None)
     if not wall_m:
@@ -169,17 +172,19 @@ def open_add_above_dialog(
                 label=LBL_TIP_ELEMENTA,
             ).classes('w-full').props('outlined dense')
 
-            with ui.row().classes('w-full gap-2'):
-                h_inp = ui.number(
-                    LBL_VISINA_MAX_FMT.format(max_h=max_h),
-                    value=def_h, min=150, max=max_h, step=10,
-                ).classes('flex-1').props('outlined dense')
+            with ui.grid().classes('w-full grid-cols-1 gap-2 md:grid-cols-2'):
+                with ui.column().classes('w-full gap-0.5 min-w-0'):
+                    ui.label(LBL_VISINA_MAX_FMT.format(max_h=max_h)).classes('text-[11px] text-gray-500')
+                    h_inp = ui.number(
+                        value=def_h, min=150, max=max_h, step=10,
+                    ).classes('w-full min-w-0').props('outlined dense suffix=mm')
 
                 def_d = int((templates.get(wu_tids[0], {}).get('defaults', {}) or {}).get('d_mm', 350))
-                d_inp = ui.number(
-                    LBL_DUBINA_LABEL_MM,
-                    value=def_d, min=150, max=700, step=10,
-                ).classes('flex-1').props('outlined dense')
+                with ui.column().classes('w-full gap-0.5 min-w-0'):
+                    ui.label(LBL_DUBINA_LABEL_MM).classes('text-[11px] text-gray-500')
+                    d_inp = ui.number(
+                        value=def_d, min=150, max=700, step=10,
+                    ).classes('w-full min-w-0').props('outlined dense suffix=mm')
 
             ui.label(LBL_SIRINA_POZ_AUTO.format(w=wall_w)).classes('text-xs text-gray-700 mt-1')
 
@@ -207,12 +212,12 @@ def open_add_above_dialog(
                     nacrt_refresh()
                     sidebar_refresh()
                 except Exception as e:
-                    ui.notify(NOTIFY_ERR_SHORT_FMT.format(err=format_user_error(e)), type='negative')
+                    ui.notify(NOTIFY_ERR_SHORT_FMT.format(err=format_user_error(e, getattr(state, 'language', 'sr'))), type='negative')
 
             with ui.row().classes('w-full mt-3 gap-2'):
                 ui.button(BTN_DODAJ, on_click=_potvrdi).classes(
                     'flex-1 bg-white text-[#111] border border-[#111] font-bold'
                 )
-                ui.button(BTN_OTKAZI, on_click=dlg.close).classes('flex-1')
+                ui.button(tr("common.cancel", _lang), on_click=dlg.close).classes('flex-1')
 
     dlg.open()

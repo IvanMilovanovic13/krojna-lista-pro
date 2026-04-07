@@ -53,6 +53,7 @@ def get_templates() -> Dict[str, Dict[str, Any]]:
         out[tid] = {
             "id":           tid,
             "label":        tpl.get("label", tid),
+            "label_i18n":   tpl.get("label_i18n") or {},
             "zone":         tpl.get("zone", "base"),
             "type":         tpl.get("type", ""),
             "features":     tpl.get("features") or {},

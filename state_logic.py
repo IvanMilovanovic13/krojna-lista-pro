@@ -5,8 +5,10 @@ import copy
 import json
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from i18n import normalize_language_code
 from layout_engine import find_first_free_x, available_space_in_zone, solve_layout, _profile_clearance_mm, _l_corner_offsets_mm
 from module_templates import resolve_template
 
@@ -55,7 +57,17 @@ def _compute_zones(k: dict) -> dict:
     }
 
 
-def _max_allowed_h_for_zone(zone: str) -> int:
+_FREESTANDING_BASE_TIDS = {
+    "BASE_DISHWASHER_FREESTANDING",
+    "BASE_OVEN_HOB_FREESTANDING",
+}
+
+
+def _is_freestanding_template(template_id: str | None) -> bool:
+    return "FREESTANDING" in str(template_id or "").upper().strip()
+
+
+def _max_allowed_h_for_zone(zone: str, template_id: str | None = None) -> int:
     """
     Računa maksimalnu dozvoljenu visinu elementa u datoj zoni
     na osnovu kitchen parametara i max_element_height granice.
@@ -66,6 +78,9 @@ def _max_allowed_h_for_zone(zone: str) -> int:
     z = (zone or 'base').lower().strip()
 
     if z == 'base':
+        _tid = str(template_id or "").upper().strip()
+        if _is_freestanding_template(_tid):
+            return max_h_global
         return int(k.get('base_korpus_h_mm', 720))
 
     elif z == 'wall':
@@ -132,7 +147,17 @@ def _default_kitchen() -> Dict[str, Any]:
         "foot_height_mm": 100,
         "base_korpus_h_mm": 720,
         "vertical_gap_mm": 600,
-        "worktop": {"thickness": 3.8, "width": 600.0},
+        "worktop": {
+            "thickness": 3.8,
+            "width": 600.0,
+            "mounting_reserve_mm": 20,
+            "front_overhang_mm": 20,
+            "field_cut": True,
+            "edge_protection": True,
+            "edge_protection_type": "silikon / vodootporni premaz",
+            "joint_type": "STRAIGHT",
+            "standard_lengths_mm": [2000, 3000, 4000],
+        },
         "manufacturing": {"profile": "EU_SRB"},
         "materials": {
             "carcass_material": "Iverica",
@@ -203,6 +228,7 @@ class AppState:
     wall_upper_target_x: int = -1
     front_color: str = "#FDFDFB"
     selected_edit_id: int = 0
+    language: str = "sr"
     mode: str = "add"            # "add" | "edit"
     sidebar_tab: str = 'dodaj'   # legacy UI tab state
     # ── Wizard ────────────────────────────────────────────────────────────────
@@ -216,6 +242,19 @@ class AppState:
     wardrobe_to_ceiling: bool = True
     wardrobe_door_mode: str = "hinged"   # "hinged" | "sliding"
     wardrobe_target_wall: str = "A"      # "A" | "B" | "C"
+    current_user_id: int = 0
+    current_user_email: str = ""
+    current_user_display: str = ""
+    current_session_token: str = ""
+    current_session_expires_at: str = ""
+    current_auth_mode: str = ""
+    current_access_tier: str = ""
+    current_subscription_status: str = ""
+    current_gate_reason: str = ""
+    current_can_access_app: bool = True
+    current_project_id: int = 0
+    current_project_name: str = ""
+    current_project_source: str = ""
     room: Dict[str, Any] = field(default_factory=_default_room)
     room_setup_done: bool = False
     # Pamti poslednje koriscene dimenzije po zoni
@@ -237,7 +276,48 @@ class AppState:
     })
 
 
-state = AppState()
+_STATE_REGISTRY: Dict[str, AppState] = {"default": AppState()}
+
+
+def _get_current_client_key() -> str:
+    try:
+        from nicegui import context
+        client = getattr(context, "client", None)
+        client_id = getattr(client, "id", None)
+        if client_id is None:
+            return "default"
+        return str(client_id)
+    except Exception:
+        return "default"
+
+
+def get_runtime_state() -> AppState:
+    key = _get_current_client_key()
+    current = _STATE_REGISTRY.get(key)
+    if current is None:
+        current = AppState()
+        _STATE_REGISTRY[key] = current
+    return current
+
+
+class StateProxy:
+    def _target(self) -> AppState:
+        return get_runtime_state()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._target(), name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        setattr(self._target(), name, value)
+
+    def __dir__(self) -> List[str]:
+        return sorted(set(dir(type(self)) + dir(self._target())))
+
+    def __repr__(self) -> str:
+        return repr(self._target())
+
+
+state = StateProxy()
 
 
 def _sync_kitchen_wall_from_room(*, room: Optional[Dict[str, Any]] = None, wall_key: str | None = None) -> None:
@@ -265,7 +345,7 @@ def _sync_kitchen_wall_from_room(*, room: Optional[Dict[str, Any]] = None, wall_
 
 
 def reset_state() -> None:
-    """Resetuje state na podrazumijevane vrijednosti — poziva se na svakom novom page loadu."""
+    """Resetuje state na podrazumevane vrednosti — poziva se na svakom novom page loadu."""
     state.active_tab        = "wizard"
     state.wizard_step       = 1
     state.project_type      = "kitchen"
@@ -277,6 +357,19 @@ def reset_state() -> None:
     state.wardrobe_to_ceiling = True
     state.wardrobe_door_mode = "hinged"
     state.wardrobe_target_wall = "A"
+    state.current_user_id   = 0
+    state.current_user_email = ""
+    state.current_user_display = ""
+    state.current_session_token = ""
+    state.current_session_expires_at = ""
+    state.current_auth_mode = ""
+    state.current_access_tier = ""
+    state.current_subscription_status = ""
+    state.current_gate_reason = ""
+    state.current_can_access_app = True
+    state.current_project_id = 0
+    state.current_project_name = ""
+    state.current_project_source = ""
     state.room              = _default_room()
     state.room_setup_done   = False
     state.active_group      = "donji"
@@ -291,6 +384,7 @@ def reset_state() -> None:
     state.wall_upper_target_x = -1
     state.front_color       = "#FDFDFB"
     state.selected_edit_id  = 0
+    state.language          = "sr"
     state.mode              = "add"
     state.sidebar_tab       = 'dodaj'
     state.zone_defaults     = {
@@ -347,8 +441,8 @@ def _validate_blocking_design_rules(
         if _lo > 0 and x_mm < _lo:
             raise ValueError(
                 f"Blokirano: Modul na Zidu {wk} x={x_mm}mm ulazi u ugaoni prostor "
-                f"(lijeva ugaona zona {_lo}mm dubine Zida A). "
-                f"Pomjeri desno za min {_lo - x_mm}mm ili dodaj ugaoni modul."
+                f"(leva ugaona zona {_lo}mm dubine Zida A). "
+                f"Pomeri desno za min {_lo - x_mm}mm ili dodaj ugaoni modul."
             )
         if _ro > 0:
             _wl_b = int(
@@ -360,7 +454,7 @@ def _validate_blocking_design_rules(
                 raise ValueError(
                     f"Blokirano: Modul na Zidu {wk} kraj={x_mm + w_mm}mm ulazi u ugaoni prostor "
                     f"(desna ugaona zona {_ro}mm dubine Zida A, granica={_wl_b - _ro}mm). "
-                    f"Pomjeri lijevo ili dodaj ugaoni modul."
+                    f"Pomeri levo ili dodaj ugaoni modul."
                 )
 
     def _fail(msg: str) -> None:
@@ -438,10 +532,16 @@ def _validate_blocking_design_rules(
             f"Postavi najmanje 500mm, preporuceno 560mm."
         )
 
-    if z in ("wall", "wall_upper") and d_mm > 400:
+    if z == "wall" and d_mm > 400:
         _fail(
             f"Gornji element dubine {d_mm}mm je predubok za bezbednu i ergonomicnu montazu. "
             f"Drzi se opsega 300-400mm."
+        )
+
+    if z == "wall_upper" and d_mm > 700:
+        _fail(
+            f"Gornji element drugog reda dubine {d_mm}mm je predubok za sigurno kacenje. "
+            f"Postavi najvise 700mm."
         )
 
     if z in ("wall", "wall_upper") and d_mm < 250 and "OPEN" not in tid:
@@ -683,7 +783,7 @@ def add_module_instance_local(
             _LOG.debug("room_constraints greška: %s", _rc_err)
 
     # Pokušaj naći slobodan prostor od x_mm (hint korisnika / klik na canvas).
-    # Ako nema slobodnog mjesta od te pozicije, vrati se na klasično skeniranje od lijevog ruba.
+    # Ako nema slobodnog mesta od te pozicije, vrati se na klasično skeniranje od levog ruba.
     if "CORNER" in str(template_id or "").upper() and z in ("base", "wall"):
         free_x = int(_x_for_validation)
     else:
@@ -776,7 +876,7 @@ def add_module_instance_local(
         "wall_key": _wk,
     }
     # Validacija visine po zoni — uzima u obzir Y poziciju elementa
-    _zone_max_h = _max_allowed_h_for_zone(z)
+    _zone_max_h = _max_allowed_h_for_zone(z, template_id)
     if int(h_mm) > _zone_max_h:
         raise ValueError(
             f"Visina elementa {h_mm}mm prelazi dozvoljenu visinu za zonu '{z.upper()}' "
@@ -807,6 +907,7 @@ def add_module_instance_local(
         from layout_engine import _clamp_to_wall
         _clamp_to_wall(k, mod)
 
+    write_autosave_snapshot(reason="add_module")
     return mod
 
 
@@ -814,6 +915,7 @@ def delete_module_local(module_id: int) -> None:
     k = state.kitchen
     mods = k.get("modules", []) or []
     k["modules"] = [m for m in mods if int(m.get("id", -1)) != int(module_id)]
+    write_autosave_snapshot(reason="delete_module")
 
 
 def update_module_local(
@@ -918,11 +1020,13 @@ def update_module_local(
             raise ValueError("Nema prostora za izmenu širine: preklapanje donjih elemenata.")
     else:
         solve_layout(k, zone=z, mode="insert", wall_key=_wk)
+    write_autosave_snapshot(reason="update_module")
 
 
 def clear_all_local() -> None:
     state.kitchen["modules"] = []
     state.next_id = 1
+    write_autosave_snapshot(reason="clear_project")
 
 
 # ── SVG ikone za paletu ───────────────────────────────────────────────────────
@@ -962,6 +1066,7 @@ def _set_wall_length(val: int) -> None:
     state.kitchen["wall"]["length_mm"] = _v
     state.kitchen["zones"] = _compute_zones(state.kitchen)
     state.kitchen["l_corner_side"] = "right"
+    write_autosave_snapshot(reason="set_wall_length")
 
 
 def _set_wall_height(val: int) -> None:
@@ -976,11 +1081,13 @@ def _set_wall_height(val: int) -> None:
     state.kitchen["zones"] = _compute_zones(state.kitchen)
     if "max_element_height" not in state.kitchen:
         state.kitchen["max_element_height"] = _v - 50
+    write_autosave_snapshot(reason="set_wall_height")
 
 
 def _set_foot_height(val: int) -> None:
     state.kitchen["foot_height_mm"] = int(val)
     state.kitchen["zones"] = _compute_zones(state.kitchen)
+    write_autosave_snapshot(reason="set_foot_height")
 
 
 def _recalc_base_module_heights(new_base_h: int) -> None:
@@ -989,12 +1096,43 @@ def _recalc_base_module_heights(new_base_h: int) -> None:
     mats = k.get("materials", {}) or {}
     carcass_thk = float(mats.get("carcass_thk", 18))
     new_inner = max(0.0, float(new_base_h) - 2.0 * carcass_thk)
+    drawer_step = 1
+
+    def _floor_step(val: float) -> int:
+        return int(float(val) // drawer_step) * drawer_step
+
+    def _snap_step(val: float) -> int:
+        return int(drawer_step * round(float(val) / drawer_step))
+
+    def _normalize_drawers(values: list[float], total_target: float) -> list[int]:
+        snapped = [max(80, _snap_step(v)) for v in values]
+        diff = int(total_target - sum(snapped))
+        while diff != 0:
+            changed = False
+            if diff > 0:
+                for idx in reversed(range(len(snapped))):
+                    snapped[idx] += drawer_step
+                    diff -= drawer_step
+                    changed = True
+                    if diff <= 0:
+                        break
+            else:
+                for idx in reversed(range(len(snapped))):
+                    if snapped[idx] - drawer_step >= 80:
+                        snapped[idx] -= drawer_step
+                        diff += drawer_step
+                        changed = True
+                        if diff >= 0:
+                            break
+            if not changed:
+                break
+        return snapped
 
     for m in k.get("modules", []) or []:
         if str(m.get("zone", "")).lower() != "base":
             continue
         tid = str(m.get("template_id", "")).upper()
-        if "DISHWASHER" in tid:
+        if "DISHWASHER" in tid or "FREESTANDING" in tid:
             # Ugradna MZS ima svoje standarde i često ne prati visinu korpusa.
             continue
 
@@ -1037,15 +1175,18 @@ def _set_base_height(val: int) -> None:
     state.zone_defaults.setdefault("base", {})["h_mm"] = _new_h
     _recalc_base_module_heights(_new_h)
     state.kitchen["zones"] = _compute_zones(state.kitchen)
+    write_autosave_snapshot(reason="set_base_height")
 
 
 def _set_vertical_gap(val: int) -> None:
     state.kitchen["vertical_gap_mm"] = int(val)
     state.kitchen["zones"] = _compute_zones(state.kitchen)
+    write_autosave_snapshot(reason="set_vertical_gap")
 
 
 def _set_material(key: str, val) -> None:
     state.kitchen.setdefault('materials', {})[key] = val
+    write_autosave_snapshot(reason="set_material")
 
 
 def _set_front_color(val: str) -> None:
@@ -1054,19 +1195,53 @@ def _set_front_color(val: str) -> None:
         return
     state.front_color = s
     state.kitchen["front_color"] = s
+    write_autosave_snapshot(reason="set_front_color")
 
 
 def _set_worktop_thickness(val: float) -> None:
     state.kitchen.setdefault('worktop', {})['thickness'] = float(val)
     state.kitchen['zones'] = _compute_zones(state.kitchen)
+    write_autosave_snapshot(reason="set_worktop_thickness")
 
 
 def _set_worktop_width(val: float) -> None:
     state.kitchen.setdefault('worktop', {})['width'] = float(val)
+    write_autosave_snapshot(reason="set_worktop_width")
+
+
+def _set_worktop_reserve_mm(val: int) -> None:
+    state.kitchen.setdefault('worktop', {})['mounting_reserve_mm'] = int(val)
+    write_autosave_snapshot(reason="set_worktop_reserve")
+
+
+def _set_worktop_front_overhang_mm(val: int) -> None:
+    state.kitchen.setdefault('worktop', {})['front_overhang_mm'] = int(val)
+    write_autosave_snapshot(reason="set_worktop_front_overhang")
+
+
+def _set_worktop_field_cut(val: bool) -> None:
+    state.kitchen.setdefault('worktop', {})['field_cut'] = bool(val)
+    write_autosave_snapshot(reason="set_worktop_field_cut")
+
+
+def _set_worktop_edge_protection(val: bool) -> None:
+    state.kitchen.setdefault('worktop', {})['edge_protection'] = bool(val)
+    write_autosave_snapshot(reason="set_worktop_edge_protection")
+
+
+def _set_worktop_edge_protection_type(val: str) -> None:
+    state.kitchen.setdefault('worktop', {})['edge_protection_type'] = str(val or "").strip()
+    write_autosave_snapshot(reason="set_worktop_edge_protection_type")
+
+
+def _set_worktop_joint_type(val: str) -> None:
+    state.kitchen.setdefault('worktop', {})['joint_type'] = str(val or "STRAIGHT").strip().upper()
+    write_autosave_snapshot(reason="set_worktop_joint_type")
 
 
 def _set_max_element_height(val: int) -> None:
     state.kitchen['max_element_height'] = int(val)
+    write_autosave_snapshot(reason="set_max_element_height")
 
 
 # ── Zone Depth Standards — helper funkcije ────────────────────────────────────
@@ -1207,6 +1382,942 @@ def get_l_corner_anchor_side(wall_key: str, kitchen: Optional[Dict[str, Any]] = 
 
 _SAVE_VERSION = "1.0"
 _SAVE_APP     = "KrojnaListaPRO"
+_LOCAL_DATA_DIR = Path(__file__).resolve().parent / "data"
+_RECENT_DIR = _LOCAL_DATA_DIR / "recent_projects"
+_RECENT_LIMIT = 8
+
+
+def _current_user_storage_key() -> str:
+    raw = str(getattr(state, "current_user_email", "") or "").strip().lower()
+    if not raw:
+        uid = int(getattr(state, "current_user_id", 0) or 0)
+        raw = f"user_{uid}" if uid > 0 else "local"
+    safe = "".join(ch if ch.isalnum() or ch in ("-", "_", ".") else "_" for ch in raw)
+    return safe or "local"
+
+
+def _recent_index_path() -> Path:
+    return _LOCAL_DATA_DIR / f"recent_projects_index_{_current_user_storage_key()}.json"
+
+
+def _autosave_path() -> Path:
+    return _LOCAL_DATA_DIR / f"autosave_project_{_current_user_storage_key()}.json"
+
+
+def _autosave_meta_path() -> Path:
+    return _LOCAL_DATA_DIR / f"autosave_meta_{_current_user_storage_key()}.json"
+
+
+def _get_active_user_record():
+    try:
+        from project_store import ensure_local_user, get_user_by_email
+        email = str(getattr(state, "current_user_email", "") or "").strip()
+        if email:
+            user = get_user_by_email(email)
+            if user is not None:
+                return user
+        return ensure_local_user()
+    except Exception:
+        return None
+
+
+def build_demo_project_json() -> bytes:
+    """Vraća gotov demo projekat kao JSON bytes u istom formatu kao Save/Load."""
+    demo_path = Path(__file__).resolve().parent / "data" / "demo_kitchen.json"
+    return demo_path.read_bytes()
+
+
+def _ensure_recent_storage() -> None:
+    _RECENT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _read_recent_index() -> List[Dict[str, Any]]:
+    _ensure_recent_storage()
+    _index_path = _recent_index_path()
+    if not _index_path.exists():
+        return []
+    try:
+        payload = json.loads(_index_path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    if not isinstance(payload, list):
+        return []
+    items: List[Dict[str, Any]] = []
+    for entry in payload:
+        if not isinstance(entry, dict):
+            continue
+        path = str(entry.get("path", "") or "").strip()
+        if not path:
+            continue
+        items.append(
+            {
+                "label": str(entry.get("label", "") or "Projekat"),
+                "path": path,
+                "saved_at": str(entry.get("saved_at", "") or ""),
+            }
+        )
+    return items
+
+
+def _write_recent_index(items: List[Dict[str, Any]]) -> None:
+    _ensure_recent_storage()
+    _recent_index_path().write_text(
+        json.dumps(items[:_RECENT_LIMIT], ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def list_recent_projects() -> List[Dict[str, Any]]:
+    try:
+        from project_store import list_projects_for_user_by_source
+        _user = _get_active_user_record()
+        if _user is not None:
+            _projects = list_projects_for_user_by_source(
+                _user.id,
+                source="local_recent",
+                include_autosave=False,
+                limit=_RECENT_LIMIT,
+            )
+            if _projects:
+                return [
+                    {
+                        "label": str(_project.name or "Projekat"),
+                        "path": f"store://{int(_project.id)}",
+                        "saved_at": str(_project.updated_at or _project.last_opened_at or ""),
+                        "store_project_id": int(_project.id),
+                    }
+                    for _project in _projects
+                ]
+    except Exception as ex:
+        _LOG.debug("list_recent_projects store read failed: %s", ex)
+
+    items = _read_recent_index()
+    result: List[Dict[str, Any]] = []
+    for entry in items:
+        path = Path(str(entry.get("path", "") or ""))
+        if not path.exists():
+            continue
+        result.append(
+            {
+                "label": str(entry.get("label", "") or "Projekat"),
+                "path": str(path),
+                "saved_at": str(entry.get("saved_at", "") or ""),
+                "store_project_id": int(entry.get("store_project_id", 0) or 0),
+            }
+        )
+    return result[:_RECENT_LIMIT]
+
+
+def save_local_recent_project(*, label: str) -> str:
+    payload_bytes = save_project_json()
+    _store_project_id = None
+    try:
+        from project_store import save_payload_from_bytes
+        _user = _get_active_user_record()
+        if _user is None:
+            raise RuntimeError("Aktivni korisnik nije dostupan.")
+        _record = save_payload_from_bytes(
+            user_id=_user.id,
+            name=str(label or "Projekat"),
+            payload_bytes=payload_bytes,
+            source="local_recent",
+            is_demo=False,
+            is_autosave=False,
+        )
+        _store_project_id = int(_record.id)
+        state.current_user_id = int(_user.id)
+        state.current_project_id = int(_record.id)
+        state.current_project_name = str(_record.name)
+        state.current_project_source = str(_record.source)
+        return f"store://{_store_project_id}"
+    except Exception as ex:
+        _LOG.debug("save_local_recent_project store sync failed, fallback to file: %s", ex)
+
+    _ensure_recent_storage()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_label = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in str(label or "projekat"))[:40]
+    if not safe_label:
+        safe_label = "projekat"
+    path = _RECENT_DIR / f"{timestamp}_{safe_label}.json"
+    path.write_bytes(payload_bytes)
+    items = [item for item in _read_recent_index() if str(item.get("path", "")) != str(path)]
+    items.insert(
+        0,
+        {
+            "label": str(label or "Projekat"),
+            "path": str(path),
+            "saved_at": datetime.now().isoformat(timespec="seconds"),
+            "store_project_id": _store_project_id,
+        },
+    )
+    _write_recent_index(items)
+    return str(path)
+
+
+def load_recent_project(path: str) -> Tuple[bool, str]:
+    try:
+        data = Path(path).read_bytes()
+    except Exception as exc:
+        return False, f"Ne mogu da otvorim lokalni projekat: {exc}"
+    ok, err = load_project_json(data)
+    if ok:
+        try:
+            _items = _read_recent_index()
+            _matched = next((item for item in _items if str(item.get("path", "")) == str(path)), None)
+            if _matched and _matched.get("store_project_id"):
+                from project_store import get_project_record, touch_project_opened
+                _user = _get_active_user_record()
+                _user_id = int(getattr(_user, "id", 0) or 0)
+                _pid = int(_matched["store_project_id"])
+                if _user_id <= 0:
+                    return ok, err
+                touch_project_opened(_pid, user_id=_user_id)
+                _project = get_project_record(_pid, user_id=_user_id)
+                if _project is not None:
+                    state.current_project_id = int(_project.id)
+                    state.current_user_id = _user_id
+                    state.current_project_name = str(_project.name)
+                    state.current_project_source = str(_project.source)
+        except Exception as ex:
+            _LOG.debug("load_recent_project store touch failed: %s", ex)
+    return ok, err
+
+
+def write_autosave_snapshot(*, reason: str = "") -> str:
+    payload_bytes = save_project_json()
+    try:
+        from project_store import save_payload_from_bytes
+        _user = _get_active_user_record()
+        if _user is None:
+            raise RuntimeError("Aktivni korisnik nije dostupan.")
+        _record = save_payload_from_bytes(
+            user_id=_user.id,
+            name="Auto-save",
+            payload_bytes=payload_bytes,
+            source="db_autosave",
+            is_demo=False,
+            is_autosave=True,
+        )
+        state.current_user_id = int(_user.id)
+        return f"store://{int(_record.id)}"
+    except Exception as ex:
+        _LOG.debug("write_autosave_snapshot store sync failed, fallback to file: %s", ex)
+
+    _ensure_recent_storage()
+    _path = _autosave_path()
+    _meta_path = _autosave_meta_path()
+    _path.write_bytes(payload_bytes)
+    _meta_path.write_text(
+        json.dumps(
+            {
+                "saved_at": datetime.now().isoformat(timespec="seconds"),
+                "reason": str(reason or ""),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return str(_path)
+
+
+def get_autosave_info() -> Optional[Dict[str, str]]:
+    try:
+        from project_store import get_user_autosave_project
+        _user = _get_active_user_record()
+        if _user is not None:
+            _autosave = get_user_autosave_project(_user.id)
+            if _autosave is not None:
+                return {
+                    "path": f"store://{int(_autosave.id)}",
+                    "saved_at": str(_autosave.updated_at or _autosave.last_opened_at or ""),
+                    "reason": "",
+                }
+    except Exception as ex:
+        _LOG.debug("get_autosave_info store read failed: %s", ex)
+
+    _path = _autosave_path()
+    _meta_path = _autosave_meta_path()
+    if not _path.exists():
+        return None
+    saved_at = ""
+    reason = ""
+    if _meta_path.exists():
+        try:
+            payload = json.loads(_meta_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                saved_at = str(payload.get("saved_at", "") or "")
+                reason = str(payload.get("reason", "") or "")
+        except Exception:
+            pass
+    return {
+        "path": str(_path),
+        "saved_at": saved_at,
+        "reason": reason,
+    }
+
+
+def load_autosave_project() -> Tuple[bool, str]:
+    try:
+        from project_store import get_project_payload, get_user_autosave_project, touch_project_opened
+        _user = _get_active_user_record()
+        if _user is not None:
+            _autosave = get_user_autosave_project(_user.id)
+            if _autosave is not None:
+                _payload = get_project_payload(int(_autosave.id), user_id=int(_user.id))
+                if _payload:
+                    ok, err = load_project_json(_payload.encode("utf-8"))
+                    if ok:
+                        touch_project_opened(int(_autosave.id), user_id=int(_user.id))
+                        state.current_user_id = int(_user.id)
+                        state.current_project_id = int(_autosave.id)
+                        state.current_project_name = str(_autosave.name)
+                        state.current_project_source = str(_autosave.source)
+                    return ok, err
+    except Exception as ex:
+        _LOG.debug("load_autosave_project store load failed: %s", ex)
+
+    _path = _autosave_path()
+    if not _path.exists():
+        return False, "Auto-save projekat ne postoji."
+    try:
+        data = _path.read_bytes()
+    except Exception as exc:
+        return False, f"Ne mogu da otvorim auto-save projekat: {exc}"
+    return load_project_json(data)
+
+
+def seed_demo_project_store() -> None:
+    try:
+        from project_store import ensure_local_user, save_payload_from_bytes
+        _user = ensure_local_user()
+        _record = save_payload_from_bytes(
+            user_id=_user.id,
+            name="Demo primer",
+            payload_bytes=build_demo_project_json(),
+            source="builtin_demo",
+            is_demo=True,
+            is_autosave=False,
+            replace_source=True,
+        )
+        state.current_user_id = int(_user.id)
+        if not int(getattr(state, "current_project_id", 0) or 0):
+            state.current_project_id = int(_record.id)
+            state.current_project_name = str(_record.name)
+            state.current_project_source = str(_record.source)
+    except Exception as ex:
+        _LOG.debug("seed_demo_project_store failed: %s", ex)
+
+
+def load_project_from_store(project_id: int) -> Tuple[bool, str]:
+    try:
+        from project_store import get_project_payload, get_project_record, touch_project_opened
+        _user = _get_active_user_record()
+        _user_id = int(getattr(_user, "id", 0) or 0)
+        if _user_id <= 0:
+            return False, "Aktivni korisnik nije dostupan."
+        _payload = get_project_payload(int(project_id), user_id=_user_id)
+        if not _payload:
+            return False, "Projekat nije pronađen ili ne pripada aktivnom korisniku."
+        ok, err = load_project_json(_payload.encode("utf-8"))
+        if not ok:
+            return ok, err
+        touch_project_opened(int(project_id), user_id=_user_id)
+        _record = get_project_record(int(project_id), user_id=_user_id)
+        if _record is not None:
+            state.current_user_id = _user_id
+            state.current_project_id = int(_record.id)
+            state.current_project_name = str(_record.name)
+            state.current_project_source = str(_record.source)
+        return True, ""
+    except Exception as ex:
+        return False, f"Ne mogu da otvorim projekat iz storage baze: {ex}"
+
+
+def list_user_store_projects() -> List[Dict[str, Any]]:
+    try:
+        from project_store import list_projects_for_user
+        _user = _get_active_user_record()
+        if _user is None:
+            return []
+        _projects = list_projects_for_user(_user.id, include_autosave=False)
+        result: List[Dict[str, Any]] = []
+        for _project in _projects:
+            result.append(
+                {
+                    "project_id": int(_project.id),
+                    "name": str(_project.name),
+                    "source": str(_project.source),
+                    "language": str(_project.language),
+                    "project_type": str(_project.project_type),
+                    "is_demo": bool(_project.is_demo),
+                    "updated_at": str(_project.updated_at),
+                    "last_opened_at": str(_project.last_opened_at),
+                }
+            )
+        return result
+    except Exception as ex:
+        _LOG.debug("list_user_store_projects failed: %s", ex)
+        return []
+
+
+def init_local_session_state() -> None:
+    try:
+        from auth_models import ensure_local_session
+        session = ensure_local_session()
+        _apply_session_state(session)
+        state.current_session_token = ""
+        state.current_session_expires_at = ""
+        state.current_project_id = 0
+        state.current_project_name = ""
+        state.current_project_source = ""
+    except Exception as ex:
+        _LOG.debug("init_local_session_state failed: %s", ex)
+
+
+def _get_user_storage() -> Any | None:
+    try:
+        from nicegui import app as nicegui_app
+        return nicegui_app.storage.user
+    except Exception:
+        return None
+
+
+def _persist_session_token(session_token: str, *, expires_at: str = "") -> None:
+    storage = _get_user_storage()
+    if storage is None:
+        return
+    clean_token = str(session_token or "").strip()
+    if clean_token:
+        storage["auth_session_token"] = clean_token
+        storage["auth_session_expires_at"] = str(expires_at or "")
+    else:
+        storage.pop("auth_session_token", None)
+        storage.pop("auth_session_expires_at", None)
+
+
+def _load_persisted_session_token() -> str:
+    storage = _get_user_storage()
+    if storage is None:
+        return ""
+    return str(storage.get("auth_session_token", "") or "").strip()
+
+
+def ensure_runtime_state_initialized(*, allow_local_fallback: bool = True) -> None:
+    try:
+        current = get_runtime_state()
+        if str(getattr(current, "current_user_email", "") or "").strip():
+            return
+        persisted_token = _load_persisted_session_token()
+        if persisted_token:
+            from auth_models import restore_session_from_token
+            from project_store import get_effective_auth_session, touch_auth_session
+            auth_session = get_effective_auth_session(persisted_token)
+            if auth_session is not None and str(auth_session.status).lower() == "active":
+                auth_session = touch_auth_session(persisted_token)
+            restored = restore_session_from_token(persisted_token)
+            if restored is not None and auth_session is not None and str(auth_session.status).lower() == "active":
+                _apply_session_state(restored)
+                state.current_session_token = str(auth_session.session_token)
+                state.current_session_expires_at = str(auth_session.expires_at)
+                return
+            _persist_session_token("")
+        if allow_local_fallback:
+            init_local_session_state()
+    except Exception as ex:
+        _LOG.debug("ensure_runtime_state_initialized failed: %s", ex)
+        if allow_local_fallback:
+            try:
+                init_local_session_state()
+            except Exception as fallback_ex:
+                _LOG.debug("ensure_runtime_state_initialized local fallback failed: %s", fallback_ex)
+
+
+def refresh_current_session_access() -> None:
+    try:
+        current_email = str(getattr(state, "current_user_email", "") or "").strip().lower()
+        if not current_email:
+            return
+        from auth_models import build_session_from_user
+        from project_store import get_user_by_email
+
+        user = get_user_by_email(current_email)
+        if user is None:
+            init_local_session_state()
+            return
+        _apply_session_state(build_session_from_user(user))
+    except Exception as ex:
+        _LOG.debug("refresh_current_session_access failed: %s", ex)
+        try:
+            init_local_session_state()
+        except Exception as fallback_ex:
+            _LOG.debug("refresh_current_session_access local fallback failed: %s", fallback_ex)
+
+
+def _clear_current_project_binding() -> None:
+    state.current_project_id = 0
+    state.current_project_name = ""
+    state.current_project_source = ""
+
+
+def _apply_session_state(session: Any) -> None:
+    try:
+        previous_user_id = int(getattr(state, "current_user_id", 0) or 0)
+        previous_email = str(getattr(state, "current_user_email", "") or "").strip().lower()
+        next_user_id = int(session.user.user_id)
+        next_email = str(session.user.email)
+        state.current_user_id = int(session.user.user_id)
+        state.current_user_email = str(session.user.email)
+        state.current_user_display = str(session.user.display_name)
+        state.current_auth_mode = str(session.user.auth_mode)
+        state.current_access_tier = str(session.user.access_tier)
+        state.current_subscription_status = str(session.user.subscription_status)
+        state.current_gate_reason = str(session.gate_reason or "")
+        state.current_can_access_app = bool(session.can_access_app)
+        if previous_user_id not in (0, next_user_id) or (
+            previous_email and previous_email != str(next_email).strip().lower()
+        ):
+            _clear_current_project_binding()
+        if str(getattr(state, "active_tab", "") or "").strip() in ("wizard", "nalog", ""):
+            state.active_tab = "nova"
+    except Exception as ex:
+        _LOG.debug("_apply_session_state failed: %s", ex)
+
+
+def login_user_session(email: str, password: str) -> Tuple[bool, str]:
+    try:
+        from auth_models import build_session_from_user
+        from project_store import (
+            append_audit_log,
+            authenticate_user,
+            clear_failed_login_attempts,
+            create_auth_session,
+            get_login_rate_limit_status,
+            record_login_attempt,
+        )
+        clean_email = str(email).strip().lower()
+        if not clean_email:
+            return False, "Unesi email adresu."
+        if not str(password or "").strip():
+            return False, "Unesi lozinku."
+        rate_limit = get_login_rate_limit_status(clean_email)
+        if bool(rate_limit.get("is_locked", False)):
+            append_audit_log(
+                event_type="auth.login_locked",
+                status="warning",
+                detail=f"email={clean_email} retry_after={int(rate_limit.get('retry_after_minutes', 0) or 0)}",
+            )
+            retry_after = int(rate_limit.get("retry_after_minutes", 0) or 0)
+            return False, f"Previse neuspesnih prijava. Pokusaj ponovo za oko {retry_after} min."
+        user = authenticate_user(clean_email, str(password))
+        if user is None:
+            record_login_attempt(email=clean_email, success=False)
+            append_audit_log(
+                event_type="auth.login_failed",
+                status="warning",
+                detail=f"email={clean_email}",
+            )
+            return False, "Pogresan email ili lozinka."
+        record_login_attempt(email=clean_email, success=True)
+        clear_failed_login_attempts(clean_email)
+        auth_session = create_auth_session(
+            user_id=int(user.id),
+            session_kind="browser",
+            auth_provider="password",
+            expires_in_days=14,
+        )
+        try:
+            _persist_session_token(
+                str(auth_session.session_token),
+                expires_at=str(auth_session.expires_at),
+            )
+        except Exception:
+            try:
+                from project_store import revoke_auth_session
+                revoke_auth_session(str(auth_session.session_token))
+            except Exception as revoke_ex:
+                _LOG.debug("login_user_session rollback revoke failed: %s", revoke_ex)
+            raise
+        session = build_session_from_user(user)
+        _apply_session_state(session)
+        state.current_session_token = str(auth_session.session_token)
+        state.current_session_expires_at = str(auth_session.expires_at)
+        try:
+            append_audit_log(
+                event_type="auth.login_success",
+                status="success",
+                detail=f"email={clean_email}",
+                user_id=int(user.id),
+            )
+        except Exception as audit_ex:
+            _LOG.debug("login_user_session audit failed: %s", audit_ex)
+        state.active_tab = "nova"
+        return True, ""
+    except Exception as ex:
+        return False, f"Ne mogu da pokrenem prijavu: {ex}"
+
+
+def register_trial_user_session(email: str, display_name: str = "", password: str = "") -> Tuple[bool, str]:
+    try:
+        from auth_models import build_session_from_user
+        from project_store import append_audit_log, create_auth_session, create_user_record, hash_password
+        clean_email = str(email).strip().lower()
+        if "@" not in clean_email or "." not in clean_email.split("@", 1)[-1]:
+            return False, "Unesi ispravan email."
+        clean_password = str(password or "")
+        if len(clean_password) < 6:
+            return False, "Lozinka mora imati najmanje 6 karaktera."
+        user = create_user_record(
+            email=clean_email,
+            display_name=str(display_name).strip(),
+            password_hash=hash_password(clean_password),
+            auth_mode="password",
+            access_tier="trial",
+            status="trial_active",
+        )
+        auth_session = create_auth_session(
+            user_id=int(user.id),
+            session_kind="browser",
+            auth_provider="password",
+            expires_in_days=14,
+        )
+        try:
+            _persist_session_token(
+                str(auth_session.session_token),
+                expires_at=str(auth_session.expires_at),
+            )
+        except Exception:
+            try:
+                from project_store import revoke_auth_session
+                revoke_auth_session(str(auth_session.session_token))
+            except Exception as revoke_ex:
+                _LOG.debug("register_trial_user_session rollback revoke failed: %s", revoke_ex)
+            raise
+        session = build_session_from_user(user)
+        _apply_session_state(session)
+        state.current_session_token = str(auth_session.session_token)
+        state.current_session_expires_at = str(auth_session.expires_at)
+        try:
+            append_audit_log(
+                event_type="auth.register_trial",
+                status="success",
+                detail=f"email={clean_email}",
+                user_id=int(user.id),
+            )
+        except Exception as audit_ex:
+            _LOG.debug("register_trial_user_session audit failed: %s", audit_ex)
+        state.active_tab = "nova"
+        return True, ""
+    except Exception as ex:
+        return False, f"Ne mogu da napravim probni nalog: {ex}"
+
+
+def restore_local_session_state() -> Tuple[bool, str]:
+    try:
+        _persist_session_token("")
+        init_local_session_state()
+        return True, ""
+    except Exception as ex:
+        return False, f"Ne mogu da vratim lokalnu sesiju: {ex}"
+
+
+def logout_current_session() -> Tuple[bool, str]:
+    try:
+        user_id = int(getattr(state, "current_user_id", 0) or 0)
+        user_email = str(getattr(state, "current_user_email", "") or "").strip().lower()
+        if str(getattr(state, "current_session_token", "") or "").strip():
+            try:
+                from project_store import append_audit_log, revoke_auth_session
+                revoke_auth_session(str(state.current_session_token))
+                append_audit_log(
+                    event_type="auth.logout",
+                    status="success",
+                    detail=f"email={user_email}",
+                    user_id=user_id,
+                )
+            except Exception as ex:
+                _LOG.debug("logout_current_session revoke/audit failed: %s", ex)
+        _persist_session_token("")
+        init_local_session_state()
+        return True, ""
+    except Exception as ex:
+        return False, f"Ne mogu da odjavim aktivnu sesiju: {ex}"
+
+
+def build_forgot_password_message(email: str) -> Tuple[bool, str]:
+    clean_email = str(email).strip().lower()
+    if not clean_email:
+        return False, "Unesi email adresu."
+    if "@" not in clean_email or "." not in clean_email.split("@", 1)[-1]:
+        return False, "Unesi ispravan email."
+    try:
+        from project_store import append_audit_log, create_password_reset_token
+        reset_token = create_password_reset_token(email=clean_email, expires_in_minutes=30)
+        if reset_token is None:
+            append_audit_log(
+                event_type="auth.password_reset_requested_missing_user",
+                status="warning",
+                detail=f"email={clean_email}",
+            )
+            return False, "Ne postoji nalog za taj email."
+        append_audit_log(
+            event_type="auth.password_reset_requested",
+            status="success",
+            detail=f"email={clean_email}",
+            user_id=int(reset_token.user_id),
+        )
+        return (
+            True,
+            "Reset token je napravljen. Email servis jos nije povezan, "
+            f"pa za sada razvojni token glasi: {reset_token.reset_token} "
+            f"(vazi do {reset_token.expires_at})."
+        )
+    except Exception as ex:
+        return False, f"Ne mogu da pripremim reset lozinke: {ex}"
+
+
+def reset_password_with_token(reset_token: str, new_password: str) -> Tuple[bool, str]:
+    clean_token = str(reset_token or "").strip()
+    clean_password = str(new_password or "")
+    if not clean_token:
+        return False, "Unesi reset token."
+    if len(clean_password) < 6:
+        return False, "Nova lozinka mora imati najmanje 6 karaktera."
+    try:
+        from project_store import append_audit_log, hash_password, use_password_reset_token
+        user = use_password_reset_token(
+            reset_token=clean_token,
+            new_password_hash=hash_password(clean_password),
+        )
+        if user is None:
+            append_audit_log(
+                event_type="auth.password_reset_failed",
+                status="warning",
+                detail="invalid_or_expired_token",
+            )
+            return False, "Reset token nije vazeci ili je istekao."
+        append_audit_log(
+            event_type="auth.password_reset_completed",
+            status="success",
+            detail=f"email={user.email}",
+            user_id=int(user.id),
+        )
+        return True, f"Lozinka je promenjena za {user.email}."
+    except Exception as ex:
+        return False, f"Ne mogu da zavrsim promenu lozinke: {ex}"
+
+
+def get_current_billing_summary() -> Dict[str, Any] | None:
+    try:
+        from billing_models import get_billing_summary_for_email
+        email = str(getattr(state, "current_user_email", "") or "").strip()
+        auth_mode = str(getattr(state, "current_auth_mode", "") or "").strip().lower()
+        if not email:
+            return None
+        if auth_mode == "local":
+            return None
+        summary = get_billing_summary_for_email(email)
+        if summary is None:
+            return None
+        return {
+            "email": str(summary.email),
+            "access_tier": str(summary.access_tier),
+            "account_status": str(summary.account_status),
+            "billing_status": str(summary.billing_status),
+            "plan_code": str(summary.plan_code),
+            "provider": str(summary.provider),
+            "current_period_end": str(summary.current_period_end),
+            "has_checkout": bool(summary.has_checkout),
+            "has_portal": bool(summary.has_portal),
+            "stripe_ready": bool(summary.billing_ready),
+            "billing_ready": bool(summary.billing_ready),
+        }
+    except Exception as ex:
+        _LOG.debug("get_current_billing_summary failed: %s", ex)
+        return None
+
+
+def get_cutlist_access_state() -> Dict[str, str]:
+    source = str(getattr(state, "current_project_source", "") or "").strip().lower()
+    tier = str(getattr(state, "current_access_tier", "") or "").strip().lower()
+    status = str(getattr(state, "current_subscription_status", "") or "").strip().lower()
+
+    if "demo" in source:
+        return {"allowed": "true", "reason": "", "mode": "demo"}
+    if tier in {"admin", "paid", "local_beta"}:
+        return {"allowed": "true", "reason": "", "mode": tier or "paid"}
+    if tier == "trial":
+        return {
+            "allowed": "false",
+            "reason": "Free pristup dozvoljava dizajn i cuvanje projekta. Krojna lista i export su dostupni tek posle placanja.",
+            "mode": "free",
+        }
+    if status in {"inactive", "canceled", "past_due"}:
+        return {
+            "allowed": "false",
+            "reason": "PRO pristup nije aktivan. Aktiviraj plan da otvoris krojnu listu i exporte.",
+            "mode": "blocked",
+        }
+    return {
+        "allowed": "false",
+        "reason": "Krojna lista je trenutno zakljucana za ovaj nalog.",
+        "mode": "blocked",
+    }
+
+
+def build_checkout_start_message(plan_code: str = "pro_monthly") -> Tuple[bool, str]:
+    try:
+        from billing_models import build_checkout_placeholder
+        from lemon_squeezy_service import get_billing_runtime_status
+        email = str(getattr(state, "current_user_email", "") or "").strip()
+        auth_mode = str(getattr(state, "current_auth_mode", "") or "").strip().lower()
+        if not email:
+            return False, "Nema aktivnog korisnika za billing."
+        if auth_mode == "local":
+            return False, "Billing nije dostupan za lokalnu fallback sesiju."
+        billing = get_billing_runtime_status()
+        has_api_key = str(billing.get("has_api_key", "") or "").strip().lower() == "true"
+        has_variant = (
+            str(billing.get("has_variant_id_weekly", "") or "").strip().lower() == "true"
+            or str(billing.get("has_variant_id_monthly", "") or "").strip().lower() == "true"
+        )
+        if not has_api_key or not has_variant:
+            return False, "Lemon Squeezy checkout jos nije konfigurisan za ovo okruzenje."
+        return True, build_checkout_placeholder(email, plan_code=str(plan_code or "pro_monthly"))
+    except Exception as ex:
+        return False, f"Ne mogu da pripremim checkout: {ex}"
+
+
+def build_customer_portal_message() -> Tuple[bool, str]:
+    try:
+        from billing_models import build_customer_portal_placeholder
+        from lemon_squeezy_service import get_billing_runtime_status
+        email = str(getattr(state, "current_user_email", "") or "").strip()
+        auth_mode = str(getattr(state, "current_auth_mode", "") or "").strip().lower()
+        if not email:
+            return False, "Nema aktivnog korisnika za billing portal."
+        if auth_mode == "local":
+            return False, "Billing portal nije dostupan za lokalnu fallback sesiju."
+        billing = get_billing_runtime_status()
+        has_api_key = str(billing.get("has_api_key", "") or "").strip().lower() == "true"
+        has_store_subdomain = str(billing.get("has_store_subdomain", "") or "").strip().lower() == "true"
+        if not has_api_key and not has_store_subdomain:
+            return False, "Lemon Squeezy billing portal jos nije konfigurisan za ovo okruzenje."
+        return True, build_customer_portal_placeholder(email)
+    except Exception as ex:
+        return False, f"Ne mogu da pripremim billing portal: {ex}"
+
+
+def get_release_readiness_summary(target: str = "production") -> Dict[str, Any]:
+    try:
+        tier = str(getattr(state, "current_access_tier", "") or "").strip().lower()
+        if tier != "admin":
+            return {
+                "target": str(target or "production"),
+                "ready": False,
+                "error": "admin_only",
+                "summary": {"total_checks": 0, "passed": 0, "blockers": 1, "warnings": 0},
+                "blockers": [{"label": "admin_only", "detail": "Release readiness summary je dostupan samo administratoru."}],
+                "warnings": [],
+            }
+        from release_readiness import get_release_readiness_report
+        return get_release_readiness_report(target=str(target or "production"))
+    except Exception as ex:
+        return {
+            "target": str(target or "production"),
+            "ready": False,
+            "summary": {"total_checks": 0, "passed": 0, "blockers": 1, "warnings": 0},
+            "blockers": [{"label": "readiness_error", "detail": str(ex)}],
+            "warnings": [],
+        }
+
+
+def get_ops_runtime_summary() -> Dict[str, Any]:
+    try:
+        tier = str(getattr(state, "current_access_tier", "") or "").strip().lower()
+        if tier != "admin":
+            return {
+                "error": "admin_only",
+                "runtime_health": {
+                    "ready": False,
+                    "blockers": ["Ops runtime summary je dostupan samo administratoru."],
+                    "warnings": [],
+                },
+            }
+        from app_config import get_public_runtime_config
+        from export_jobs import get_export_runtime_summary
+        from project_store import (
+            get_auth_runtime_summary,
+            get_billing_event_summary,
+            get_export_job_summary,
+            get_project_store_runtime_info,
+        )
+        from lemon_squeezy_service import get_billing_runtime_status
+        app_config = get_public_runtime_config()
+        project_store = get_project_store_runtime_info()
+        export_jobs = get_export_runtime_summary()
+        export_job_counts = get_export_job_summary()
+        auth_runtime = get_auth_runtime_summary()
+        stripe = get_billing_runtime_status()
+        blockers: list[str] = []
+        warnings: list[str] = []
+
+        if str(project_store.get("production_ready", "")).lower() != "true":
+            blockers.append("Storage nije production-ready. SQLite nije finalni backend za vise korisnika.")
+        if str(app_config.get("web_workers", "0") or "0").strip() in ("", "0"):
+            warnings.append("WEB_WORKERS je 0, pa app i dalje radi u development-style single worker modu.")
+        if str(export_jobs.get("mode", "")).lower() == "dedicated_process" and str(export_jobs.get("worker_alive", "")).lower() != "true":
+            blockers.append("Dedicated export worker je podesen, ali heartbeat nije aktivan.")
+        elif str(export_jobs.get("production_ready", "")).lower() != "true":
+            warnings.append("Export i dalje radi u app procesu; za ozbiljniji scale treba izdvojen worker servis.")
+        if str(stripe.get("has_api_key", "")).lower() != "true":
+            warnings.append("Lemon Squeezy API key nije povezan.")
+        if str(stripe.get("has_webhook_secret", "")).lower() != "true":
+            warnings.append("Lemon Squeezy webhook secret nije povezan.")
+        if int(auth_runtime.get("active_reset_tokens", 0)) > 20:
+            warnings.append("Ima previse aktivnih reset tokena; proveri auth cleanup tok.")
+        if int(auth_runtime.get("failed_login_attempts", 0)) > 50:
+            warnings.append("Ima mnogo failed login attempt zapisa; proveri rate limit i auth cleanup.")
+        return {
+            "app_config": app_config,
+            "project_store": project_store,
+            "auth_runtime": auth_runtime,
+            "export_jobs": export_jobs,
+            "export_job_counts": export_job_counts,
+            "stripe": stripe,
+            "billing_events": get_billing_event_summary(),
+            "runtime_health": {
+                "ready": not blockers,
+                "blockers": blockers,
+                "warnings": warnings,
+            },
+        }
+    except Exception as ex:
+        return {"error": str(ex)}
+
+
+def get_visible_audit_logs(limit: int = 20) -> List[Dict[str, Any]]:
+    try:
+        from project_store import list_recent_audit_logs
+        tier = str(getattr(state, "current_access_tier", "") or "").strip().lower()
+        user_id = int(getattr(state, "current_user_id", 0) or 0)
+        if tier == "admin":
+            rows = list_recent_audit_logs(limit=limit)
+        elif user_id > 0:
+            rows = list_recent_audit_logs(user_id=user_id, limit=limit)
+        else:
+            rows = []
+        return [
+            {
+                "created_at": str(row.created_at),
+                "event_type": str(row.event_type),
+                "status": str(row.status),
+                "detail": str(row.detail),
+            }
+            for row in rows
+        ]
+    except Exception as ex:
+        return [{"created_at": "-", "event_type": "ops.error", "status": "warning", "detail": str(ex)}]
 
 
 def save_project_json() -> bytes:
@@ -1230,6 +2341,7 @@ def save_project_json() -> bytes:
         "kitchen_layout":       str(getattr(state, "kitchen_layout", "jedan_zid")),
         "l_corner_side":        str(getattr(state, "l_corner_side", "right")),
         "room_setup_done":      bool(getattr(state, "room_setup_done", False)),
+        "language":             str(getattr(state, "language", "sr") or "sr"),
         "room":                 copy.deepcopy(getattr(state, "room", {})),
         "wardrobe_profile":     str(getattr(state, "wardrobe_profile", "standard")),
         "wardrobe_to_ceiling":  bool(getattr(state, "wardrobe_to_ceiling", True)),
@@ -1245,7 +2357,7 @@ def save_project_json() -> bytes:
 def load_project_json(data: bytes) -> Tuple[bool, str]:
     """
     Učitava projekat iz JSON bytes.
-    Vraća (True, "") ako uspješno, ili (False, poruka_greške) ako ne.
+    Vraća (True, "") ako uspešno, ili (False, poruka_greške) ako ne.
     State se mijenja SAMO ako je sve OK.
     """
     # ── 1. Parse ──────────────────────────────────────────────────────────────
@@ -1335,6 +2447,8 @@ def load_project_json(data: bytes) -> Tuple[bool, str]:
         _m["wall_key"] = _wk
     state.project_type         = project_type
     state.kitchen["project_type"] = state.project_type
+    _saved_language = str(payload.get("language", "sr") or "sr").lower().strip()
+    state.language = _saved_language if _saved_language in ("sr", "en") else "sr"
 
     # kitchen_layout + l_corner_side (backward compat: čitaj iz kitchen ako nedostaje)
     _saved_layout = str(payload.get("kitchen_layout", "") or "").lower().strip()
@@ -1388,6 +2502,11 @@ def load_project_json(data: bytes) -> Tuple[bool, str]:
     state.mode               = "add"
     state.sidebar_tab        = "dodaj"
     state.active_tab         = "elementi"
+    write_autosave_snapshot(reason="load_project")
 
     return True, ""
+
+
+def _set_language(lang: str) -> None:
+    state.language = normalize_language_code(lang)
 

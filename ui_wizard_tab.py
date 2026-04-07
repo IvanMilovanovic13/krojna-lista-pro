@@ -1,47 +1,32 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from i18n import (
-    SYM_CHEVRON,
-    WIZ_BACK,
-    WIZ_BTN_LOAD_PROJECT,
-    WIZ_CONTINUE_EXISTING,
-    WIZ_MODE_PRO,
-    WIZ_MODE_PRO_DESC1,
-    WIZ_MODE_PRO_DESC2,
-    WIZ_MODE_STANDARD,
-    WIZ_MODE_STANDARD_DESC1,
-    WIZ_MODE_STANDARD_DESC2,
-    WIZ_STEP_MODE,
-    WIZ_STEP_TYPE,
-    WIZ_SUB_PICK_MODE,
-    WIZ_TITLE_APP,
-    WIZ_TITLE_PICK_MODE,
-    WIZ_TITLE_PICK_TYPE,
-    WIZ_TYPE_KITCHEN,
-    WIZ_TYPE_KITCHEN_DESC,
-)
+from typing import Any, Callable
+
+from i18n import SYM_CHEVRON
 
 
 def render_wizard_tab(
-    ui,
-    state,
-    main_content,
-    main_content_refresh,
-    switch_tab,
-    render_room_setup_step3,
-    plt,
-    ensure_room_walls,
-    get_room_wall,
-    set_wall_length,
-    set_wall_height,
-    room_opening_types,
-    room_fixture_types,
+    ui: Any,
+    state: Any,
+    tr_fn: Callable[[str], str],
+    main_content: Any,
+    main_content_refresh: Callable[[], None],
+    switch_tab: Callable[[str], None],
+    render_room_setup_step3: Callable[..., None],
+    plt: Any,
+    ensure_room_walls: Callable[..., Any],
+    get_room_wall: Callable[..., Any],
+    set_wall_length: Callable[[int], None],
+    set_wall_height: Callable[[int], None],
+    room_opening_types: Any,
+    room_fixture_types: Any,
 ) -> None:
     with ui.column().classes('w-full h-[calc(100vh-48px)] overflow-hidden'):
         _render_wizard(
             ui=ui,
             state=state,
+            tr_fn=tr_fn,
             main_content_refresh=main_content_refresh,
             switch_tab=switch_tab,
             render_room_setup_step3=render_room_setup_step3,
@@ -57,38 +42,38 @@ def render_wizard_tab(
 
 
 def _render_wizard(
-    ui,
-    state,
-    main_content_refresh,
-    switch_tab,
-    render_room_setup_step3,
-    plt,
-    ensure_room_walls,
-    get_room_wall,
-    set_wall_length,
-    set_wall_height,
-    room_opening_types,
-    room_fixture_types,
-    main_content,
+    ui: Any,
+    state: Any,
+    tr_fn: Callable[[str], str],
+    main_content_refresh: Callable[[], None],
+    switch_tab: Callable[[str], None],
+    render_room_setup_step3: Callable[..., None],
+    plt: Any,
+    ensure_room_walls: Callable[..., Any],
+    get_room_wall: Callable[..., Any],
+    set_wall_length: Callable[[int], None],
+    set_wall_height: Callable[[int], None],
+    room_opening_types: Any,
+    room_fixture_types: Any,
+    main_content: Any,
 ) -> None:
-    # Produkcija: jedan zid, projekat uvek kuhinja.
     state.project_type = 'kitchen'
     state.kitchen['project_type'] = 'kitchen'
     state.kitchen_layout = 'jedan_zid'
     state.kitchen['layout'] = 'jedan_zid'
 
-    # Wizard ima 3 koraka: 1=tip, 2=rezim merenja, 4=prostorija (korak 3 nije u produkciji)
     if state.wizard_step == 3:
         state.wizard_step = 4
 
     if state.wizard_step == 1:
-        _render_wizard_step1(ui, state, main_content_refresh, switch_tab)
+        _render_wizard_step1(ui, state, tr_fn, main_content_refresh, switch_tab)
     elif state.wizard_step == 2:
-        _render_wizard_step2_measurement(ui, state, main_content_refresh)
+        _render_wizard_step2_measurement(ui, state, tr_fn, main_content_refresh)
     else:
         render_room_setup_step3(
             state,
             ui=ui,
+            tr_fn=tr_fn,
             plt=plt,
             _ensure_room_walls=ensure_room_walls,
             _get_room_wall=get_room_wall,
@@ -100,79 +85,149 @@ def _render_wizard(
         )
 
 
-def _render_wizard_step1(ui, state, main_content_refresh, switch_tab) -> None:
-    with ui.column().classes('w-full h-full overflow-auto bg-gray-50 items-center justify-center p-8 gap-6'):
-        ui.label(WIZ_TITLE_APP).classes('text-4xl font-bold text-gray-800')
-        ui.label(WIZ_TITLE_PICK_TYPE).classes('text-lg text-gray-500 mb-2')
+def _render_wizard_step1(
+    ui: Any,
+    state: Any,
+    tr_fn: Callable[[str], str],
+    main_content_refresh: Callable[[], None],
+    switch_tab: Callable[[str], None],
+) -> None:
+    def _start_new_kitchen() -> None:
+        state.project_type = 'kitchen'
+        state.kitchen['project_type'] = 'kitchen'
+        state.furniture_type = 'kuhinja'
+        state.kitchen_layout = 'jedan_zid'
+        state.kitchen['layout'] = 'jedan_zid'
+        state.active_group = 'donji'
+        state.measurement_mode = ''
+        state.wizard_step = 2
+        main_content_refresh()
 
-        with ui.row().classes('flex-wrap justify-center gap-4 max-w-4xl'):
-            def _klik():
-                state.project_type = 'kitchen'
-                state.kitchen['project_type'] = 'kitchen'
-                state.furniture_type = 'kuhinja'
-                state.kitchen_layout = 'jedan_zid'
-                state.kitchen['layout'] = 'jedan_zid'
-                state.active_group = 'donji'
-                state.measurement_mode = ''
-                state.wizard_step = 2
-                main_content_refresh()
+    with ui.column().classes('w-full h-full overflow-auto bg-gray-50 items-center justify-center p-8 gap-6'):
+        ui.label(tr_fn('wizard.title_app')).classes('text-4xl font-bold text-gray-800')
+        ui.label(tr_fn('wizard.title_pick_type')).classes('text-lg text-gray-500 mb-2')
+
+        with ui.row().classes('flex-wrap justify-center items-stretch gap-4 max-w-5xl w-full'):
+            with ui.card().classes(
+                'w-[320px] cursor-pointer hover:shadow-xl hover:border-gray-500 '
+                'border-2 border-transparent transition-all duration-200 '
+                'flex flex-col gap-3 p-6 bg-white'
+            ).on('click', _start_new_kitchen):
+                ui.label(tr_fn('wizard.start_recommended')).classes(
+                    'self-start text-xs font-semibold uppercase tracking-wide text-green-700 '
+                    'bg-green-100 px-3 py-1 rounded-full'
+                )
+                ui.label(tr_fn('wizard.type_kitchen')).classes('text-2xl font-bold text-gray-800')
+                ui.label(tr_fn('wizard.start_new')).classes('text-xl font-bold text-gray-800')
+                ui.label(tr_fn('wizard.start_new_desc')).classes('text-sm text-gray-500')
+                ui.separator()
+                ui.label(tr_fn('wizard.type_kitchen_desc')).classes('text-sm text-gray-500')
+                ui.button(tr_fn('wizard.start_new'), on_click=_start_new_kitchen).classes(
+                    'mt-auto bg-[#111] text-white'
+                )
 
             with ui.card().classes(
-                'w-48 h-44 cursor-pointer hover:shadow-xl hover:border-gray-500 '
-                'border-2 border-transparent transition-all duration-200 '
-                'flex flex-col items-center justify-center gap-2 p-4'
-            ).on('click', _klik):
-                ui.label('🍴').classes('text-5xl')
-                ui.label(WIZ_TYPE_KITCHEN).classes('text-base font-bold text-gray-800')
-                ui.label(WIZ_TYPE_KITCHEN_DESC).classes('text-xs text-gray-400 text-center')
+                'w-[320px] border border-gray-200 flex flex-col gap-3 p-6 bg-white'
+            ):
+                ui.label(tr_fn('wizard.type_json')).classes('text-2xl font-bold text-gray-800')
+                ui.label(tr_fn('wizard.start_load')).classes('text-xl font-bold text-gray-800')
+                ui.label(tr_fn('wizard.start_load_desc')).classes('text-sm text-gray-500')
+                ui.separator()
+                ui.label(tr_fn('wizard.continue_existing')).classes('text-sm text-gray-400')
+                ui.button(tr_fn('wizard.load_project'), on_click=lambda: switch_tab('nova')).classes(
+                    'mt-auto bg-white text-[#111] border border-[#111]'
+                ).props('flat')
 
-        ui.separator().classes('max-w-4xl w-full')
-        ui.label(WIZ_CONTINUE_EXISTING).classes('text-sm text-gray-400')
-        ui.button(WIZ_BTN_LOAD_PROJECT, on_click=lambda: switch_tab('nova')).classes(
-            'bg-white text-[#111] border border-[#111]'
-        ).props('flat')
+            with ui.card().classes(
+                'w-[320px] border border-[#d4a017] flex flex-col gap-3 p-6 bg-[#fff7d6]'
+            ):
+                ui.label(tr_fn('wizard.type_account')).classes('text-2xl font-bold text-gray-800')
+                ui.label(tr_fn('wizard.account_title')).classes('text-xl font-bold text-gray-800')
+                ui.label(tr_fn('wizard.account_desc')).classes('text-sm text-gray-500')
+                ui.separator()
+                ui.label(tr_fn('wizard.account_hint')).classes('text-sm text-gray-400')
+                ui.button(tr_fn('wizard.account_open'), on_click=lambda: switch_tab('nalog')).classes(
+                    'mt-auto bg-[#111] text-white'
+                )
+
+            with ui.card().classes('w-[320px] border border-gray-200 flex flex-col gap-3 p-6 bg-[#f7f5ef]'):
+                ui.label(tr_fn('wizard.start_next_title')).classes('text-xl font-bold text-gray-800')
+                ui.label(tr_fn('wizard.start_next_1')).classes('text-sm text-gray-600')
+                ui.label(tr_fn('wizard.start_next_2')).classes('text-sm text-gray-600')
+                ui.label(tr_fn('wizard.start_next_3')).classes('text-sm text-gray-600')
 
 
-def _render_wizard_step2_measurement(ui, state, main_content_refresh) -> None:
+def _render_wizard_step2_measurement(
+    ui: Any,
+    state: Any,
+    tr_fn: Callable[[str], str],
+    main_content_refresh: Callable[[], None],
+) -> None:
     with ui.column().classes('w-full h-full overflow-auto bg-gray-50 items-center justify-center p-8 gap-6'):
         with ui.row().classes('items-center gap-2 mb-2'):
             ui.button(icon='arrow_back', on_click=lambda: (
                 setattr(state, 'wizard_step', 1), main_content_refresh()
             )).props('flat round dense')
-            ui.label(WIZ_BACK).classes('text-sm text-gray-400')
+            ui.label(tr_fn('wizard.back')).classes('text-sm text-gray-400')
             ui.label(SYM_CHEVRON).classes('text-gray-300')
-            ui.label(WIZ_STEP_TYPE).classes('text-sm text-gray-400')
+            ui.label(tr_fn('wizard.step_type')).classes('text-sm text-gray-400')
             ui.label(SYM_CHEVRON).classes('text-gray-300')
-            ui.label(WIZ_STEP_MODE).classes('text-sm font-semibold text-gray-700')
+            ui.label(tr_fn('wizard.step_mode')).classes('text-sm font-semibold text-gray-700')
 
-        ui.label(WIZ_TITLE_PICK_MODE).classes('text-3xl font-bold text-gray-800')
-        ui.label(WIZ_SUB_PICK_MODE).classes('text-gray-400 mb-2')
+        ui.label(tr_fn('wizard.title_pick_mode')).classes('text-3xl font-bold text-gray-800')
+        ui.label(tr_fn('wizard.sub_pick_mode')).classes('text-gray-400 mb-2')
 
         with ui.row().classes('flex-wrap justify-center gap-5 max-w-4xl'):
-            # Standard merenje -> direktno na korak 4 (prostorija)
             with ui.card().classes(
                 'w-80 cursor-pointer hover:shadow-xl hover:border-gray-500 '
                 'border-2 border-transparent transition-all duration-200 p-5 gap-2'
             ).on('click', lambda: (
                 setattr(state, 'measurement_mode', 'standard'),
-                setattr(state, 'room', {**getattr(state, 'room', {}), 'active_wall': 'A', 'kitchen_wall': 'A', 'setup_panel_mode': 'walls'}),
+                setattr(
+                    state,
+                    'room',
+                    {
+                        **getattr(state, 'room', {}),
+                        'active_wall': 'A',
+                        'kitchen_wall': 'A',
+                        'setup_panel_mode': 'walls',
+                    },
+                ),
                 setattr(state, 'wizard_step', 4),
                 main_content_refresh()
             )):
-                ui.label(WIZ_MODE_STANDARD).classes('font-bold text-gray-800 text-lg')
-                ui.label(WIZ_MODE_STANDARD_DESC1).classes('text-sm text-gray-500')
-                ui.label(WIZ_MODE_STANDARD_DESC2).classes('text-xs text-gray-400')
+                ui.label(tr_fn('wizard.mode_standard_badge')).classes(
+                    'self-start text-xs font-semibold uppercase tracking-wide text-green-700 '
+                    'bg-green-100 px-3 py-1 rounded-full mb-1'
+                )
+                ui.label(tr_fn('wizard.mode_standard')).classes('font-bold text-gray-800 text-lg')
+                ui.label(tr_fn('wizard.mode_standard_desc1')).classes('text-sm text-gray-500')
+                ui.label(tr_fn('wizard.mode_standard_desc2')).classes('text-xs text-gray-400')
+                ui.label(tr_fn('wizard.mode_standard_desc3')).classes('text-xs text-gray-500')
 
-            # PRO merenje -> direktno na korak 4 (prostorija)
             with ui.card().classes(
                 'w-80 cursor-pointer hover:shadow-xl hover:border-gray-500 '
                 'border-2 border-transparent transition-all duration-200 p-5 gap-2'
             ).on('click', lambda: (
                 setattr(state, 'measurement_mode', 'pro'),
-                setattr(state, 'room', {**getattr(state, 'room', {}), 'active_wall': 'A', 'kitchen_wall': 'A', 'setup_panel_mode': 'walls'}),
+                setattr(
+                    state,
+                    'room',
+                    {
+                        **getattr(state, 'room', {}),
+                        'active_wall': 'A',
+                        'kitchen_wall': 'A',
+                        'setup_panel_mode': 'walls',
+                    },
+                ),
                 setattr(state, 'wizard_step', 4),
                 main_content_refresh()
             )):
-                ui.label(WIZ_MODE_PRO).classes('font-bold text-gray-800 text-lg')
-                ui.label(WIZ_MODE_PRO_DESC1).classes('text-sm text-gray-500')
-                ui.label(WIZ_MODE_PRO_DESC2).classes('text-xs text-gray-400')
+                ui.label(tr_fn('wizard.mode_pro_badge')).classes(
+                    'self-start text-xs font-semibold uppercase tracking-wide text-amber-700 '
+                    'bg-amber-100 px-3 py-1 rounded-full mb-1'
+                )
+                ui.label(tr_fn('wizard.mode_pro')).classes('font-bold text-gray-800 text-lg')
+                ui.label(tr_fn('wizard.mode_pro_desc1')).classes('text-sm text-gray-500')
+                ui.label(tr_fn('wizard.mode_pro_desc2')).classes('text-xs text-gray-400')
+                ui.label(tr_fn('wizard.mode_pro_desc3')).classes('text-xs text-gray-500')

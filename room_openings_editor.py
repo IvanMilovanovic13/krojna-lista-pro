@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 from __future__ import annotations
 
+from i18n import tr
 from i18n import (
     BTN_DODAJ_INSTALACIJU,
     BTN_DODAJ_PROZOR,
@@ -91,6 +92,10 @@ def render_room_openings_editor(
     wall_compass,
     BTN_ZATVORI,
 ):
+    _lang = str(getattr(state, "language", "sr") or "sr").lower().strip()
+    def _t(sr: str, en: str) -> str:
+        return en if _lang == "en" else sr
+
     # Stabilni podrazumevani parametri prostorije
     for _k in ('A', 'B', 'C'):
         _w = _get_wall_by_key(_k)
@@ -123,23 +128,27 @@ def render_room_openings_editor(
                     _fix_btns.append(_b)
 
             inst_wall_sel = ui.select(
-                {'A': ROE_WALL_A_BACK, 'B': ROE_WALL_B_LEFT, 'C': ROE_WALL_C_RIGHT},
+                {
+                    'A': _t("Zid A (zadnji)", "Wall A (back)"),
+                    'B': _t("Zid B (levi)", "Wall B (left)"),
+                    'C': _t("Zid C (desni)", "Wall C (right)"),
+                },
                 value=_fixture_wall_choice['value'],
-                label=ROE_LABEL_INSTALL_WALL,
+                label=_t("Zid instalacije", "Fixture wall"),
             ).props('dense outlined').classes('w-full')
             inst_wall_sel.on(
                 'update:model-value',
                 lambda e: _fixture_wall_choice.__setitem__('value', str(e.value or 'A').upper())
             )
-            ui.label(ROE_QUICK_INPUT).classes('text-xs text-gray-500 mt-1')
-            with ui.expansion(ROE_ADV_MANUAL_XY, value=False).classes('w-full mt-1'):
+            ui.label(_t("Brzi unos", "Quick input")).classes('text-xs text-gray-500 mt-1')
+            with ui.expansion(_t("Napredno (ručni unos X/Y)", "Advanced (manual X/Y input)"), value=False).classes('w-full mt-1'):
                 with ui.grid(columns=2).classes('w-full gap-x-3 gap-y-1'):
                     with ui.column().classes('gap-0'):
-                        ui.label(ROE_LABEL_LEFT_EDGE_X).classes('text-xs text-gray-500')
+                        ui.label(_t("Od leve ivice (X)", "From left edge (X)")).classes('text-xs text-gray-500')
                         fx_inp = ui.number(value=500, min=0, max=10000, step=50, suffix='mm').props('dense outlined').classes('w-full')
                         _refs['fx_inp'] = fx_inp
                     with ui.column().classes('gap-0'):
-                        ui.label(ROE_LABEL_FLOOR_Y).classes('text-xs text-gray-500')
+                        ui.label(_t("Od poda (Y)", "From floor (Y)")).classes('text-xs text-gray-500')
                         fy_inp = ui.number(value=300, min=0, max=3000, step=50, suffix='mm').props('dense outlined').classes('w-full')
                         _refs['fy_inp'] = fy_inp
 
@@ -151,7 +160,7 @@ def render_room_openings_editor(
                 _x = int((fx_inp.value if _refs.get('fx_inp') is not None else (_refs['click_x_mm'][0] or 0)) or 0)
                 _y = int((fy_inp.value if _refs.get('fy_inp') is not None else (_refs['click_y_mm'][0] or 0)) or 0)
                 if _x > _wl or _y > _wh:
-                    ui.notify(ROE_NOTIFY_FIXTURE_OUT, type='negative')
+                    ui.notify(_t("Instalacija izlazi van zida. Proveri X/Y.", "The fixture is outside the wall. Check X/Y."), type='negative')
                     return
                 _wall.setdefault('fixtures', []).append({
                     'type': _sel_fixture_type['value'],
@@ -164,7 +173,7 @@ def render_room_openings_editor(
                 wall_preview.refresh()
                 scene_container.refresh()
 
-            ui.button(f'+ {BTN_DODAJ_INSTALACIJU}', on_click=_add_fixture).classes(
+            ui.button(f'+ {_t("Dodaj instalaciju", "Add fixture")}', on_click=_add_fixture).classes(
                 'w-full font-semibold text-sm'
             ).props('dense')
             return
@@ -185,13 +194,17 @@ def render_room_openings_editor(
                 )
                 _type_btns.append(_b)
         ui.label(
-            ROE_MODE_ADD_DOOR if _sel_opening_type.get('value') == 'vrata' else ROE_MODE_ADD_WINDOW
+            _t("Režim: Dodaj vrata", "Mode: Add door") if _sel_opening_type.get('value') == 'vrata' else _t("Režim: Dodaj prozor", "Mode: Add window")
         ).classes('text-xs font-semibold text-gray-700')
 
         opening_wall_sel = ui.select(
-            {'A': ROE_WALL_A_BACK, 'B': ROE_WALL_B_LEFT, 'C': ROE_WALL_C_RIGHT},
+            {
+                'A': _t("Zid A (zadnji)", "Wall A (back)"),
+                'B': _t("Zid B (levi)", "Wall B (left)"),
+                'C': _t("Zid C (desni)", "Wall C (right)"),
+            },
             value=_opening_wall_choice['value'],
-            label=ROE_LABEL_OPENING_WALL,
+            label=_t("Zid otvora", "Opening wall"),
         ).props('dense outlined').classes('w-full')
         opening_wall_sel.on(
             'update:model-value',
@@ -200,38 +213,38 @@ def render_room_openings_editor(
         ui.label().bind_text_from(
             _opening_wall_choice,
             'value',
-            backward=lambda v: ROE_OPENING_ADDING_ON_WALL_FMT.format(wall=str(v or "A").upper()),
+            backward=lambda v: _t("Dodavanje ide na zid: {wall}", "Adding to wall: {wall}").format(wall=str(v or "A").upper()),
         ).classes('text-xs text-gray-600')
-        ui.label(ROE_QUICK_INPUT).classes('text-xs text-gray-500 mt-1')
+        ui.label(_t("Brzi unos", "Quick input")).classes('text-xs text-gray-500 mt-1')
         with ui.grid(columns=2).classes('w-full gap-x-3 gap-y-1'):
             with ui.column().classes('gap-0'):
-                ui.label(ROE_LABEL_OPENING_WIDTH).classes('text-xs text-gray-500')
+                ui.label(_t("Širina otvora", "Opening width")).classes('text-xs text-gray-500')
                 ow_inp = ui.number(value=800, min=100, max=4000, step=50, suffix='mm').props('dense outlined').classes('w-full')
             with ui.column().classes('gap-0'):
-                ui.label(ROE_LABEL_OPENING_HEIGHT).classes('text-xs text-gray-500')
+                ui.label(_t("Visina otvora", "Opening height")).classes('text-xs text-gray-500')
                 oh_inp = ui.number(value=1200, min=100, max=3000, step=50, suffix='mm').props('dense outlined').classes('w-full')
 
         with ui.row().classes('w-full gap-2 mt-1'):
             with ui.column().classes('flex-1 gap-0'):
-                ui.label(ROE_LABEL_BOTTOM_EDGE_Y).classes('text-xs text-gray-500')
+                ui.label(_t("Donja ivica od poda (Y)", "Bottom edge from floor (Y)")).classes('text-xs text-gray-500')
                 oy_quick = ui.number(value=0, min=0, max=3000, step=50, suffix='mm').props('dense outlined').classes('w-full')
                 _refs['oy_quick'] = oy_quick
             with ui.column().classes('w-[140px] gap-0'):
-                ui.label(ROE_LABEL_MANUAL_XY).classes('text-xs text-gray-500')
+                ui.label(_t("Ručni X/Y", "Manual X/Y")).classes('text-xs text-gray-500')
                 ui.checkbox(
-                    ROE_LABEL_MANUAL_INPUT,
+                    _t("Ručni unos", "Manual input"),
                     value=False,
                     on_change=lambda e: _use_manual_xy.__setitem__('value', bool(e.value)),
                 ).props('dense')
 
-        with ui.expansion(ROE_ADV_MANUAL_XY, value=False).classes('w-full mt-1'):
+        with ui.expansion(_t("Napredno (ručni unos X/Y)", "Advanced (manual X/Y input)"), value=False).classes('w-full mt-1'):
             with ui.grid(columns=2).classes('w-full gap-x-3 gap-y-1'):
                 with ui.column().classes('gap-0'):
-                    ui.label(ROE_LABEL_LEFT_EDGE_X).classes('text-xs text-gray-500')
+                    ui.label(_t("Od leve ivice (X)", "From left edge (X)")).classes('text-xs text-gray-500')
                     ox_inp = ui.number(value=500, min=0, max=10000, step=50, suffix='mm').props('dense outlined').classes('w-full')
                     _refs['ox_inp'] = ox_inp
                 with ui.column().classes('gap-0'):
-                    ui.label(ROE_LABEL_FLOOR_Y).classes('text-xs text-gray-500')
+                    ui.label(_t("Od poda (Y)", "From floor (Y)")).classes('text-xs text-gray-500')
                     oy_inp = ui.number(value=800, min=0, max=3000, step=50, suffix='mm').props('dense outlined').classes('w-full')
                     _refs['oy_inp'] = oy_inp
 
@@ -246,7 +259,7 @@ def render_room_openings_editor(
             else:
                 _x = int((_refs['click_x_mm'][0] if _refs['click_x_mm'][0] is not None else -1))
                 if _x < 0:
-                    ui.notify(ROE_NOTIFY_CLICK_WALL_FOR_X, type='negative')
+                    ui.notify(_t("Klikni na zid da postaviš X poziciju.", "Click the wall to set the X position."), type='negative')
                     return
                 _y = int((oy_quick.value if _refs.get('oy_quick') is not None else (_refs['click_y_mm'][0] or 0)) or 0)
             if str(_sel_opening_type.get('value', 'prozor')) == 'vrata':
@@ -254,7 +267,7 @@ def render_room_openings_editor(
             _w = int(ow_inp.value or 800)
             _h = int(oh_inp.value or 1200)
             if _x + _w > _wl or _y + _h > _wh:
-                ui.notify(ROE_NOTIFY_OPENING_OUT, type='negative')
+                ui.notify(_t("Otvor izlazi van zida. Proveri X/Y i dimenzije.", "The opening is outside the wall. Check X/Y and dimensions."), type='negative')
                 return
             _wall.setdefault('openings', []).append({
                 'type': _sel_opening_type['value'],
@@ -299,7 +312,7 @@ def render_room_openings_editor(
             wall_compass.refresh()
             wall_preview.refresh()
             scene_container.refresh()
-            ui.notify(ROE_NOTIFY_WINDOW_ADDED_DRAG, timeout=2200)
+            ui.notify(_t("Prozor dodat. Prevuci ga mišem na željenu poziciju u 2D prikazu.", "Window added. Drag it to the desired position in the 2D view."), timeout=2200)
 
         def _add_door_drag_ready():
             _wall_key = str(opening_wall_sel.value or _opening_wall_choice['value'] or "A").upper()
@@ -328,20 +341,20 @@ def render_room_openings_editor(
             wall_compass.refresh()
             wall_preview.refresh()
             scene_container.refresh()
-            ui.notify(ROE_NOTIFY_DOOR_ADDED_DRAG, timeout=2200)
+            ui.notify(_t("Vrata dodata. Prevuci ih mišem na željenu poziciju u 2D prikazu.", "Door added. Drag it to the desired position in the 2D view."), timeout=2200)
 
         if _sel_opening_type.get('value') == 'vrata':
-            ui.button(f'{BTN_UBACI_VRATA_PREVUCI}', on_click=_add_door_drag_ready).props('dense outlined').classes('w-full text-xs')
+            ui.button(_t("Ubaci vrata i prevuci", "Insert door and drag"), on_click=_add_door_drag_ready).props('dense outlined').classes('w-full text-xs')
         else:
-            ui.button(f'{BTN_UBACI_PROZOR_PREVUCI}', on_click=_add_window_drag_ready).props('dense outlined').classes('w-full text-xs')
-        _add_label = f' + {BTN_DODAJ_VRATA}' if _sel_opening_type.get('value') == 'vrata' else f'+ {BTN_DODAJ_PROZOR}'
+            ui.button(_t("Ubaci prozor i prevuci", "Insert window and drag"), on_click=_add_window_drag_ready).props('dense outlined').classes('w-full text-xs')
+        _add_label = f' + {_t("Dodaj vrata", "Add door")}' if _sel_opening_type.get('value') == 'vrata' else f'+ {_t("Dodaj prozor", "Add window")}'
         ui.button(_add_label, on_click=_add_opening).classes('w-full font-semibold text-sm').props('dense')
 
     @ui.refreshable
     def openings_list():
         ops = _get_active_wall().get('openings', [])
         if not ops:
-            ui.label(ROE_NO_OPENINGS).classes('text-xs text-gray-300 italic text-center py-2')
+            ui.label(_t("Još nema otvora.", "There are no openings yet.")).classes('text-xs text-gray-300 italic text-center py-2')
             return
         for i, op in enumerate(ops):
             oi_ic, onm, ocl = OPENING_TYPES.get(op['type'], ('?', op['type'], '#ccc'))
@@ -354,8 +367,14 @@ def render_room_openings_editor(
                 with ui.column().classes('flex-1 gap-0'):
                     ui.label(onm).classes('text-xs font-semibold text-gray-700')
                     ui.label(
-                        ROE_OPENING_INFO_FMT.format(
-                            x=op["x_mm"], w=op["width_mm"], h=op["height_mm"], y=op["y_mm"]
+                        _t(
+                            "x={x}  {w}x{h}mm  +{y}mm od poda",
+                            "x={x}  {w}x{h}mm  +{y}mm from floor",
+                        ).format(
+                            x=op["x_mm"],
+                            w=op["width_mm"],
+                            h=op["height_mm"],
+                            y=op["y_mm"],
                         )
                     ).classes('text-xs text-gray-400')
 
@@ -370,15 +389,15 @@ def render_room_openings_editor(
                     _op = dict(_get_wall_by_key(cur_wall_key).get('openings', [])[idx])
                     with ui.dialog() as dlg:
                         with ui.card().classes('p-4 min-w-80 gap-2'):
-                            ui.label(ROE_EDIT_OPENING).classes('font-bold text-sm')
+                            ui.label(_t("Izmena otvora", "Edit opening")).classes('font-bold text-sm')
                             wall_sel = ui.select(
-                                {'A': ROE_WALL_A, 'B': ROE_WALL_B, 'C': ROE_WALL_C},
-                                value=cur_wall_key, label=ROE_WALL
+                                {'A': _t("Zid A", "Wall A"), 'B': _t("Zid B", "Wall B"), 'C': _t("Zid C", "Wall C")},
+                                value=cur_wall_key, label=_t("Zid", "Wall")
                             ).props('dense outlined').classes('w-full')
-                            w_in = ui.number(value=int(_op.get('width_mm', 800)), label=ROE_LABEL_WIDTH_MM).props('dense outlined').classes('w-full')
-                            h_in = ui.number(value=int(_op.get('height_mm', 1200)), label=ROE_LABEL_HEIGHT_MM).props('dense outlined').classes('w-full')
-                            x_in = ui.number(value=int(_op.get('x_mm', 0)), label=ROE_LABEL_X_FROM_LEFT_MM).props('dense outlined').classes('w-full')
-                            y_in = ui.number(value=int(_op.get('y_mm', 0)), label=ROE_LABEL_Y_FROM_FLOOR_MM).props('dense outlined').classes('w-full')
+                            w_in = ui.number(value=int(_op.get('width_mm', 800)), label=_t("Širina [mm]", "Width [mm]")).props('dense outlined').classes('w-full')
+                            h_in = ui.number(value=int(_op.get('height_mm', 1200)), label=_t("Visina [mm]", "Height [mm]")).props('dense outlined').classes('w-full')
+                            x_in = ui.number(value=int(_op.get('x_mm', 0)), label=_t("X od levog ugla [mm]", "X from left corner [mm]")).props('dense outlined').classes('w-full')
+                            y_in = ui.number(value=int(_op.get('y_mm', 0)), label=_t("Y od poda [mm]", "Y from floor [mm]")).props('dense outlined').classes('w-full')
 
                             def _save_edit():
                                 src_wall = _get_wall_by_key(cur_wall_key)
@@ -400,8 +419,8 @@ def render_room_openings_editor(
                                 scene_container.refresh()
 
                             with ui.row().classes('w-full gap-2'):
-                                ui.button(ROE_SAVE, on_click=_save_edit).classes('flex-1')
-                                ui.button(BTN_ZATVORI, on_click=dlg.close).classes('flex-1')
+                                ui.button(_t("Sačuvaj", "Save"), on_click=_save_edit).classes('flex-1')
+                                ui.button(_t("Zatvori", "Close"), on_click=dlg.close).classes('flex-1')
                     dlg.open()
 
                 def _rm(idx=i):
@@ -421,7 +440,7 @@ def render_room_openings_editor(
         _ops = _get_active_wall().get('openings', [])
         _idx = _refs['selected_open_idx'][0]
         if _idx is None or not (0 <= _idx < len(_ops)):
-            ui.label(ROE_CLICK_OPENING_FOR_DETAILS).classes('text-xs text-gray-500')
+            ui.label(_t("Klikni prozor/vrata u 2D prikazu za detalje.", "Click a window/door in the 2D view for details.")).classes('text-xs text-gray-500')
             return
         _op = _ops[_idx]
         _wl = int(_get_active_wall().get('length_mm', room.get('wall_length_mm', 3000)))
@@ -432,16 +451,16 @@ def render_room_openings_editor(
         _h = int(_op.get('height_mm', 0))
         _right = max(0, _wl - (_x + _w))
         with ui.card().classes('w-full p-2 border border-gray-300'):
-            ui.label(ROE_SELECTED_OPENING_DETAILS).classes('text-xs font-bold text-gray-700')
-            ui.label(ROE_X_FROM_LEFT_FMT.format(x=_x)).classes('text-xs')
-            ui.label(ROE_X_FROM_RIGHT_FMT.format(x=_right)).classes('text-xs')
-            ui.label(ROE_Y_FROM_FLOOR_FMT.format(y=_y)).classes('text-xs')
-            ui.label(ROE_DIMENSIONS_FMT.format(w=_w, h=_h)).classes('text-xs')
+            ui.label(_t("Detalji izabranog otvora", "Selected opening details")).classes('text-xs font-bold text-gray-700')
+            ui.label(_t("X od levog zida: {x} mm", "X from left wall: {x} mm").format(x=_x)).classes('text-xs')
+            ui.label(_t("X od desnog zida: {x} mm", "X from right wall: {x} mm").format(x=_right)).classes('text-xs')
+            ui.label(_t("Y od poda: {y} mm", "Y from floor: {y} mm").format(y=_y)).classes('text-xs')
+            ui.label(_t("Dimenzije: {w} × {h} mm", "Dimensions: {w} × {h} mm").format(w=_w, h=_h)).classes('text-xs')
             with ui.grid(columns=2).classes('w-full gap-x-2 gap-y-1 mt-1'):
-                ed_x = ui.number(value=_x, label=ROE_LABEL_X_MM).props('dense outlined').classes('w-full')
-                ed_y = ui.number(value=_y, label=ROE_LABEL_Y_MM).props('dense outlined').classes('w-full')
-                ed_w = ui.number(value=_w, label=ROE_LABEL_WIDTH_MM).props('dense outlined').classes('w-full')
-                ed_h = ui.number(value=_h, label=ROE_LABEL_HEIGHT_MM).props('dense outlined').classes('w-full')
+                ed_x = ui.number(value=_x, label="X [mm]").props('dense outlined').classes('w-full')
+                ed_y = ui.number(value=_y, label="Y [mm]").props('dense outlined').classes('w-full')
+                ed_w = ui.number(value=_w, label=_t("Širina [mm]", "Width [mm]")).props('dense outlined').classes('w-full')
+                ed_h = ui.number(value=_h, label=_t("Visina [mm]", "Height [mm]")).props('dense outlined').classes('w-full')
 
             def _apply_selected():
                 if _idx is None or not (0 <= _idx < len(_ops)):
@@ -451,10 +470,10 @@ def render_room_openings_editor(
                 _nw = int(ed_w.value or 0)
                 _nh = int(ed_h.value or 0)
                 if _nw <= 0 or _nh <= 0:
-                    ui.notify(ROE_NOTIFY_DIM_POSITIVE, type='negative')
+                    ui.notify(_t("Dimenzije moraju biti veće od nule.", "Dimensions must be greater than zero."), type='negative')
                     return
                 if _nx < 0 or _ny < 0 or (_nx + _nw) > _wl or (_ny + _nh) > _wh:
-                    ui.notify(ROE_NOTIFY_OPENING_OUT_SHORT, type='negative')
+                    ui.notify(_t("Otvor izlazi van zida. Proveri X/Y/Š/V.", "The opening is outside the wall. Check X/Y/W/H."), type='negative')
                     return
                 _ops[_idx]['x_mm'] = _nx
                 _ops[_idx]['y_mm'] = _ny
@@ -478,14 +497,14 @@ def render_room_openings_editor(
                 scene_container.refresh()
 
             with ui.row().classes('w-full gap-2 mt-1'):
-                ui.button(ROE_APPLY, on_click=_apply_selected).props('dense').classes('flex-1')
-                ui.button(ROE_DELETE, on_click=_delete_selected).props('dense outlined').classes('flex-1')
+                ui.button(_t("Primeni", "Apply"), on_click=_apply_selected).props('dense').classes('flex-1')
+                ui.button(_t("Obriši", "Delete"), on_click=_delete_selected).props('dense outlined').classes('flex-1')
 
     @ui.refreshable
     def fixtures_list():
         ops = _get_active_wall().get('fixtures', [])
         if not ops:
-            ui.label(ROE_NO_FIXTURES).classes('text-xs text-gray-300 italic text-center py-2')
+            ui.label(_t("Još nema instalacija.", "There are no fixtures yet.")).classes('text-xs text-gray-300 italic text-center py-2')
             return
         for i, op in enumerate(ops):
             fi_ic, fnm, fcl = FIXTURE_TYPES.get(op['type'], ('?', op['type'], '#ccc'))
@@ -493,7 +512,12 @@ def render_room_openings_editor(
                 ui.label(f'{fi_ic}').classes('text-base shrink-0')
                 with ui.column().classes('flex-1 gap-0'):
                     ui.label(fnm).classes('text-xs font-semibold text-gray-700')
-                ui.label(ROE_FIXTURE_INFO_FMT.format(x=op["x_mm"], y=op["y_mm"])).classes('text-xs text-gray-400')
+                ui.label(
+                    _t("x={x} mm  y={y} mm", "x={x} mm  y={y} mm").format(
+                        x=op["x_mm"],
+                        y=op["y_mm"],
+                    )
+                ).classes('text-xs text-gray-400')
 
     @ui.refreshable
     def openings_list_all():
@@ -503,12 +527,12 @@ def render_room_openings_editor(
             for _idx, _op in enumerate(_w.get('openings', [])):
                 _all.append((_wk, _idx, _op))
         if not _all:
-            ui.label(ROE_NO_OPENINGS_ANY).classes('text-xs text-gray-400')
+            ui.label(_t("Nema otvora ni na jednom zidu.", "There are no openings on any wall.")).classes('text-xs text-gray-400')
             return
         for _wk, _idx, _op in _all:
-            _lbl = ROE_ALL_OPENINGS_FMT.format(
+            _lbl = _t("Zid {wall} · {type} · x={x} y={y}", "Wall {wall} · {type} · x={x} y={y}").format(
                 wall=_wk,
-                type=_op.get("type", "otvor"),
+                type=_t("vrata", "door") if str(_op.get("type", "otvor")) == "vrata" else _t("prozor", "window"),
                 x=int(_op.get("x_mm", 0)),
                 y=int(_op.get("y_mm", 0)),
             )
@@ -527,33 +551,33 @@ def render_room_openings_editor(
             _row.on('click', lambda e, _s=_go: _s())
 
     if _panel_mode['value'] in ('all', 'openings'):
-        with ui.expansion(ROE_EXP_OPENINGS_INSTALL, value=True).classes('w-full bg-white border border-gray-100'):
+        with ui.expansion(_t("4. Otvori / instalacije", "4. Openings / fixtures"), value=True).classes('w-full bg-white border border-gray-100'):
             with ui.column().classes('w-full p-3 gap-2'):
                 with ui.row().classes('items-center gap-2 mb-0'):
                     ui.icon('door_front').classes('text-gray-700')
-                    ui.label(ROE_TITLE_OPENINGS_INSTALL).classes('font-bold text-gray-800 text-sm')
+                    ui.label(_t("Otvori / Instalacije", "Openings / Fixtures")).classes('font-bold text-gray-800 text-sm')
                 with ui.row().classes('items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1'):
                     ui.icon('touch_app').classes('text-gray-600 shrink-0 text-sm')
-                    ui.label(ROE_CLICK_WALL_HINT).classes('text-xs text-gray-700')
+                    ui.label(_t("Klikni direktno na zid (desno) da automatski postavi X/Y poziciju!", "Click directly on the wall (right) to set X/Y automatically.")).classes('text-xs text-gray-700')
                 with ui.row().classes('w-full gap-2'):
                     def _set_tab(v):
                         _oi_tab['value'] = v
                         _oi_body.refresh()
-                    ui.button(ROE_TAB_OPENINGS, on_click=lambda: _set_tab('otvori')).props('dense outlined').classes('text-xs')
-                    ui.button(ROE_TAB_FIXTURES, on_click=lambda: _set_tab('inst')).props('dense outlined').classes('text-xs')
+                    ui.button(_t("Otvori", "Openings"), on_click=lambda: _set_tab('otvori')).props('dense outlined').classes('text-xs')
+                    ui.button(_t("Instalacije", "Fixtures"), on_click=lambda: _set_tab('inst')).props('dense outlined').classes('text-xs')
             _oi_body()
 
     if _panel_mode['value'] in ('all', 'openings'):
-        with ui.expansion(ROE_EXP_ADDED_LIST, value=True).classes('w-full bg-white border border-gray-100'):
+        with ui.expansion(_t("5. Lista dodatih", "5. Added items"), value=True).classes('w-full bg-white border border-gray-100'):
             with ui.column().classes('w-full p-3 gap-2'):
-                ui.label(ROE_LIST_OPENINGS_ACTIVE).classes('text-xs font-semibold text-gray-600')
+                ui.label(_t("Otvori (aktivni zid)", "Openings (active wall)")).classes('text-xs font-semibold text-gray-600')
                 openings_list()
                 opening_selected_info()
                 ui.separator()
-                ui.label(ROE_LIST_FIXTURES_ACTIVE).classes('text-xs font-semibold text-gray-600')
+                ui.label(_t("Instalacije (aktivni zid)", "Fixtures (active wall)")).classes('text-xs font-semibold text-gray-600')
                 fixtures_list()
                 ui.separator()
-                ui.label(ROE_LIST_OPENINGS_ALL).classes('text-xs font-semibold text-gray-600')
+                ui.label(_t("Svi otvori (A/B/C)", "All openings (A/B/C)")).classes('text-xs font-semibold text-gray-600')
                 openings_list_all()
 
     return {

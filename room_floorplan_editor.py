@@ -7,6 +7,7 @@ import math
 from typing import Any, Callable
 
 import matplotlib as _mpl
+from i18n import tr
 
 _mpl.use("Agg")
 import matplotlib.pyplot as _plt
@@ -33,6 +34,9 @@ def render_room_floorplan_editor(
     on_show_3d: Callable[[], None] | None = None,
 ) -> None:
     """Simple room editor: one place to add by click and move by drag & drop."""
+    _lang = str(getattr(state, "language", "sr") or "sr").lower().strip()
+    def _t(key: str, **fmt: object) -> str:
+        return tr(key, _lang, **fmt)
     ensure_room_walls(room)
 
     if "simple_tool" not in refs:
@@ -52,12 +56,12 @@ def render_room_floorplan_editor(
     rd = max(rd, int(wall_b.get("length_mm", rd)), int(wall_c.get("length_mm", rd)))
 
     with ui.card().props("id=room-floorplan-card").classes("w-full p-3 border border-gray-200"):
-        ui.label("Dodavanje i pomeranje na jednom mestu").classes("text-sm font-bold text-gray-800")
-        ui.label("Izaberi alat, klikni na zid za dodavanje, pa prevuci element ako treba pomeranje.").classes(
+        ui.label(_t("room.floorplan_title")).classes("text-sm font-bold text-gray-800")
+        ui.label(_t("room.floorplan_hint")).classes(
             "text-xs text-gray-600"
         )
         if callable(on_show_3d):
-            ui.button("3D prikaz", on_click=on_show_3d).props("dense outlined").classes("text-xs mt-1")
+            ui.button(_t("room.floorplan_3d"), on_click=on_show_3d).props("dense outlined").classes("text-xs mt-1")
 
         with ui.row().classes("w-full gap-2 flex-wrap mt-1"):
             def _set_tool(t: str) -> None:
@@ -65,11 +69,11 @@ def render_room_floorplan_editor(
                 floorplan.refresh()
 
             tools = [
-                ("prozor", "Prozor"),
-                ("vrata", "Vrata"),
-                ("struja", "Uticnica"),
-                ("voda", "Voda"),
-                ("gas", "Gas"),
+                ("prozor", _t("room.tool_window")),
+                ("vrata", _t("room.tool_door")),
+                ("struja", _t("room.tool_socket")),
+                ("voda", _t("room.tool_water")),
+                ("gas", _t("room.tool_gas")),
             ]
             for key, label in tools:
                 active = refs.get("simple_tool") == key
@@ -77,13 +81,13 @@ def render_room_floorplan_editor(
                 ui.button(label, on_click=lambda k=key: _set_tool(k)).props("dense").classes(f"text-xs {cls}")
 
         with ui.row().classes("w-full gap-2 mt-2"):
-            refs["simple_w"] = ui.number(value=900, min=100, max=4000, step=10, label="Sirina [mm]").props(
+            refs["simple_w"] = ui.number(value=900, min=100, max=4000, step=10, label=_t("room.width_mm_plain")).props(
                 "dense outlined"
             ).classes("flex-1")
-            refs["simple_h"] = ui.number(value=1200, min=100, max=3000, step=10, label="Visina [mm]").props(
+            refs["simple_h"] = ui.number(value=1200, min=100, max=3000, step=10, label=_t("room.height_mm_plain")).props(
                 "dense outlined"
             ).classes("flex-1")
-            refs["simple_y"] = ui.number(value=0, min=0, max=3000, step=10, label="Y od poda [mm]").props(
+            refs["simple_y"] = ui.number(value=0, min=0, max=3000, step=10, label=_t("room.y_from_floor_plain")).props(
                 "dense outlined"
             ).classes("flex-1")
 
@@ -125,9 +129,9 @@ def render_room_floorplan_editor(
 
             ax.add_patch(_mpatches.Rectangle((0, 0), _wl, _rd, facecolor="#f8efe1", edgecolor="#111827", linewidth=2.0, zorder=1))
             ax.plot([0, _wl], [_rd, _rd], color="#6b7280", linewidth=1.4, linestyle="--", zorder=2)
-            ax.text(_wl * 0.5, -40, "Zid A", ha="center", va="top", fontsize=9, color="#1f2937", fontweight="bold")
-            ax.text(-30, _rd * 0.5, "Zid B", ha="right", va="center", fontsize=9, color="#1f2937", rotation=90)
-            ax.text(_wl + 30, _rd * 0.5, "Zid C", ha="left", va="center", fontsize=9, color="#1f2937", rotation=-90)
+            ax.text(_wl * 0.5, -40, _t("room.wall_a_short"), ha="center", va="top", fontsize=9, color="#1f2937", fontweight="bold")
+            ax.text(-30, _rd * 0.5, _t("room.wall_b_short"), ha="right", va="center", fontsize=9, color="#1f2937", rotation=90)
+            ax.text(_wl + 30, _rd * 0.5, _t("room.wall_c_short"), ha="left", va="center", fontsize=9, color="#1f2937", rotation=-90)
 
             _oc = {"prozor": "#93C5FD", "vrata": "#86EFAC"}
             for wk in ("A", "B", "C"):
@@ -143,7 +147,7 @@ def render_room_floorplan_editor(
                     else:
                         ax.add_patch(_mpatches.Rectangle((_wl, x0), 18, ww, facecolor=col, edgecolor="#1f2937", linewidth=1.1, zorder=6))
                     if refs.get("plan_drag", {}).get("active") and refs.get("plan_drag", {}).get("idx") == i and refs.get("plan_drag", {}).get("wall") == wk:
-                        ax.text(_wl * 0.5, _rd * 0.5, "Pomeranje...", ha="center", va="center", fontsize=10, color="#111827")
+                        ax.text(_wl * 0.5, _rd * 0.5, _t("room.moving"), ha="center", va="center", fontsize=10, color="#111827")
 
             _fc = {"voda": "#67E8F9", "struja": "#FCD34D", "gas": "#FCA5A5"}
             for wk in ("A", "B", "C"):

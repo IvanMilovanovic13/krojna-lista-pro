@@ -1,17 +1,7 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from typing import Callable, Iterable, Tuple, Any
-from i18n import (
-    BTN_RESET_PROJEKTA,
-    BTN_SACUVAJ,
-    BTN_UCITAJ,
-    TOOLBAR_RESET_TOOLTIP,
-    TOOLBAR_APP_NAME,
-    TOOLBAR_APP_SUB,
-    TOOLBAR_LOAD_TOOLTIP,
-    TOOLBAR_SAVE_TOOLTIP,
-)
 
 
 def render_toolbar_layout(
@@ -23,53 +13,103 @@ def render_toolbar_layout(
     on_save_click: Callable[[], None],
     on_load_click: Callable[[], None],
     on_reset_click: Callable[[], None] | None = None,
+    language_label: str = "",
+    language_options: dict[str, str] | None = None,
+    current_language: str = "sr",
+    on_language_change: Callable[[str], None] | None = None,
+    toolbar_app_name: str = "",
+    toolbar_app_sub: str = "",
+    toolbar_save_label: str = "",
+    toolbar_load_label: str = "",
+    toolbar_reset_label: str = "",
+    toolbar_save_tooltip: str = "",
+    toolbar_load_tooltip: str = "",
+    toolbar_reset_tooltip: str = "",
+    session_label: str = "",
+    account_label: str = "",
+    logout_label: str = "",
+    on_account_click: Callable[[], None] | None = None,
+    on_logout_click: Callable[[], None] | None = None,
 ) -> None:
-    """Render only toolbar layout; behavior is provided via callbacks."""
+    """Kompaktni flat toolbar — sve uniformno, bez bordera."""
     with ui.row().classes(
-        'w-full bg-white px-2 py-0 gap-0 border-b border-gray-200 items-stretch'
-    ).style('min-height:48px;'):
-        with ui.element('div').classes('flex items-center px-3 border-r border-gray-200 shrink-0'):
-            ui.label(TOOLBAR_APP_NAME).classes('text-sm font-bold text-gray-700')
-            ui.label(TOOLBAR_APP_SUB).classes('text-[9px] font-bold text-gray-700 ml-1 mt-0.5')
+        'w-full bg-white px-0 py-0 gap-0 border-b border-gray-200 items-stretch'
+    ).style('min-height:42px; height:42px;'):
 
+        # Naziv aplikacije
+        with ui.element('div').classes(
+            'flex items-center gap-1 px-3 border-r border-gray-200 shrink-0'
+        ):
+            ui.label(toolbar_app_name).classes(
+                'text-[13px] font-bold text-gray-800 whitespace-nowrap'
+            )
+            if toolbar_app_sub:
+                ui.label(toolbar_app_sub).classes(
+                    'text-[8px] font-semibold text-gray-400 whitespace-nowrap'
+                )
+
+        # Tab dugmad
         for key, label, icon in tabs:
             is_active = active_tab == key
-            if is_active:
-                btn_cls = (
-                    'flex flex-col items-center px-4 py-1 rounded-none '
-                    'border-b-2 border-gray-900 text-gray-900 bg-white'
-                )
-                lbl_cls = 'text-[10px] font-bold text-gray-900'
-                icn_cls = 'text-xl text-gray-900'
-            else:
-                btn_cls = (
-                    'flex flex-col items-center px-4 py-1 rounded-none '
-                    'border-b-2 border-transparent text-gray-500 '
-                    'hover:bg-gray-50 hover:text-gray-700'
-                )
-                lbl_cls = 'text-[10px] font-medium text-gray-500'
-                icn_cls = 'text-xl text-gray-500'
-            with ui.button(on_click=lambda k=key: on_tab_click(k)).classes(btn_cls).props('flat no-caps'):
-                ui.icon(icon).classes(icn_cls)
-                ui.label(label).classes(lbl_cls)
+            extra = 'toolbar-btn--active' if is_active else ''
+            with ui.button(
+                on_click=lambda k=key: on_tab_click(k)
+            ).classes(f'toolbar-btn {extra}').props('flat no-caps'):
+                ui.icon(icon).classes('text-[15px]')
+                ui.label(label).classes('text-[12px] font-medium whitespace-nowrap')
 
+        # Spacer
         ui.element('div').classes('flex-1')
 
+        # Akcijska dugmad desno
         with ui.button(on_click=on_save_click).classes(
-            'flex flex-col items-center px-3 py-1 rounded-none hover:bg-gray-50'
-        ).props('flat dense').tooltip(TOOLBAR_SAVE_TOOLTIP):
-            ui.icon('save').classes('text-xl text-gray-900')
-            ui.label(BTN_SACUVAJ).classes('text-[10px] text-gray-900 font-medium')
+            'toolbar-btn toolbar-btn--action'
+        ).props('flat no-caps dense').tooltip(toolbar_save_tooltip):
+            ui.icon('save').classes('text-[15px]')
+            ui.label(toolbar_save_label).classes('text-[12px] font-medium whitespace-nowrap')
 
         with ui.button(on_click=on_load_click).classes(
-            'flex flex-col items-center px-3 py-1 rounded-none hover:bg-gray-50'
-        ).props('flat dense').tooltip(TOOLBAR_LOAD_TOOLTIP):
-            ui.icon('folder_open').classes('text-xl text-gray-900')
-            ui.label(BTN_UCITAJ).classes('text-[10px] text-gray-900 font-medium')
+            'toolbar-btn toolbar-btn--action'
+        ).props('flat no-caps dense').tooltip(toolbar_load_tooltip):
+            ui.icon('folder_open').classes('text-[15px]')
+            ui.label(toolbar_load_label).classes('text-[12px] font-medium whitespace-nowrap')
 
         if callable(on_reset_click):
             with ui.button(on_click=on_reset_click).classes(
-                'flex flex-col items-center px-3 py-1 rounded-none hover:bg-gray-50'
-            ).props('flat dense').tooltip(TOOLBAR_RESET_TOOLTIP):
-                ui.icon('restart_alt').classes('text-xl text-gray-900')
-                ui.label(BTN_RESET_PROJEKTA).classes('text-[10px] text-gray-900 font-medium')
+                'toolbar-btn toolbar-btn--action'
+            ).props('flat no-caps dense').tooltip(toolbar_reset_tooltip):
+                ui.icon('restart_alt').classes('text-[15px]')
+                ui.label(toolbar_reset_label).classes('text-[12px] font-medium whitespace-nowrap')
+
+        if session_label:
+            with ui.element('div').classes(
+                'flex items-center px-3 border-l border-gray-200 shrink-0'
+            ).style('height:42px;'):
+                ui.label(session_label).classes('text-[11px] text-gray-600 whitespace-nowrap')
+
+        if callable(on_account_click):
+            with ui.button(on_click=on_account_click).classes(
+                'toolbar-btn toolbar-btn--action'
+            ).props('flat no-caps dense'):
+                ui.icon('person').classes('text-[15px]')
+                ui.label(account_label).classes('text-[12px] font-medium whitespace-nowrap')
+
+        if callable(on_logout_click):
+            with ui.button(on_click=on_logout_click).classes(
+                'toolbar-btn toolbar-btn--action'
+            ).props('flat no-caps dense'):
+                ui.icon('logout').classes('text-[15px]')
+                ui.label(logout_label).classes('text-[12px] font-medium whitespace-nowrap')
+
+        # Jezik — isti izgled kao ostala toolbar dugmad
+        if language_options and callable(on_language_change):
+            with ui.element('div').classes(
+                'flex items-center border-l border-gray-200 shrink-0'
+            ).style('height:42px;'):
+                ui.select(
+                    options=language_options,
+                    value=current_language,
+                    on_change=lambda e: on_language_change(str(e.value or 'sr')),
+                ).props('dense borderless').classes('toolbar-lang text-[11px] font-medium').style(
+                    'min-width:78px; max-width:96px; height:42px;'
+                )

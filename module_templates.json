@@ -20,6 +20,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🚪"
+    },
+    "label_i18n": {
+      "sr": "Donji (1 vrata)",
+      "en": "Base (1 door)",
+      "ru": "Нижний (1 дверца)",
+      "es": "Bajo (1 puerta)",
+      "pt-br": "Base (1 porta)",
+      "zh-cn": "地柜（1门）",
+      "hi": "बेस (1 दरवाज़ा)"
     }
   },
   "BASE_2DOOR": {
@@ -41,6 +50,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🚪"
+    },
+    "label_i18n": {
+      "sr": "Donji (2 vrata)",
+      "en": "Base (2 doors)",
+      "ru": "Нижний (2 дверцы)",
+      "es": "Bajo (2 puertas)",
+      "pt-br": "Base (2 portas)",
+      "zh-cn": "地柜（2门）",
+      "hi": "बेस (2 दरवाज़े)"
     }
   },
   "BASE_DRAWERS": {
@@ -61,6 +79,15 @@
       "accent_color": null,
       "texture": null,
       "icon": ""
+    },
+    "label_i18n": {
+      "sr": "Donji (fioke 2-4)",
+      "en": "Base (drawers 2-4)",
+      "ru": "Нижний (ящики 2-4)",
+      "es": "Bajo (cajones 2-4)",
+      "pt-br": "Base (gavetas 2-4)",
+      "zh-cn": "地柜（2-4个抽屉）",
+      "hi": "बेस (2-4 दराज़)"
     }
   },
   "BASE_DRAWERS_3": {
@@ -79,6 +106,15 @@
     },
     "visual": {
       "icon": ""
+    },
+    "label_i18n": {
+      "sr": "Donji (fioke)",
+      "en": "Base (drawers)",
+      "ru": "Нижний (ящики)",
+      "es": "Bajo (cajones)",
+      "pt-br": "Base (gavetas)",
+      "zh-cn": "地柜（抽屉）",
+      "hi": "बेस (दराज़)"
     }
   },
   "BASE_DOOR_DRAWER": {
@@ -99,6 +135,15 @@
     },
     "visual": {
       "icon": ""
+    },
+    "label_i18n": {
+      "sr": "Donji (vrata + fioka)",
+      "en": "Base (door + drawer)",
+      "ru": "Нижний (дверца + ящик)",
+      "es": "Bajo (puerta + cajón)",
+      "pt-br": "Base (porta + gaveta)",
+      "zh-cn": "地柜（门 + 抽屉）",
+      "hi": "बेस (दरवाज़ा + दराज़)"
     }
   },
   "BASE_OVEN": {
@@ -122,7 +167,16 @@
       "icon": "⬛"
     },
     "enabled": false,
-    "deprecated": true
+    "deprecated": true,
+    "label_i18n": {
+      "sr": "Donji (ugradna rerna + fioka) [HIDDEN]",
+      "en": "Base (built-in oven + drawer) [HIDDEN]",
+      "ru": "Нижний (встраиваемая духовка + ящик) [скрыто]",
+      "es": "Bajo (horno integrado + cajón) [oculto]",
+      "pt-br": "Base (forno embutido + gaveta) [oculto]",
+      "zh-cn": "地柜（嵌入式烤箱 + 抽屉）[隐藏]",
+      "hi": "बेस (बिल्ट-इन ओवन + दराज़) [छिपा हुआ]"
+    }
   },
   "BASE_DISHWASHER": {
     "id": "BASE_DISHWASHER",
@@ -143,6 +197,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🍽️"
+    },
+    "label_i18n": {
+      "sr": "Donji (masina za sudove)",
+      "en": "Base (dishwasher)",
+      "ru": "Нижний (посудомоечная машина)",
+      "es": "Bajo (lavavajillas)",
+      "pt-br": "Base (lava-louças)",
+      "zh-cn": "地柜（洗碗机）",
+      "hi": "बेस (डिशवॉशर)"
     }
   },
   "BASE_DISHWASHER_FREESTANDING": {
@@ -165,11 +228,20 @@
       "accent_color": null,
       "texture": null,
       "icon": "ðŸ½ï¸"
+    },
+    "label_i18n": {
+      "sr": "Donji (masina za sudove - samostojeca)",
+      "en": "Base (dishwasher - freestanding)",
+      "ru": "Нижний (посудомоечная машина - отдельно стоящая)",
+      "es": "Bajo (lavavajillas independiente)",
+      "pt-br": "Base (lava-louças independente)",
+      "zh-cn": "地柜（独立式洗碗机）",
+      "hi": "बेस (फ्रीस्टैंडिंग डिशवॉशर)"
     }
   },
   "BASE_COOKING_UNIT": {
     "id": "BASE_COOKING_UNIT",
-    "label": "Donji (kuhinjska jedinica: rerna + ploca za kuvanje)",
+    "label": "Donji (kuhinjska jedinica: rerna + ploča za kuvanje)",
     "defaults": {
       "w_mm": 600,
       "h_mm": 720,
@@ -188,6 +260,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🔥"
+    },
+    "label_i18n": {
+      "sr": "Donji (kuhinjska jedinica: rerna + ploča za kuvanje)",
+      "en": "Base (cooking unit: oven + hob)",
+      "ru": "Нижний (кухонный блок: духовка + варочная панель)",
+      "es": "Bajo (unidad de cocción: horno + placa)",
+      "pt-br": "Base (unidade de cocção: forno + cooktop)",
+      "zh-cn": "地柜（烹饪单元：烤箱 + 炉灶）",
+      "hi": "बेस (कुकिंग यूनिट: ओवन + हॉब)"
     }
   },
   "BASE_OVEN_HOB_FREESTANDING": {
@@ -211,6 +292,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "ðŸ”¥"
+    },
+    "label_i18n": {
+      "sr": "Donji (sporet - samostojeci)",
+      "en": "Base (cooker - freestanding)",
+      "ru": "Нижний (плита - отдельно стоящая)",
+      "es": "Bajo (cocina independiente)",
+      "pt-br": "Base (fogão independente)",
+      "zh-cn": "地柜（独立式炉灶）",
+      "hi": "बेस (फ्रीस्टैंडिंग स्टोव)"
     }
   },
   "SINK_BASE": {
@@ -231,6 +321,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🚿"
+    },
+    "label_i18n": {
+      "sr": "Donji (sudopera)",
+      "en": "Base (sink)",
+      "ru": "Нижний (мойка)",
+      "es": "Bajo (fregadero)",
+      "pt-br": "Base (pia)",
+      "zh-cn": "地柜（水槽）",
+      "hi": "बेस (सिंक)"
     }
   },
   "BASE_NARROW": {
@@ -251,6 +350,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "▌"
+    },
+    "label_i18n": {
+      "sr": "Donji uski (flase/ulja/zacini)",
+      "en": "Narrow base (bottles/oils/spices)",
+      "ru": "Узкий нижний (бутылки/масла/специи)",
+      "es": "Bajo estrecho (botellas/aceites/especias)",
+      "pt-br": "Base estreita (garrafas/óleos/temperos)",
+      "zh-cn": "窄地柜（瓶/油/香料）",
+      "hi": "संकरा बेस (बोतलें/तेल/मसाले)"
     }
   },
   "BASE_CORNER": {
@@ -271,6 +379,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "↩️"
+    },
+    "label_i18n": {
+      "sr": "Donji coskasti (L-oblik)",
+      "en": "Base corner (L-shape)",
+      "ru": "Нижний угловой (L-образный)",
+      "es": "Bajo de esquina (forma L)",
+      "pt-br": "Base de canto (formato L)",
+      "zh-cn": "转角地柜（L形）",
+      "hi": "कोना बेस (L-आकार)"
     }
   },
   "BASE_CORNER_DIAGONAL": {
@@ -292,6 +409,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "◪"
+    },
+    "label_i18n": {
+      "sr": "Donji coskasti (dijagonalni front)",
+      "en": "Base corner (diagonal front)",
+      "ru": "Нижний угловой (диагональный фасад)",
+      "es": "Bajo de esquina (frente diagonal)",
+      "pt-br": "Base de canto (frente diagonal)",
+      "zh-cn": "转角地柜（斜面门板）",
+      "hi": "कोना बेस (तिरछा फ्रंट)"
     }
   },
   "BASE_OPEN": {
@@ -312,6 +438,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "📂"
+    },
+    "label_i18n": {
+      "sr": "Donji otvoreni (bez vrata)",
+      "en": "Open base (no doors)",
+      "ru": "Открытый нижний (без дверей)",
+      "es": "Bajo abierto (sin puertas)",
+      "pt-br": "Base aberta (sem portas)",
+      "zh-cn": "开放地柜（无门）",
+      "hi": "खुला बेस (बिना दरवाज़े)"
     }
   },
   "BASE_DOORS": {
@@ -333,6 +468,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🚪"
+    },
+    "label_i18n": {
+      "sr": "Donji (vrata)",
+      "en": "Base (doors)",
+      "ru": "Нижний (дверцы)",
+      "es": "Bajo (puertas)",
+      "pt-br": "Base (portas)",
+      "zh-cn": "地柜（门）",
+      "hi": "बेस (दरवाज़े)"
     }
   },
   "WALL_1DOOR": {
@@ -354,6 +498,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🚪"
+    },
+    "label_i18n": {
+      "sr": "Gornji (1 vrata)",
+      "en": "Wall (1 door)",
+      "ru": "Верхний (1 дверца)",
+      "es": "Alto (1 puerta)",
+      "pt-br": "Aéreo (1 porta)",
+      "zh-cn": "吊柜（1门）",
+      "hi": "वॉल (1 दरवाज़ा)"
     }
   },
   "WALL_2DOOR": {
@@ -375,6 +528,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🚪"
+    },
+    "label_i18n": {
+      "sr": "Gornji (2 vrata)",
+      "en": "Wall (2 doors)",
+      "ru": "Верхний (2 дверцы)",
+      "es": "Alto (2 puertas)",
+      "pt-br": "Aéreo (2 portas)",
+      "zh-cn": "吊柜（2门）",
+      "hi": "वॉल (2 दरवाज़े)"
     }
   },
   "WALL_GLASS": {
@@ -395,6 +557,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🔲"
+    },
+    "label_i18n": {
+      "sr": "Gornji (staklena vrata)",
+      "en": "Wall (glass doors)",
+      "ru": "Верхний (стеклянные дверцы)",
+      "es": "Alto (puertas de vidrio)",
+      "pt-br": "Aéreo (portas de vidro)",
+      "zh-cn": "吊柜（玻璃门）",
+      "hi": "वॉल (कांच के दरवाज़े)"
     }
   },
   "WALL_OPEN": {
@@ -415,6 +586,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "📂"
+    },
+    "label_i18n": {
+      "sr": "Gornji otvoreni (police)",
+      "en": "Open wall (shelves)",
+      "ru": "Открытый верхний (полки)",
+      "es": "Alto abierto (estantes)",
+      "pt-br": "Aéreo aberto (prateleiras)",
+      "zh-cn": "开放吊柜（层板）",
+      "hi": "खुला वॉल (शेल्फ)"
     }
   },
   "WALL_LIFTUP": {
@@ -435,6 +615,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "⬆️"
+    },
+    "label_i18n": {
+      "sr": "Gornji (podizna vrata / klapna)",
+      "en": "Wall (lift-up door / flap)",
+      "ru": "Верхний (подъёмная дверца / клапан)",
+      "es": "Alto (puerta abatible elevable)",
+      "pt-br": "Aéreo (porta basculante)",
+      "zh-cn": "吊柜（上翻门）",
+      "hi": "वॉल (लिफ्ट-अप दरवाज़ा)"
     }
   },
   "WALL_CORNER": {
@@ -455,6 +644,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "↩️"
+    },
+    "label_i18n": {
+      "sr": "Gornji coskasti",
+      "en": "Wall corner",
+      "ru": "Верхний угловой",
+      "es": "Alto de esquina",
+      "pt-br": "Aéreo de canto",
+      "zh-cn": "转角吊柜",
+      "hi": "कोना वॉल"
     }
   },
   "WALL_CORNER_DIAGONAL": {
@@ -476,6 +674,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "◪"
+    },
+    "label_i18n": {
+      "sr": "Gornji coskasti (dijagonalni front)",
+      "en": "Wall corner (diagonal front)",
+      "ru": "Верхний угловой (диагональный фасад)",
+      "es": "Alto de esquina (frente diagonal)",
+      "pt-br": "Aéreo de canto (frente diagonal)",
+      "zh-cn": "转角吊柜（斜面门板）",
+      "hi": "कोना वॉल (तिरछा फ्रंट)"
     }
   },
   "WALL_NARROW": {
@@ -496,6 +703,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "▌"
+    },
+    "label_i18n": {
+      "sr": "Gornji uski (zacini)",
+      "en": "Narrow wall (spices)",
+      "ru": "Узкий верхний (специи)",
+      "es": "Alto estrecho (especias)",
+      "pt-br": "Aéreo estreito (temperos)",
+      "zh-cn": "窄吊柜（香料）",
+      "hi": "संकरा वॉल (मसाले)"
     }
   },
   "WALL_HOOD": {
@@ -517,6 +733,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "💨"
+    },
+    "label_i18n": {
+      "sr": "Gornji (aspirator / napa)",
+      "en": "Wall (extractor hood)",
+      "ru": "Верхний (вытяжка)",
+      "es": "Alto (campana extractora)",
+      "pt-br": "Aéreo (depurador/coifa)",
+      "zh-cn": "吊柜（油烟机）",
+      "hi": "वॉल (हुड)"
     }
   },
   "WALL_MICRO": {
@@ -538,6 +763,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "📡"
+    },
+    "label_i18n": {
+      "sr": "Gornji (mikrotalasna)",
+      "en": "Wall (microwave)",
+      "ru": "Верхний (микроволновка)",
+      "es": "Alto (microondas)",
+      "pt-br": "Aéreo (micro-ondas)",
+      "zh-cn": "吊柜（微波炉）",
+      "hi": "वॉल (माइक्रोवेव)"
     }
   },
   "WALL_DOORS": {
@@ -559,6 +793,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🚪"
+    },
+    "label_i18n": {
+      "sr": "Gornji (vrata)",
+      "en": "Wall (doors)",
+      "ru": "Верхний (дверцы)",
+      "es": "Alto (puertas)",
+      "pt-br": "Aéreo (portas)",
+      "zh-cn": "吊柜（门）",
+      "hi": "वॉल (दरवाज़े)"
     }
   },
   "TALL_FRIDGE": {
@@ -580,6 +823,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "❄️"
+    },
+    "label_i18n": {
+      "sr": "Visoki (frizider integrisani)",
+      "en": "Tall (integrated fridge)",
+      "ru": "Высокий (встроенный холодильник)",
+      "es": "Columna (frigorífico integrado)",
+      "pt-br": "Torre (geladeira embutida)",
+      "zh-cn": "高柜（嵌入式冰箱）",
+      "hi": "टॉल (बिल्ट-इन फ्रिज)"
     }
   },
   "TALL_FRIDGE_FREESTANDING": {
@@ -602,6 +854,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "â„ï¸"
+    },
+    "label_i18n": {
+      "sr": "Visoki (frizider - samostojeci)",
+      "en": "Tall (fridge - freestanding)",
+      "ru": "Высокий (холодильник - отдельно стоящий)",
+      "es": "Columna (frigorífico independiente)",
+      "pt-br": "Torre (geladeira independente)",
+      "zh-cn": "高柜（独立式冰箱）",
+      "hi": "टॉल (फ्रीस्टैंडिंग फ्रिज)"
     }
   },
   "TALL_FRIDGE_FREEZER": {
@@ -624,6 +885,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "❄️"
+    },
+    "label_i18n": {
+      "sr": "Visoki (frizider + zamrzivac)",
+      "en": "Tall (fridge + freezer)",
+      "ru": "Высокий (холодильник + морозильник)",
+      "es": "Columna (frigorífico + congelador)",
+      "pt-br": "Torre (geladeira + freezer)",
+      "zh-cn": "高柜（冰箱 + 冷冻柜）",
+      "hi": "टॉल (फ्रिज + फ्रीज़र)"
     }
   },
   "TALL_OVEN_MICRO": {
@@ -646,6 +916,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "⬛"
+    },
+    "label_i18n": {
+      "sr": "Visoki kolona (rerna + mikrotalasna)",
+      "en": "Tall column (oven + microwave)",
+      "ru": "Высокая колонна (духовка + микроволновка)",
+      "es": "Columna alta (horno + microondas)",
+      "pt-br": "Torre alta (forno + micro-ondas)",
+      "zh-cn": "高柜柱（烤箱 + 微波炉）",
+      "hi": "टॉल कॉलम (ओवन + माइक्रोवेव)"
     }
   },
   "TALL_PANTRY": {
@@ -666,6 +945,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🏪"
+    },
+    "label_i18n": {
+      "sr": "Visoki ostava / spajz (police)",
+      "en": "Tall pantry (shelves)",
+      "ru": "Высокий шкаф-кладовая (полки)",
+      "es": "Columna despensa (estantes)",
+      "pt-br": "Torre despensa (prateleiras)",
+      "zh-cn": "高储物柜（层板）",
+      "hi": "टॉल पैंट्री (शेल्फ)"
     }
   },
   "TALL_DOORS": {
@@ -686,6 +974,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🚪"
+    },
+    "label_i18n": {
+      "sr": "Visoki (vrata)",
+      "en": "Tall (doors)",
+      "ru": "Высокий (дверцы)",
+      "es": "Columna (puertas)",
+      "pt-br": "Torre (portas)",
+      "zh-cn": "高柜（门）",
+      "hi": "टॉल (दरवाज़े)"
     }
   },
   "TALL_OVEN": {
@@ -707,6 +1004,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "⬛"
+    },
+    "label_i18n": {
+      "sr": "Visoki (ugradna rerna)",
+      "en": "Tall (built-in oven)",
+      "ru": "Высокий (встроенная духовка)",
+      "es": "Columna (horno integrado)",
+      "pt-br": "Torre (forno embutido)",
+      "zh-cn": "高柜（嵌入式烤箱）",
+      "hi": "टॉल (बिल्ट-इन ओवन)"
     }
   },
   "TALL_OPEN": {
@@ -727,6 +1033,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "📂"
+    },
+    "label_i18n": {
+      "sr": "Visoki otvoreni (police)",
+      "en": "Open tall (shelves)",
+      "ru": "Открытый высокий (полки)",
+      "es": "Columna abierta (estantes)",
+      "pt-br": "Torre aberta (prateleiras)",
+      "zh-cn": "开放高柜（层板）",
+      "hi": "खुला टॉल (शेल्फ)"
     }
   },
   "TALL_TOP_DOORS": {
@@ -747,6 +1062,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🚪"
+    },
+    "label_i18n": {
+      "sr": "Popuna iznad visokog (vrata)",
+      "en": "Filler above tall unit (doors)",
+      "ru": "Заглушка над высоким (дверцы)",
+      "es": "Relleno sobre columna alta (puertas)",
+      "pt-br": "Preenchimento acima do armário alto (portas)",
+      "zh-cn": "高柜上方填充件（门）",
+      "hi": "ऊँचे यूनिट के ऊपर फिलर (दरवाज़े)"
     }
   },
   "TALL_TOP_OPEN": {
@@ -767,6 +1091,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "📂"
+    },
+    "label_i18n": {
+      "sr": "Popuna iznad visokog (otvoreno)",
+      "en": "Filler above tall unit (open)",
+      "ru": "Заглушка над высоким (открытый)",
+      "es": "Relleno sobre columna alta (abierto)",
+      "pt-br": "Preenchimento acima do armário alto (aberto)",
+      "zh-cn": "高柜上方填充件（开放）",
+      "hi": "ऊँचे यूनिट के ऊपर फिलर (खुला)"
     }
   },
   "WALL_UPPER_1DOOR": {
@@ -788,6 +1121,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🚪"
+    },
+    "label_i18n": {
+      "sr": "Gornji 2. red (1 vrata)",
+      "en": "Upper second row (1 door)",
+      "ru": "Верхний 2-й ряд (1 дверца)",
+      "es": "Alto 2ª fila (1 puerta)",
+      "pt-br": "Aéreo 2ª fileira (1 porta)",
+      "zh-cn": "第二排吊柜（1门）",
+      "hi": "ऊपरी दूसरी पंक्ति (1 दरवाज़ा)"
     }
   },
   "WALL_UPPER_2DOOR": {
@@ -809,6 +1151,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🚪"
+    },
+    "label_i18n": {
+      "sr": "Gornji 2. red (2 vrata)",
+      "en": "Upper second row (2 doors)",
+      "ru": "Верхний 2-й ряд (2 дверцы)",
+      "es": "Alto 2ª fila (2 puertas)",
+      "pt-br": "Aéreo 2ª fileira (2 portas)",
+      "zh-cn": "第二排吊柜（2门）",
+      "hi": "ऊपरी दूसरी पंक्ति (2 दरवाज़े)"
     }
   },
   "WALL_UPPER_OPEN": {
@@ -829,6 +1180,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "📂"
+    },
+    "label_i18n": {
+      "sr": "Gornji 2. red (otvoreno / police)",
+      "en": "Upper second row (open / shelves)",
+      "ru": "Верхний 2-й ряд (открытый / полки)",
+      "es": "Alto 2ª fila (abierto / estantes)",
+      "pt-br": "Aéreo 2ª fileira (aberto / prateleiras)",
+      "zh-cn": "第二排吊柜（开放 / 层板）",
+      "hi": "ऊपरी दूसरी पंक्ति (खुला / शेल्फ)"
     }
   },
   "TALL_GLASS": {
@@ -850,6 +1210,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🔲"
+    },
+    "label_i18n": {
+      "sr": "Visoki (staklena vrata - vitrina)",
+      "en": "Tall (glass doors - display)",
+      "ru": "Высокий (стеклянные дверцы - витрина)",
+      "es": "Columna (puertas de vidrio - vitrina)",
+      "pt-br": "Torre (portas de vidro - vitrine)",
+      "zh-cn": "高柜（玻璃展示门）",
+      "hi": "टॉल (कांच के दरवाज़े - शोकेस)"
     }
   },
   "BASE_TRASH": {
@@ -872,6 +1241,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🗑️"
+    },
+    "label_i18n": {
+      "sr": "Donji (sortirnik / kante za otpad)",
+      "en": "Base (waste sorter / bins)",
+      "ru": "Нижний (сортировка отходов / ведра)",
+      "es": "Bajo (clasificador / cubos de basura)",
+      "pt-br": "Base (seletor / lixeiras)",
+      "zh-cn": "地柜（垃圾分类桶）",
+      "hi": "बेस (कचरा वर्गीकरण / डिब्बे)"
     }
   },
   "BASE_HOB": {
@@ -894,6 +1272,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "🔥"
+    },
+    "label_i18n": {
+      "sr": "Donji (ploča za kuvanje - samostalna)",
+      "en": "Base (hob - standalone)",
+      "ru": "Нижний (варочная панель - отдельно)",
+      "es": "Bajo (placa - independiente)",
+      "pt-br": "Base (cooktop - independente)",
+      "zh-cn": "地柜（炉灶 - 独立）",
+      "hi": "बेस (हॉब - अलग)"
     }
   },
   "FILLER_PANEL": {
@@ -915,6 +1302,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "▌"
+    },
+    "label_i18n": {
+      "sr": "Filer panel (popunjač prostora)",
+      "en": "Filler panel (space filler)",
+      "ru": "Доборная панель (заполнение пространства)",
+      "es": "Panel de relleno (relleno de espacio)",
+      "pt-br": "Painel de preenchimento (fechamento de vão)",
+      "zh-cn": "填充板（空间填充）",
+      "hi": "फिलर पैनल (खाली जगह भरना)"
     }
   },
   "BASE_TV_2DOOR": {
@@ -937,6 +1333,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "TV"
+    },
+    "label_i18n": {
+      "sr": "TV komoda (vrata)",
+      "en": "TV unit (doors)",
+      "ru": "ТВ-тумба (дверцы)",
+      "es": "Mueble TV (puertas)",
+      "pt-br": "Rack de TV (portas)",
+      "zh-cn": "电视柜（门）",
+      "hi": "टीवी यूनिट (दरवाज़े)"
     }
   },
   "BASE_TV_DRAWERS": {
@@ -959,6 +1364,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "TV"
+    },
+    "label_i18n": {
+      "sr": "TV komoda (fioke)",
+      "en": "TV unit (drawers)",
+      "ru": "ТВ-тумба (ящики)",
+      "es": "Mueble TV (cajones)",
+      "pt-br": "Rack de TV (gavetas)",
+      "zh-cn": "电视柜（抽屉）",
+      "hi": "टीवी यूनिट (दराज़)"
     }
   },
   "WALL_TV_OPEN": {
@@ -980,6 +1394,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "TV"
+    },
+    "label_i18n": {
+      "sr": "TV zidna polica (otvorena)",
+      "en": "TV wall shelf (open)",
+      "ru": "Настенная ТВ-полка (открытая)",
+      "es": "Estante mural TV (abierto)",
+      "pt-br": "Prateleira de parede TV (aberta)",
+      "zh-cn": "电视墙搁板（开放）",
+      "hi": "टीवी वॉल शेल्फ (खुली)"
     }
   },
   "TALL_WARDROBE_2DOOR": {
@@ -1002,6 +1425,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "WARD"
+    },
+    "label_i18n": {
+      "sr": "Orman visoki (vrata)",
+      "en": "Tall wardrobe (doors)",
+      "ru": "Высокий шкаф (дверцы)",
+      "es": "Armario alto (puertas)",
+      "pt-br": "Armário alto (portas)",
+      "zh-cn": "高衣柜（门）",
+      "hi": "ऊँची अलमारी (दरवाज़े)"
     }
   },
   "TALL_WARDROBE_DRAWERS": {
@@ -1024,6 +1456,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "WARD"
+    },
+    "label_i18n": {
+      "sr": "Orman visoki (fioke)",
+      "en": "Tall wardrobe (drawers)",
+      "ru": "Высокий шкаф (ящики)",
+      "es": "Armario alto (cajones)",
+      "pt-br": "Armário alto (gavetas)",
+      "zh-cn": "高衣柜（抽屉）",
+      "hi": "ऊँची अलमारी (दराज़)"
     }
   },
   "TALL_WARDROBE_2DOOR_SLIDING": {
@@ -1047,6 +1488,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "WARD"
+    },
+    "label_i18n": {
+      "sr": "Orman visoki (klizna 2 vrata)",
+      "en": "Tall wardrobe (2 sliding doors)",
+      "ru": "Высокий шкаф (2 раздвижные двери)",
+      "es": "Armario alto (2 puertas correderas)",
+      "pt-br": "Armário alto (2 portas de correr)",
+      "zh-cn": "高衣柜（2扇推拉门）",
+      "hi": "ऊँची अलमारी (2 स्लाइडिंग दरवाज़े)"
     }
   },
   "BASE_TV_OPEN": {
@@ -1068,6 +1518,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "TV"
+    },
+    "label_i18n": {
+      "sr": "TV komoda (otvorena polica)",
+      "en": "TV unit (open shelf)",
+      "ru": "ТВ-тумба (открытая полка)",
+      "es": "Mueble TV (estante abierto)",
+      "pt-br": "Rack de TV (prateleira aberta)",
+      "zh-cn": "电视柜（开放层板）",
+      "hi": "टीवी यूनिट (खुली शेल्फ)"
     }
   },
   "END_PANEL": {
@@ -1089,6 +1548,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "▌"
+    },
+    "label_i18n": {
+      "sr": "Zavrsna bocna ploca",
+      "en": "End side panel",
+      "ru": "Боковая завершающая панель",
+      "es": "Panel lateral final",
+      "pt-br": "Painel lateral de acabamento",
+      "zh-cn": "侧封板",
+      "hi": "एंड साइड पैनल"
     }
   },
   "TALL_WARDROBE_AMERICAN": {
@@ -1116,6 +1584,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "WARD"
+    },
+    "label_i18n": {
+      "sr": "Americki plakar (klizna vrata)",
+      "en": "American wardrobe (sliding doors)",
+      "ru": "Американский шкаф (раздвижные двери)",
+      "es": "Armario americano (puertas correderas)",
+      "pt-br": "Roupeiro americano (portas de correr)",
+      "zh-cn": "美式衣柜（推拉门）",
+      "hi": "अमेरिकन वॉर्डरोब (स्लाइडिंग दरवाज़े)"
     }
   },
   "TALL_WARDROBE_CORNER": {
@@ -1143,6 +1620,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "WARD"
+    },
+    "label_i18n": {
+      "sr": "Ugaoni ormar (krilna vrata)",
+      "en": "Corner wardrobe (hinged doors)",
+      "ru": "Угловой шкаф (распашные двери)",
+      "es": "Armario de esquina (puertas abatibles)",
+      "pt-br": "Armário de canto (portas de abrir)",
+      "zh-cn": "转角衣柜（平开门）",
+      "hi": "कोना अलमारी (हिंग वाले दरवाज़े)"
     }
   },
   "TALL_WARDROBE_CORNER_SLIDING": {
@@ -1171,6 +1657,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "WARD"
+    },
+    "label_i18n": {
+      "sr": "Ugaoni ormar (klizna vrata)",
+      "en": "Corner wardrobe (sliding doors)",
+      "ru": "Угловой шкаф (раздвижные двери)",
+      "es": "Armario de esquina (puertas correderas)",
+      "pt-br": "Armário de canto (portas de correr)",
+      "zh-cn": "转角衣柜（推拉门）",
+      "hi": "कोना अलमारी (स्लाइडिंग दरवाज़े)"
     }
   },
   "TALL_WARDROBE_INT_SHELVES": {
@@ -1197,6 +1692,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "WARD"
+    },
+    "label_i18n": {
+      "sr": "Sekcija: police",
+      "en": "Section: shelves",
+      "ru": "Секция: полки",
+      "es": "Sección: estantes",
+      "pt-br": "Seção: prateleiras",
+      "zh-cn": "分区：层板",
+      "hi": "सेक्शन: शेल्फ"
     }
   },
   "TALL_WARDROBE_INT_DRAWERS": {
@@ -1223,6 +1727,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "WARD"
+    },
+    "label_i18n": {
+      "sr": "Sekcija: fioke",
+      "en": "Section: drawers",
+      "ru": "Секция: ящики",
+      "es": "Sección: cajones",
+      "pt-br": "Seção: gavetas",
+      "zh-cn": "分区：抽屉",
+      "hi": "सेक्शन: दराज़"
     }
   },
   "TALL_WARDROBE_INT_HANG": {
@@ -1249,6 +1762,15 @@
       "accent_color": null,
       "texture": null,
       "icon": "WARD"
+    },
+    "label_i18n": {
+      "sr": "Sekcija: vjesalica",
+      "en": "Section: hanging rail",
+      "ru": "Секция: штанга для одежды",
+      "es": "Sección: barra de colgar",
+      "pt-br": "Seção: cabideiro",
+      "zh-cn": "分区：挂衣杆",
+      "hi": "सेक्शन: हैंगिंग रेल"
     }
   }
 }

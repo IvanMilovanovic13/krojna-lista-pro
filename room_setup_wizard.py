@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Callable
 # UI za korak 4 podešavanja prostorije, izdvojen iz ui_panels.py (bez promene ponašanja).
 from i18n import (
     BTN_2D_POZICIONIRANJE,
@@ -115,6 +116,7 @@ def render_room_setup_step3(
     state,
     *,
     ui,
+    tr_fn: Callable[[str], str],
     plt,
     _ensure_room_walls,
     _get_room_wall,
@@ -204,7 +206,22 @@ def render_room_setup_step3(
 
     def _wall_name(k: str) -> str:
         ku = str(k or "A").upper()
-        return "ZADNJI" if ku == "A" else ("LEVI" if ku == "B" else "DESNI")
+        return (
+            tr_fn('room.wall_name_back') if ku == "A" else (
+                tr_fn('room.wall_name_left') if ku == "B" else tr_fn('room.wall_name_right')
+            )
+        )
+
+    def _layout_label() -> str:
+        key = str(getattr(state, 'kitchen_layout', '') or '').lower().strip()
+        mapping = {
+            'jedan_zid': tr_fn('room.layout_one_wall'),
+            'l_oblik': tr_fn('room.layout_l_shape'),
+            'u_oblik': tr_fn('room.layout_u_shape'),
+            'galija': tr_fn('room.layout_galley'),
+            '': tr_fn('room.layout_one_wall'),
+        }
+        return mapping.get(key, str(getattr(state, 'kitchen_layout', '') or '').replace('_', ' ').title())
 
     def _get_wall_by_key(k: str) -> dict:
         return _get_room_wall(room, str(k or "A").upper())
@@ -242,11 +259,11 @@ def render_room_setup_step3(
         mx = max(vals)
         dev = mx - mn
         if dev <= 5:
-            rec = "Odstupanje malo: 5-8 mm tolerancije je dovoljno."
+            rec = tr_fn('room.pro_rec_small')
         elif dev <= 12:
-            rec = "Srednje odstupanje: planiraj toleranciju 10-15 mm."
+            rec = tr_fn('room.pro_rec_medium')
         else:
-            rec = "Veliko odstupanje: preporuka filer/lajsna 20+ mm ili podela elemenata."
+            rec = tr_fn('room.pro_rec_large')
         return {"min": mn, "max": mx, "dev": dev, "rec": rec}
 
     # ── Wall Preview image constants ─────────────────────────────────────────
@@ -270,25 +287,25 @@ def render_room_setup_step3(
             with ui.element('div').classes('bg-white px-3 py-3 shrink-0 border-b border-gray-300'):
                 with ui.row().classes('items-center gap-2'):
                     ui.button(icon='arrow_back', on_click=lambda: (
-                        setattr(state, 'wizard_step', 3), main_content.refresh()
+                        setattr(state, 'wizard_step', 2), main_content.refresh()
                     )).props('flat round dense')
                     ui.label(
-                        WIZ4_SETUP_ROOM_FMT.format(icon=type_icons.get(state.furniture_type, "🏠"))
+                        tr_fn('room.setup_room_fmt', icon=type_icons.get(state.furniture_type, "🏠"))
                     ).classes('text-xl font-bold text-gray-900')
                 with ui.row().classes('items-center gap-2 mt-1'):
-                    ui.label(f'{LBL_ZID_KUHINJE}:').classes('text-gray-600 text-xs')
+                    ui.label(f'{tr_fn("room.kitchen_wall")}:').classes('text-gray-600 text-xs')
                     ui.label(str(room.get("kitchen_wall", "A")).upper()).classes(
                         'text-xs font-bold text-gray-900 border border-gray-900 px-2 py-0.5 rounded'
                     )
                 with ui.row().classes('items-center gap-2 mt-0.5'):
-                    ui.label(WIZ4_STEP_TITLE).classes('text-gray-600 text-xs')
+                    ui.label(tr_fn('room.step_title')).classes('text-gray-600 text-xs')
                     ui.label(SYM_MID_DOT).classes('text-gray-400')
                     ui.label(
-                        f'📐 {state.kitchen_layout.replace("_", " ").title()}'
+                        f'📐 {_layout_label()}'
                     ).classes('text-gray-600 text-xs')
                     _mm = 'PRO' if str(getattr(state, 'measurement_mode', '')).lower() == 'pro' else 'STANDARD'
                     ui.label(SYM_MID_DOT).classes('text-gray-400')
-                    ui.label(WIZ4_MEASUREMENT_FMT.format(mode=_mm)).classes('text-gray-600 text-xs')
+                    ui.label(tr_fn('room.measurement_fmt', mode=_mm)).classes('text-gray-600 text-xs')
 
             with ui.column().classes('flex-1 p-4 gap-3 overflow-y-auto'):
                 # ── Workflow progress ───────────────────────────────────────
@@ -300,50 +317,63 @@ def render_room_setup_step3(
                 _walls_all = _ensure_room_walls(room)
                 _total_openings = sum(len(w.get("openings", [])) for w in _walls_all)
                 _total_fixtures = sum(len(w.get("fixtures", [])) for w in _walls_all)
-                _open_mark = f"✅ ({_total_openings})" if _total_openings > 0 else "• (opciono)"
-                _fix_mark  = f"✅ ({_total_fixtures})" if _total_fixtures > 0 else "• (opciono)"
+                _open_mark = f"✅ ({_total_openings})" if _total_openings > 0 else tr_fn('room.optional_mark')
+                _fix_mark  = f"✅ ({_total_fixtures})" if _total_fixtures > 0 else tr_fn('room.optional_mark')
+                if _kw not in ("A", "B", "C"):
+                    _current_task = tr_fn('room.current_task_pick_wall')
+                elif not _dims_ok:
+                    _current_task = tr_fn('room.current_task_dims')
+                elif _pro_mode and not _pro_ok:
+                    _current_task = tr_fn('room.current_task_pro')
+                elif _total_openings == 0 and _total_fixtures == 0:
+                    _current_task = tr_fn('room.current_task_optional')
+                else:
+                    _current_task = tr_fn('room.current_task_ready')
 
                 def _step_cls(done: bool) -> str:
                     return 'text-xs text-green-700 font-semibold' if done else 'text-xs text-gray-500'
 
                 with ui.card().classes('w-full p-2 border border-gray-200'):
-                    ui.label(WIZ4_STEPS_TITLE).classes('text-xs font-bold text-gray-700 mb-1')
+                    ui.label(tr_fn('room.steps_title')).classes('text-xs font-bold text-gray-700 mb-1')
                     _wall_done  = _kw in ("A", "B", "C")
                     _pro_show   = _pro_mode  # ako je PRO mode, pokazuje se korak
                     with ui.row().classes('items-center gap-1'):
                         ui.icon('check_circle' if _wall_done else 'radio_button_unchecked').classes(
                             'text-green-600 text-base' if _wall_done else 'text-gray-400 text-base')
-                        ui.label(WIZ4_STEP_MAIN_WALL_FMT.format(mark=("✅" if _wall_done else "•"))).classes(
+                        ui.label(tr_fn('room.step_main_wall_fmt', mark=("✅" if _wall_done else "•"))).classes(
                             _step_cls(_wall_done))
                     with ui.row().classes('items-center gap-1'):
                         ui.icon('check_circle' if _dims_ok else 'radio_button_unchecked').classes(
                             'text-green-600 text-base' if _dims_ok else 'text-gray-400 text-base')
-                        ui.label(WIZ4_STEP_DIMS_FMT.format(mark=("✅" if _dims_ok else "•"))).classes(
+                        ui.label(tr_fn('room.step_dims_fmt', mark=("✅" if _dims_ok else "•"))).classes(
                             _step_cls(_dims_ok))
                     if _pro_show:
                         with ui.row().classes('items-center gap-1'):
                             ui.icon('check_circle' if _pro_ok else 'radio_button_unchecked').classes(
                                 'text-green-600 text-base' if _pro_ok else 'text-gray-400 text-base')
-                            ui.label(WIZ4_STEP_PRO_FMT.format(mark=("✅" if _pro_ok else "•"))).classes(
+                            ui.label(tr_fn('room.step_pro_fmt', mark=("✅" if _pro_ok else "•"))).classes(
                                 _step_cls(_pro_ok))
                     with ui.row().classes('items-center gap-1'):
                         _op_done = _total_openings > 0
                         ui.icon('check_circle' if _op_done else 'radio_button_unchecked').classes(
                             'text-green-600 text-base' if _op_done else 'text-gray-300 text-base')
-                        ui.label(WIZ4_STEPS_OPENINGS_FMT.format(mark=_open_mark)).classes(
+                        ui.label(tr_fn('room.steps_openings_fmt', mark=_open_mark)).classes(
                             _step_cls(_op_done))
                     with ui.row().classes('items-center gap-1'):
                         _fx_done = _total_fixtures > 0
                         ui.icon('check_circle' if _fx_done else 'radio_button_unchecked').classes(
                             'text-green-600 text-base' if _fx_done else 'text-gray-300 text-base')
-                        ui.label(WIZ4_STEPS_FIXTURES_FMT.format(mark=_fix_mark)).classes(
+                        ui.label(tr_fn('room.steps_fixtures_fmt', mark=_fix_mark)).classes(
                             _step_cls(_fx_done))
                 with ui.card().classes('w-full p-2'):
-                    ui.label(WIZ4_GUIDE_TITLE).classes('text-xs font-bold text-gray-700')
-                    ui.label(WIZ4_GUIDE_1).classes('text-xs')
-                    ui.label(WIZ4_GUIDE_2).classes('text-xs')
-                    ui.label(WIZ4_GUIDE_3).classes('text-xs')
-                    ui.label(WIZ4_GUIDE_4).classes('text-xs')
+                    ui.label(tr_fn('room.current_task_title')).classes('text-xs font-bold text-gray-700')
+                    ui.label(_current_task).classes('text-sm text-gray-800 font-semibold')
+                with ui.card().classes('w-full p-2'):
+                    ui.label(tr_fn('room.guide_title')).classes('text-xs font-bold text-gray-700')
+                    ui.label(tr_fn('room.guide_1')).classes('text-xs')
+                    ui.label(tr_fn('room.guide_2')).classes('text-xs')
+                    ui.label(tr_fn('room.guide_3')).classes('text-xs')
+                    ui.label(tr_fn('room.guide_4')).classes('text-xs')
 
                 with ui.row().classes('w-full gap-1 flex-wrap'):
                     def _set_panel_mode(m: str):
@@ -358,34 +388,34 @@ def render_room_setup_step3(
                             return 'bg-white text-gray-900 border-2 border-gray-900'
                         return 'bg-white text-gray-700 border border-gray-300'
 
-                    ui.button('1) Zid', on_click=lambda: _set_panel_mode('walls')).props('dense').classes(f'text-xs {_step_cls("walls")}')
-                    ui.button('2) Dimenzije', on_click=lambda: _set_panel_mode('dims')).props('dense').classes(f'text-xs {_step_cls("dims")}')
-                    ui.button('3) Otvori i instalacije', on_click=lambda: _set_panel_mode('openings')).props('dense').classes(f'text-xs {_step_cls("openings")}')
+                    ui.button(tr_fn('room.quick_walls'), on_click=lambda: _set_panel_mode('walls')).props('dense').classes(f'text-xs {_step_cls("walls")}')
+                    ui.button(tr_fn('room.quick_dims'), on_click=lambda: _set_panel_mode('dims')).props('dense').classes(f'text-xs {_step_cls("dims")}')
+                    ui.button(tr_fn('room.quick_openings'), on_click=lambda: _set_panel_mode('openings')).props('dense').classes(f'text-xs {_step_cls("openings")}')
 
                     # Napredne opcije ostaju dostupne, ali nisu podrazumevane.
-                    with ui.expansion('Napredno').classes('w-full mt-1'):
+                    with ui.expansion(tr_fn('room.advanced')).classes('w-full mt-1'):
                         with ui.row().classes('w-full gap-1 flex-wrap'):
-                            ui.button(WIZ4_FILTER_ALL, on_click=lambda: _set_panel_mode('all')).props('dense outlined').classes('text-xs')
-                            ui.button(WIZ4_FILTER_WALL, on_click=lambda: _set_panel_mode('walls')).props('dense outlined').classes('text-xs')
-                            ui.button(WIZ4_FILTER_DIMS, on_click=lambda: _set_panel_mode('dims')).props('dense outlined').classes('text-xs')
+                            ui.button(tr_fn('room.filter_all'), on_click=lambda: _set_panel_mode('all')).props('dense outlined').classes('text-xs')
+                            ui.button(tr_fn('room.filter_wall'), on_click=lambda: _set_panel_mode('walls')).props('dense outlined').classes('text-xs')
+                            ui.button(tr_fn('room.filter_dims'), on_click=lambda: _set_panel_mode('dims')).props('dense outlined').classes('text-xs')
                             if _is_pro:
-                                ui.button(WIZ4_FILTER_PRO, on_click=lambda: _set_panel_mode('pro')).props('dense outlined').classes('text-xs')
-                            ui.button(WIZ4_FILTER_OPENINGS, on_click=lambda: _set_panel_mode('openings')).props('dense outlined').classes('text-xs')
+                                ui.button(tr_fn('room.filter_pro'), on_click=lambda: _set_panel_mode('pro')).props('dense outlined').classes('text-xs')
+                            ui.button(tr_fn('room.filter_openings'), on_click=lambda: _set_panel_mode('openings')).props('dense outlined').classes('text-xs')
 
                 # ── 1. Izbor zida ─────────────────────────────────────────────
                 if _panel_mode['value'] in ('all', 'walls'):
-                    with ui.expansion(WIZ4_EXP_WALL_PICK, value=True).classes('w-full bg-white border border-gray-100'):
+                    with ui.expansion(tr_fn('room.exp_wall_pick'), value=True).classes('w-full bg-white border border-gray-100'):
                         with ui.column().classes('w-full p-3 gap-2'):
                             with ui.row().classes('items-center gap-2'):
                                 ui.icon('wallpaper').classes('text-gray-700')
-                                ui.label(WIZ4_SELECT_WALL_HINT).classes('font-bold text-gray-800 text-sm')
+                                ui.label(tr_fn('room.select_wall_hint')).classes('font-bold text-gray-800 text-sm')
                             if _is_l_layout:
                                 _l_side = str((state.kitchen or {}).get('l_corner_side', getattr(state, 'l_corner_side', 'right')) or 'right')
-                                _side_txt = 'desni ugao' if _l_side == 'right' else 'levi ugao'
-                                ui.label(f'L-oblik ({_side_txt}): fokus na zid A (glavni) i zid B (bočni).')
-                                ui.label('Zid C se automatski usklađuje sa dubinom zida B.').classes('text-xs text-gray-500')
+                                _side_txt = tr_fn('room.corner_side_right') if _l_side == 'right' else tr_fn('room.corner_side_left')
+                                ui.label(tr_fn('room.l_shape_hint', side=_side_txt))
+                                ui.label(tr_fn('room.wall_c_auto')).classes('text-xs text-gray-500')
                             elif _is_jedan_zid:
-                                ui.label('Jedan zid: svi elementi idu na Zid A.').classes('text-xs text-gray-500')
+                                ui.label(tr_fn('room.one_wall_hint')).classes('text-xs text-gray-500')
 
                             with ui.row().classes('w-full gap-2 flex-wrap'):
                                 for _w in _ensure_room_walls(room):
@@ -393,7 +423,7 @@ def render_room_setup_step3(
                                     # Za jedan_zid prikazujemo samo Zid A
                                     if _is_jedan_zid and _wk != "A":
                                         continue
-                                    _lbl = f'Zid {_wk} ({_wall_name(_wk)})'
+                                    _lbl = f'{tr_fn(f"room.wall_{_wk.lower()}")} ({_wall_name(_wk)})'
                                     _is_kitchen = (room.get("kitchen_wall", "A") == _wk)
                                     _cls = 'bg-white text-gray-900 border border-gray-900' if _is_kitchen else 'bg-gray-100 text-gray-700 border border-gray-300'
 
@@ -406,7 +436,7 @@ def render_room_setup_step3(
                                         f'px-3 py-1 rounded text-xs font-semibold {_cls}'
                                     ).props('dense')
                             _kw = str(room.get("kitchen_wall", "A")).upper()
-                            ui.label(WIZ4_MAIN_WALL_FMT.format(wall=_kw, name=_wall_name(_kw))).classes(
+                            ui.label(tr_fn('room.main_wall_fmt', wall=_kw, name=_wall_name(_kw))).classes(
                                 'text-xs font-bold text-gray-700'
                             )
 
@@ -449,21 +479,21 @@ def render_room_setup_step3(
                                         wall_compass.refresh()
                                         scene_container.refresh()
 
-                                    ui.button(WIZ4_PREV_WALL, on_click=_prev_wall).props('dense outlined').classes('text-xs')
+                                    ui.button(tr_fn('room.prev_wall'), on_click=_prev_wall).props('dense outlined').classes('text-xs')
                                     _aw = str(room.get("active_wall", "A")).upper()
-                                    _aw_lbl = "ZADNJI" if _aw == "A" else ("LEVI" if _aw == "B" else "DESNI")
-                                    ui.label(WIZ4_EDITING_WALL_FMT.format(wall=_aw, name=_aw_lbl)).classes('text-xs font-bold text-gray-800')
-                                    ui.button(BTN_SLEDECI_ZID, on_click=_next_wall).props('dense outlined').classes('text-xs')
+                                    _aw_lbl = _wall_name(_aw)
+                                    ui.label(tr_fn('room.editing_wall_fmt', wall=_aw, name=_aw_lbl)).classes('text-xs font-bold text-gray-800')
+                                    ui.button(tr_fn('room.next_wall'), on_click=_next_wall).props('dense outlined').classes('text-xs')
 
                 # ── 2. Dimenzije ──────────────────────────────────────────────
                 if _panel_mode['value'] in ('all', 'dims'):
-                    with ui.expansion(WIZ4_EXP_DIMS, value=True).classes('w-full bg-white border border-gray-100'):
+                    with ui.expansion(tr_fn('room.exp_dims'), value=True).classes('w-full bg-white border border-gray-100'):
                         with ui.column().classes('w-full p-3 gap-3'):
                             with ui.row().classes('items-center gap-2 mb-0'):
                                 ui.icon('straighten').classes('text-gray-700')
-                                ui.label(WIZ4_DIMS_TITLE).classes('font-bold text-gray-800 text-sm')
+                                ui.label(tr_fn('room.dims_title')).classes('font-bold text-gray-800 text-sm')
                             ui.label(
-                                WIZ4_DIMS_HINT
+                                tr_fn('room.dims_hint')
                             ).classes('text-xs text-gray-500')
 
                             wall_a = _get_wall_by_key("A")
@@ -479,7 +509,7 @@ def render_room_setup_step3(
 
                             # 1) Visina prostorije
                             with ui.card().classes('w-full p-3 border border-gray-200'):
-                                ui.label(WIZ4_ROOM_HEIGHT).classes('text-xs font-semibold text-gray-700')
+                                ui.label(tr_fn('room.room_height')).classes('text-xs font-semibold text-gray-700')
                                 wh_inp = ui.number(
                                     value=int(room.get('wall_height_mm', 2600)),
                                     min=2000, max=4000, step=50, suffix='mm'
@@ -488,8 +518,8 @@ def render_room_setup_step3(
                             # 2) Zid A
                             with ui.card().classes('w-full p-3 border border-gray-200'):
                                 with ui.row().classes('w-full items-center justify-between'):
-                                    ui.label(WIZ4_WALL_A_LEN).classes('text-xs font-semibold text-gray-700')
-                                    ui.button(f'🧭 {WIZ4_FOCUS_WALL_A}', on_click=lambda: _focus_wall("A")).props('dense outlined').classes('text-xs')
+                                    ui.label(tr_fn('room.wall_a_len')).classes('text-xs font-semibold text-gray-700')
+                                    ui.button(f'🧭 {tr_fn("room.focus_wall_a")}', on_click=lambda: _focus_wall("A")).props('dense outlined').classes('text-xs')
                                 wa_inp = ui.number(
                                     value=int(wall_a.get('length_mm', room.get('wall_length_mm', 3000))),
                                     min=500, max=12000, step=50, suffix='mm'
@@ -498,8 +528,8 @@ def render_room_setup_step3(
                             if _is_jedan_zid:
                                 # Jedan zid: samo dubina prostorije (B=C=ta vrednost)
                                 with ui.card().classes('w-full p-3 border border-gray-200'):
-                                    ui.label('3) Dubina prostorije').classes('text-xs font-semibold text-gray-700')
-                                    ui.label('Rastojanje od kuhinjskog zida do suprotnog zida.').classes('text-xs text-gray-400')
+                                    ui.label(tr_fn('room.depth_title')).classes('text-xs font-semibold text-gray-700')
+                                    ui.label(tr_fn('room.depth_hint')).classes('text-xs text-gray-400')
                                     wb_inp = ui.number(
                                         value=int(wall_b.get('length_mm', room.get('room_depth_mm', 3000))),
                                         min=500, max=12000, step=50, suffix='mm'
@@ -509,8 +539,8 @@ def render_room_setup_step3(
                                 # 3) Zid B (L-oblik, U-oblik, galija)
                                 with ui.card().classes('w-full p-3 border border-gray-200'):
                                     with ui.row().classes('w-full items-center justify-between'):
-                                        ui.label(WIZ4_WALL_B_LEN).classes('text-xs font-semibold text-gray-700')
-                                        ui.button(f'🧭 {WIZ4_FOCUS_WALL_B}', on_click=lambda: _focus_wall("B")).props('dense outlined').classes('text-xs')
+                                        ui.label(tr_fn('room.wall_b_len')).classes('text-xs font-semibold text-gray-700')
+                                        ui.button(f'🧭 {tr_fn("room.focus_wall_b")}', on_click=lambda: _focus_wall("B")).props('dense outlined').classes('text-xs')
                                     wb_inp = ui.number(
                                         value=int(wall_b.get('length_mm', room.get('room_depth_mm', 3000))),
                                         min=500, max=12000, step=50, suffix='mm'
@@ -520,8 +550,8 @@ def render_room_setup_step3(
                                     # 4) Zid C (ostali multi-wall režimi)
                                     with ui.card().classes('w-full p-3 border border-gray-200'):
                                         with ui.row().classes('w-full items-center justify-between'):
-                                            ui.label(WIZ4_WALL_C_LEN).classes('text-xs font-semibold text-gray-700')
-                                            ui.button(f'🧭 {WIZ4_FOCUS_WALL_C}', on_click=lambda: _focus_wall("C")).props('dense outlined').classes('text-xs')
+                                            ui.label(tr_fn('room.wall_c_len')).classes('text-xs font-semibold text-gray-700')
+                                            ui.button(f'🧭 {tr_fn("room.focus_wall_c")}', on_click=lambda: _focus_wall("C")).props('dense outlined').classes('text-xs')
                                         wc_inp = ui.number(
                                             value=int(wall_c.get('length_mm', room.get('room_depth_mm', 3000))),
                                             min=500, max=12000, step=50, suffix='mm'
@@ -530,8 +560,8 @@ def render_room_setup_step3(
                                     # L-oblik: zid C = dubina zida B (read-only info)
                                     wc_inp = None
                                     with ui.card().classes('w-full p-3 border border-gray-100 bg-gray-50'):
-                                        ui.label('Zid C (auto)').classes('text-xs font-semibold text-gray-600')
-                                        ui.label('Automatski = dužina zida B (dubina prostorije).').classes('text-xs text-gray-500')
+                                        ui.label(tr_fn('room.wall_c_auto_short')).classes('text-xs font-semibold text-gray-600')
+                                        ui.label(tr_fn('room.wall_c_auto_desc')).classes('text-xs text-gray-500')
 
                             def _update_preview():
                                 _h = int(wh_inp.value or 2600)
@@ -550,35 +580,35 @@ def render_room_setup_step3(
                                 wall_preview.refresh()
                                 scene_container.refresh()
 
-                            ui.button(BTN_AZURIRAJ_PRIKAZ_DIM, on_click=_update_preview).props(
+                            ui.button(tr_fn('room.update_preview'), on_click=_update_preview).props(
                                 'unelevated'
-                            ).classes('w-full text-sm font-bold py-2').tooltip(WIZ4_UPDATE_TOOLTIP)
+                            ).classes('w-full text-sm font-bold py-2').tooltip(tr_fn('room.update_preview_tooltip'))
 
                 # ── 3. PRO merenje glavnog zida ─────────────────────────────
                 if str(getattr(state, "measurement_mode", "standard")).lower() == "pro" and _panel_mode['value'] in ('all', 'pro'):
-                    with ui.expansion(WIZ4_PRO_TITLE, value=True).classes(
+                    with ui.expansion(tr_fn('room.pro_title'), value=True).classes(
                         'w-full bg-white border border-gray-100'
                     ):
                         with ui.column().classes('w-full p-3 gap-3'):
                             kw = str(room.get("kitchen_wall", "A")).upper()
                             with ui.card().classes('w-full p-3 border border-gray-200 bg-gray-50'):
-                                ui.label(WIZ4_PRO_MAIN_WALL_FMT.format(wall=kw, name=_wall_name(kw))).classes(
+                                ui.label(tr_fn('room.pro_main_wall_fmt', wall=kw, name=_wall_name(kw))).classes(
                                     'text-sm font-bold text-gray-800'
                                 )
-                                ui.label(WIZ4_PRO_HINT1).classes('text-xs text-gray-600')
-                                ui.label(WIZ4_PRO_HINT2).classes('text-xs text-gray-500')
+                                ui.label(tr_fn('room.pro_hint1')).classes('text-xs text-gray-600')
+                                ui.label(tr_fn('room.pro_hint2')).classes('text-xs text-gray-500')
                                 with ui.row().classes('w-full gap-2 mt-1'):
-                                    ui.button(WIZ4_PRO_MEASURE_FLOOR, on_click=lambda: ui.notify(
-                                        WIZ4_PRO_MEASURE_FLOOR_NOTE, timeout=1800
+                                    ui.button(tr_fn('room.pro_measure_floor'), on_click=lambda: ui.notify(
+                                        tr_fn('room.pro_measure_floor_note'), timeout=1800
                                     )).props('dense outlined').classes('text-xs')
-                                    ui.button(WIZ4_PRO_MEASURE_CEIL, on_click=lambda: ui.notify(
-                                        WIZ4_PRO_MEASURE_CEIL_NOTE, timeout=1800
+                                    ui.button(tr_fn('room.pro_measure_ceil'), on_click=lambda: ui.notify(
+                                        tr_fn('room.pro_measure_ceil_note'), timeout=1800
                                     )).props('dense outlined').classes('text-xs')
                             wm = _ensure_pro_wall_measurements(kw)
                             _kw_wall_len = int(_get_wall_by_key(kw).get('length_mm', 3000) or 3000)
                             for _off in ("0", "300", "600"):
                                 with ui.card().classes('w-full p-3 border border-gray-200'):
-                                    ui.label(WIZ4_OFFSET_FROM_WALL_FMT.format(offset=_off)).classes('text-xs font-bold text-gray-700')
+                                    ui.label(tr_fn('room.offset_from_wall_fmt', offset=_off)).classes('text-xs font-bold text-gray-700')
                                     with ui.grid(columns=2).classes('w-full gap-2'):
                                         for _h in ("0", "1000", "2000", "2500"):
                                             _init = wm.get(_off, {}).get(_h)
@@ -600,7 +630,8 @@ def render_room_setup_step3(
                             if _sum:
                                 with ui.card().classes('w-full p-2 border border-gray-200'):
                                     ui.label(
-                                        WIZ4_PRO_SUMMARY_FMT.format(
+                                        tr_fn(
+                                            'room.pro_summary_fmt',
                                             min_v=int(_sum["min"]),
                                             max_v=int(_sum["max"]),
                                             dev=int(_sum["dev"]),
@@ -608,7 +639,7 @@ def render_room_setup_step3(
                                     ).classes('text-xs font-bold text-gray-700')
                                     ui.label(_sum["rec"]).classes('text-xs text-gray-600')
                             else:
-                                ui.label(WIZ4_PRO_EMPTY).classes('text-xs text-gray-400')
+                                ui.label(tr_fn('room.pro_empty')).classes('text-xs text-gray-400')
 
                 # Jednostavni režim: dodavanje/provera otvora i instalacija radi se kroz jedan centralni editor.
                 # Napredni panel ostaje isključen da UI ne bude prenatrpan.
@@ -618,7 +649,7 @@ def render_room_setup_step3(
                 def _nastavi():
                     _kw = str(room.get("kitchen_wall", "") or "").upper()
                     if _kw not in ("A", "B", "C"):
-                        ui.notify(f'❌ {WIZ4_NOTIFY_PICK_KITCHEN_WALL}', type='negative')
+                        ui.notify(f'❌ {tr_fn("room.notify_pick_kitchen_wall")}', type='negative')
                         return
                     _wa = int((_get_wall_by_key("A") or {}).get('length_mm', 0))
                     _wb = int((_get_wall_by_key("B") or {}).get('length_mm', 0))
@@ -628,14 +659,14 @@ def render_room_setup_step3(
                         _get_wall_by_key("C")['length_mm'] = _wc
                     _wh = int((_get_wall_by_key("A") or {}).get('height_mm', room.get('wall_height_mm', 2600)))
                     if _wa <= 0 or _wb <= 0 or _wc <= 0 or _wh <= 0:
-                        ui.notify(f'❌ {WIZ4_NOTIFY_BAD_DIMS}', type='negative')
+                        ui.notify(f'❌ {tr_fn("room.notify_bad_dims")}', type='negative')
                         return
                     # ── PRO mode: koristi MIN izmjerenu vrijednost za kuhinjski zid ──
                     _final_wall_len = _wa  # default: ručno unesena vrijednost
                     if str(getattr(state, "measurement_mode", "standard")).lower() == "pro":
                         _sum = _pro_summary(_kw)
                         if not _sum:
-                            ui.notify(f'❌ {WIZ4_NOTIFY_PRO_REQUIRED}', type='negative')
+                            ui.notify(f'❌ {tr_fn("room.notify_pro_required")}', type='negative')
                             return
                         _final_wall_len = int(_sum["min"])
                         # Ažuriraj i wall zapis da se poklapa s PRO MIN vrijednošću
@@ -644,8 +675,7 @@ def render_room_setup_step3(
                             _kw_wall['length_mm'] = _final_wall_len
                         if _sum["dev"] > 0:
                             ui.notify(
-                                f'📐 PRO: koristi se MIN {_final_wall_len} mm '
-                                f'(odstupanje {int(_sum["dev"])} mm)',
+                                tr_fn('room.pro_min_used_fmt', wall_len=_final_wall_len, dev=int(_sum["dev"])),
                                 type='info', timeout=4000
                             )
                     _set_wall_length(_final_wall_len)
@@ -656,10 +686,10 @@ def render_room_setup_step3(
                     state.room_setup_done = True
                     state.active_tab = 'elementi'
                     main_content.refresh()
-                    ui.notify(f'✅ {WIZ4_NOTIFY_ROOM_READY}', type='positive')
+                    ui.notify(f'✅ {tr_fn("room.notify_room_ready")}', type='positive')
 
                 ui.button(
-                    f'➡️ {BTN_KRENI_SA_DIZAJNOM}',
+                    f'➡️ {tr_fn("room.start_design")}',
                     on_click=_nastavi
                 ).classes('w-full font-bold text-base py-3 rounded-lg shadow')
 
@@ -671,9 +701,9 @@ def render_room_setup_step3(
             @ui.refreshable
             def wall_headline():
                 _aw = str(room.get("active_wall", "A")).upper()
-                _aw_lbl = "ZADNJI" if _aw == "A" else ("LEVI" if _aw == "B" else "DESNI")
+                _aw_lbl = _wall_name(_aw)
                 _kw = str(room.get("kitchen_wall", "A")).upper()
-                ui.label(WIZ4_EDITING_AND_MAIN_FMT.format(wall=_aw, name=_aw_lbl, main=_kw)).classes(
+                ui.label(tr_fn('room.editing_and_main_fmt', wall=_aw, name=_aw_lbl, main=_kw)).classes(
                     'text-sm font-bold text-gray-800'
                 )
             _wall_headline_proxy.set_target(wall_headline)
@@ -684,8 +714,8 @@ def render_room_setup_step3(
                 def _cls(k: str) -> str:
                     return 'bg-white text-gray-900 border-gray-900' if _aw == k else 'bg-gray-100 text-gray-500 border-gray-200'
                 with ui.element('div').classes('inline-grid gap-1').style('grid-template-columns: 56px 56px;'):
-                    ui.label(WIZ4_COMPASS_B).classes(f'px-2 py-1 text-xs text-center rounded border {_cls("B")}')
-                    ui.label(WIZ4_COMPASS_C).classes(f'px-2 py-1 text-xs text-center rounded border {_cls("C")}')
+                    ui.label(tr_fn('room.compass_b')).classes(f'px-2 py-1 text-xs text-center rounded border {_cls("B")}')
+                    ui.label(tr_fn('room.compass_c')).classes(f'px-2 py-1 text-xs text-center rounded border {_cls("C")}')
             _wall_compass_proxy.set_target(wall_compass)
 
             with ui.row().classes('items-center justify-between'):
@@ -697,8 +727,8 @@ def render_room_setup_step3(
                 with ui.dialog().props('maximized') as _dlg_3d:
                     with ui.card().classes('w-full h-full p-3 gap-2'):
                         with ui.row().classes('w-full items-center justify-between'):
-                            ui.label('3D prikaz prostorije').classes('text-base font-bold')
-                            ui.button(BTN_ZATVORI, on_click=_dlg_3d.close).props('dense outlined')
+                            ui.label(tr_fn('room.fullscreen_title')).classes('text-base font-bold')
+                            ui.button(tr_fn('room.close'), on_click=_dlg_3d.close).props('dense outlined')
 
                         _tool = {'value': 'prozor'}
                         _fs_camera = {'value': 'diag'}
@@ -707,18 +737,26 @@ def render_room_setup_step3(
                         @ui.refreshable
                         def _wall_badge():
                             _aw = str(room.get("active_wall", "A")).upper()
-                            ui.label(f'Aktivan zid: {_aw}').classes('text-xs text-gray-600')
+                            ui.label(tr_fn('room.active_wall_fmt', wall=_aw)).classes('text-xs text-gray-600')
                             _sp = _refs.get('scene_pick', {}) or {}
                             ui.label(
-                                f'3D pozicija: zid {str(_sp.get("wall", _aw)).upper()}  ·  X={int(_sp.get("x_mm", 0))} mm'
+                                tr_fn(
+                                    'room.scene_pick_fmt',
+                                    wall=str(_sp.get("wall", _aw)).upper(),
+                                    x=int(_sp.get("x_mm", 0)),
+                                )
                             ).classes('text-xs text-gray-600')
 
                         @ui.refreshable
                         def _wall_picker():
                             _aw = str(room.get("active_wall", "A")).upper()
                             with ui.row().classes('w-full gap-2 items-center flex-wrap'):
-                                ui.label('Izaberi zid:').classes('text-xs text-gray-600')
-                                for _k, _label in (('A', 'Zid A'), ('B', 'Zid B'), ('C', 'Zid C')):
+                                ui.label(tr_fn('room.choose_wall')).classes('text-xs text-gray-600')
+                                for _k, _label in (
+                                    ('A', tr_fn('room.wall_a')),
+                                    ('B', tr_fn('room.wall_b')),
+                                    ('C', tr_fn('room.wall_c')),
+                                ):
                                     _active = (_aw == _k)
                                     _cls = (
                                         'bg-white text-gray-900 border-2 border-gray-900'
@@ -740,27 +778,27 @@ def render_room_setup_step3(
                                         wall_headline.refresh()
                                         wall_compass.refresh()
                                     ui.button(_label, on_click=_pick_wall).props('dense').classes(f'text-xs {_cls}')
-                                ui.button('Diag', on_click=lambda: (_fs_camera.__setitem__('value', 'diag'), _scene_full.refresh())).props('dense outlined').classes('text-xs')
+                                ui.button(tr_fn('room.camera_diag'), on_click=lambda: (_fs_camera.__setitem__('value', 'diag'), _scene_full.refresh())).props('dense outlined').classes('text-xs')
 
                         with ui.row().classes('w-full gap-2 items-end flex-wrap'):
                             _tool_sel = ui.select(
                                 {
-                                    'prozor': '🪟 Prozor',
-                                    'vrata': '🚪 Vrata',
-                                    'struja': '⚡ Utičnica',
-                                    'voda': '💧 Voda',
-                                    'gas': '🔥 Gas',
+                                    'prozor': f'🪟 {tr_fn("room.tool_window")}',
+                                    'vrata': f'🚪 {tr_fn("room.tool_door")}',
+                                    'struja': f'⚡ {tr_fn("room.tool_socket")}',
+                                    'voda': f'💧 {tr_fn("room.tool_water")}',
+                                    'gas': f'🔥 {tr_fn("room.tool_gas")}',
                                 },
                                 value='prozor',
-                                label='Šta dodaješ',
+                                label=tr_fn('room.what_adding'),
                             ).props('dense outlined').classes('w-44')
-                            _w_in = ui.number(value=900, min=100, max=4000, step=10, label='Širina [mm]').props(
+                            _w_in = ui.number(value=900, min=100, max=4000, step=10, label=tr_fn('room.width_mm')).props(
                                 'dense outlined'
                             ).classes('w-36')
-                            _h_in = ui.number(value=1200, min=100, max=3000, step=10, label='Visina [mm]').props(
+                            _h_in = ui.number(value=1200, min=100, max=3000, step=10, label=tr_fn('room.height_mm')).props(
                                 'dense outlined'
                             ).classes('w-36')
-                            _y_in = ui.number(value=0, min=0, max=3000, step=10, label='Y od poda [mm]').props(
+                            _y_in = ui.number(value=0, min=0, max=3000, step=10, label=tr_fn('room.y_from_floor_mm')).props(
                                 'dense outlined'
                             ).classes('w-36')
 
@@ -807,13 +845,13 @@ def render_room_setup_step3(
                                 _scene_full.refresh()
                                 _wall_badge.refresh()
 
-                            ui.button('➕ Dodaj na aktivan zid', on_click=_add_from_3d).props('dense').classes(
+                            ui.button(tr_fn('room.add_to_active_wall'), on_click=_add_from_3d).props('dense').classes(
                                 'text-xs'
                             )
 
                         _wall_badge()
                         _wall_picker()
-                        ui.label('Klikni tačno na zid u 3D: bira se zid i X pozicija, pa klikni Dodaj.').classes(
+                        ui.label(tr_fn('room.click_wall_hint_3d')).classes(
                             'text-xs text-gray-500'
                         )
 
@@ -861,8 +899,8 @@ def render_room_setup_step3(
             )
 
             with ui.card().props('id=room-scene-card').classes('w-full p-3 bg-white border border-gray-200 shadow-sm'):
-                ui.label('3D prikaz je sada samo preko celog ekrana.').classes('text-xs text-gray-600')
-                ui.label('Dodavanje i pomeranje radi se na 2D planu iznad, na jednom mestu.').classes('text-xs text-gray-600')
-                ui.button('Otvori 3D preko celog ekrana', on_click=_open_3d_fullscreen).props('unelevated').classes(
+                ui.label(tr_fn('room.scene_info_1')).classes('text-xs text-gray-600')
+                ui.label(tr_fn('room.scene_info_2')).classes('text-xs text-gray-600')
+                ui.button(tr_fn('room.open_fullscreen_3d'), on_click=_open_3d_fullscreen).props('unelevated').classes(
                     'text-xs mt-1'
                 )

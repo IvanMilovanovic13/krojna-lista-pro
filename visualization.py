@@ -13,6 +13,7 @@ import matplotlib.patches as mpatches
 import numpy as np
 
 from cutlist import MANUFACTURING_PROFILES
+from module_rules import default_shelf_count, dishwasher_installation_metrics
 
 
 # =========================================================
@@ -186,6 +187,19 @@ def _norm_text(v: Any) -> str:
     return s
 
 
+def _ui_lang(kitchen: Dict[str, Any]) -> str:
+    return str((kitchen or {}).get("language", "sr") or "sr").lower().strip()
+
+
+def _wall_label(kitchen: Dict[str, Any], wall_len: int) -> str:
+    return f"{wall_len}mm"
+
+
+def _free_space_label(kitchen: Dict[str, Any], mm: int, *, arrow: str = "←") -> str:
+    _suffix = "free" if _ui_lang(kitchen) == "en" else "slobodno"
+    return f"{arrow} {mm}mm {_suffix}"
+
+
 def _draw_l_layout_inset(
     ax: Any,
     kitchen: Dict[str, Any],
@@ -198,6 +212,9 @@ def _draw_l_layout_inset(
     if room is None:
         return
     try:
+        _lang = str((kitchen or {}).get("language", "sr") or "sr").lower().strip()
+        _wall_a_lbl = "Wall A" if _lang == "en" else "Zid A"
+        _wall_b_lbl = "Wall B" if _lang == "en" else "Zid B"
         _walls = list((room.get("walls", []) or []))
         _wa = next((w for w in _walls if str(w.get("key", "")).upper() == "A"), None)
         _wb = next((w for w in _walls if str(w.get("key", "")).upper() == "B"), None)
@@ -282,8 +299,8 @@ def _draw_l_layout_inset(
             elif _wk == "B":
                 iax.add_patch(plt.Rectangle((-_depth + 18, _x), _depth - 36, _w, facecolor=_fc, edgecolor="#4A4A4A", lw=0.6))
         iax.plot([0, 0], [0, _depth], color="#1F2937", lw=1.0)
-        iax.text(_la * 0.5, _depth + 45, "Zid A", ha="center", va="bottom", fontsize=6.5, color="#374151")
-        iax.text(-_depth - 30, _lb * 0.5, "Zid B", ha="right", va="center", rotation=90, fontsize=6.5, color="#374151")
+        iax.text(_la * 0.5, _depth + 45, _wall_a_lbl, ha="center", va="bottom", fontsize=6.5, color="#374151")
+        iax.text(-_depth - 30, _lb * 0.5, _wall_b_lbl, ha="right", va="center", rotation=90, fontsize=6.5, color="#374151")
         iax.set_xlim(-_depth - 120, _la + 120)
         iax.set_ylim(-40, max(_lb, _depth) + 140)
         for _sp in iax.spines.values():
@@ -344,6 +361,8 @@ def _detect_type(m: Dict[str, Any]) -> str:
     lbl = str(m.get("label", "")).lower()
     features = m.get("params", {}) or {}
     # Iz template_id-a (pouzdan)
+    if tid == "BASE_DISHWASHER_FREESTANDING": return "dishwasher_freestanding"
+    if tid == "BASE_OVEN_HOB_FREESTANDING": return "oven_hob_freestanding"
     if "DISHWASHER"    in tid: return "dishwasher"
     if "END_PANEL"     in tid: return "panel"
     if "FILLER_PANEL"  in tid: return "panel"
@@ -402,9 +421,11 @@ def _is_sink(m: Optional[Dict[str, Any]]) -> bool:
 #   RUČKE: moderan "bar" dizajn, fiksne dimenzije (ne zavise od širine elementa)
 # =========================================================
 
-# Sve ručke su crne i iste (osim frižidera koji je duži po pravilu).
-HANDLE_FILL = "#000000"
-HANDLE_EDGE = "#000000"
+# Ručke prate svetlinu fronta:
+# - svetli frontovi -> tamne ručke
+# - tamni frontovi  -> svetle ručke
+HANDLE_FILL = "#111111"
+HANDLE_EDGE = "#111111"
 
 # Fiksne dimenzije u mm (naš 2D crtež je u mm koordinatama)
 DOOR_HANDLE_V_LEN = 200.0
@@ -420,6 +441,25 @@ FRIDGE_HANDLE_V_LEN = 380.0
 FRIDGE_HANDLE_V_W   = 20.0
 
 HANDLE_ROUNDING = 3.0
+
+
+def _handle_palette_for_face(hex_color: str) -> tuple[str, str]:
+    h = str(hex_color or "").lstrip("#")
+    try:
+        r = int(h[0:2], 16)
+        g = int(h[2:4], 16)
+        b = int(h[4:6], 16)
+        brightness = (r * 299 + g * 587 + b * 114) / 1000
+        if brightness >= 150:
+            return ("#111111", "#111111")
+        return ("#E7E9ED", "#C9CED6")
+    except Exception:
+        return ("#111111", "#111111")
+
+
+def _set_handle_palette(face_color: str) -> None:
+    global HANDLE_FILL, HANDLE_EDGE
+    HANDLE_FILL, HANDLE_EDGE = _handle_palette_for_face(face_color)
 
 def _bar_handle_h(ax, cx: float, cy: float, length: float, height: float, technical: bool = False) -> None:
     face = HANDLE_FILL if not technical else "none"
@@ -530,6 +570,8 @@ def _draw_base_doors(ax, x, y, w, h, accent, face, technical, m=None):
             handle_cx = (x + w - door_inset) - (handle_edge_off + DOOR_HANDLE_V_W / 2.0)
         _handle_v(ax, handle_cx, handle_cy, technical=technical)
 
+    _draw_shelf_hints(ax, x, y, w, h, accent, face, technical, m=m, zone_hint='base')
+
 # ── Drawer gap constant & segment computation ─────────────────────────────
 _FRONT_GAP_MM = 2  # mm gap at top, bottom and between each drawer front
 
@@ -636,53 +678,16 @@ def _draw_base_doors_drawers(ax, x, y, w, h, accent, face, technical, params=Non
 
 
 def _draw_sink(ax, x, y, w, h, accent, face, technical, worktop_thk_mm: int = 38):
-    """Sudopera — inox korito na radnoj ploči + česma (frontalni prikaz).
+    """Sudopera — front kao 2-door base, uz vidljivu česmu.
 
     Napomena: vrata se crtaju odvojeno kroz _draw_base_doors() poziv u glavnoj
-    petlji — ovde crtamo SAMO inox površinu sa koritom i češmu iznad.
+    petlji — ovde crtamo SAMO česmu iznad radne ploče.
     Duple dveri se ne crtaju.
     """
     top = y + h
     wt  = float(worktop_thk_mm)
-
-    # ── Inox radna površina (zamenjuje standardni radni sto za sudoperu) ─────
-    _INOX_SURFACE = '#C2C8CE'   # siva inox površina
-    _INOX_BOWL    = '#969FA8'   # tamnije korito (uvučeno)
-    _INOX_RIM     = '#ADB5BD'   # rub korita (highlight)
-    _INOX_EDGE    = '#7E8890'   # ivica ploče
-
-    _mx = max(2, int(w * 0.015))
-
-    # Inox površinska ploča (cela širina elementa, debljina = worktop)
-    ax.add_patch(plt.Rectangle(
-        (x + _mx, top), w - 2 * _mx, wt,
-        facecolor=_INOX_SURFACE, edgecolor=_INOX_EDGE,
-        linewidth=0.9, zorder=11,
-    ))
-
-    # Korito/korita — uvučeni pravougaonik na inox ploči
-    _bin_inset = max(1.0, wt * 0.15)  # mali uvlak od ivice ploče
-    if w <= 600:
-        # Jedno korito (uska sudopera)
-        _bw = (w - 2 * _mx) * 0.74
-        _bx = x + (w - _bw) / 2.0
-        ax.add_patch(plt.Rectangle(
-            (_bx, top + _bin_inset), _bw, wt - 2 * _bin_inset,
-            facecolor=_INOX_BOWL, edgecolor=_INOX_RIM,
-            linewidth=0.7, zorder=12,
-        ))
-    else:
-        # Dva korita (široka sudopera >= 600mm)
-        _avail = w - 2 * _mx
-        _bw    = _avail * 0.38
-        _gap   = (_avail - 2.0 * _bw) / 3.0
-        for _i in range(2):
-            _bx = x + _mx + _gap + _i * (_bw + _gap)
-            ax.add_patch(plt.Rectangle(
-                (_bx, top + _bin_inset), _bw, wt - 2 * _bin_inset,
-                facecolor=_INOX_BOWL, edgecolor=_INOX_RIM,
-                linewidth=0.7, zorder=12,
-            ))
+    if wt <= 0:
+        return
 
     # ── Česma iznad radne ploče — realistični gooseneck ──────────────────────
     base_y = top + wt
@@ -933,10 +938,9 @@ def _draw_oven_hob(ax, x, y, w, h, accent, face, technical,
                    has_drawer: bool = True, worktop_thk_mm: int = 38):
     """
     Industrijski standard BASE_OVEN_HOB:
-      - Dno: fioka (130mm) sa horizontalnom ručicom
-      - Gore: ugradna rerna — prozor (gornji deo) + ručica (pri dnu rerne) + mali dugmici (vrh)
-      - HOB zona: iznad vrha korpusa, na radnoj ploči
-        Visina prikaza = worktop_thk_mm (stvarna); 4 ringlje u 1 redu horizontalno
+      - Dno: fioka sa horizontalnom ručicom
+      - Gore: ugradna rerna — komande gore, ručka pri vrhu vrata, staklo ispod
+      - U front tehničkom prikazu ne crtamo ploču gore kao zaseban tamni blok.
     """
     # --- 1. FIOKA (dno) ---
     drawer_h = min(150, max(120, int(h * 0.18)))
@@ -960,8 +964,8 @@ def _draw_oven_hob(ax, x, y, w, h, accent, face, technical,
     ow  = w - 2 * oven_margin
     oh  = oven_h
 
-    # Ručica rerne — pri dnu rerne (ispod prozora)
-    _handle_h(ax, ox + ow / 2, oven_y + int(oh * 0.12), hw=ow * 0.55, technical=technical)
+    # Ručica rerne — pri vrhu vrata (standardno otvaranje na dole)
+    _handle_h_oven(ax, ox + ow / 2, oven_y + int(oh * 0.80), technical=technical)
 
     # Razdvajanje između ploče i rerne (shadow gap)
     gap_y = y + h
@@ -972,16 +976,16 @@ def _draw_oven_hob(ax, x, y, w, h, accent, face, technical,
     win_x = ox + win_inset
     win_w = ow - 2 * win_inset
     btn_r = max(4, int(win_w * 0.035))
-    btn_y = gap_y - 35
+    btn_y = oven_y + int(oh * 0.90)
     bsp   = win_w / 5   # 4 dugmica na 5 intervala
     for i in range(4):
         ax.add_patch(plt.Circle((win_x + bsp * (i + 1), btn_y), btn_r,
             facecolor="#AAAAAA" if not technical else "none",
             edgecolor="#555555", linewidth=0.5, zorder=15))
 
-    # Prozor rerne — od 25% do 88% visine rerne
-    win_y = oven_y + int(oh * 0.25)
-    win_h = int(oh * 0.63)
+    # Prozor rerne — ispod komandi i ručke
+    win_y = oven_y + int(oh * 0.20)
+    win_h = int(oh * 0.52)
     ax.add_patch(plt.Rectangle(
         (win_x, win_y), win_w, win_h,
         facecolor="#2A2A2A" if not technical else "none",
@@ -1044,10 +1048,71 @@ def _draw_microwave(ax, x, y, w, h, accent, face, technical):
 
 
 
-def _draw_dishwasher(ax, x, y, w, h, accent, face, technical):
+def _draw_dishwasher(ax, x, y, w, h, accent, face, technical, *, kitchen=None, m=None):
     """Mašina za sudove: integrisani front panel (boja fronta), kontrolna traka, ručka."""
+    _k = kitchen if kitchen is not None else globals().get("state", None).kitchen if globals().get("state", None) is not None else {}
+    _dish = dishwasher_installation_metrics(_k, m or {"h_mm": h})
+    _raised = bool(_dish.get("dishwasher_raised_mode", False))
+    _front_h = float(_dish.get("dishwasher_front_height", 720))
+    _lower_fill_h = float(_dish.get("dishwasher_lower_filler_height", 0))
     inset = max(5, int(w * 0.05))
     mid = x + w / 2
+
+    if _raised and _lower_fill_h > 0:
+        _front_vis_h = max(40.0, min(h, _front_h))
+        _filler_vis_h = max(20.0, min(h - _front_vis_h, _lower_fill_h))
+        _front_y = y + _filler_vis_h
+
+        ax.add_patch(plt.Rectangle(
+            (x + inset, _front_y + inset),
+            w - 2 * inset, max(2.0, _front_vis_h - 2 * inset),
+            facecolor=face if not technical else "none",
+            edgecolor=accent,
+            linewidth=0.9 if not technical else 0.8,
+            alpha=0.95 if not technical else 0.55,
+            zorder=12,
+        ))
+        ax.add_patch(plt.Rectangle(
+            (x + inset, y + inset),
+            w - 2 * inset, max(2.0, _filler_vis_h - 2 * inset),
+            facecolor=face if not technical else "none",
+            edgecolor=accent,
+            linewidth=0.75,
+            alpha=0.88 if not technical else 0.50,
+            zorder=11,
+        ))
+        ax.plot([x, x + w], [_front_y, _front_y], color=accent, linewidth=0.75, zorder=13)
+
+        ctrl_h = max(10, int(_front_vis_h * 0.10))
+        ctrl_y = _front_y + _front_vis_h - inset - ctrl_h
+        ax.add_patch(plt.Rectangle(
+            (x + inset, ctrl_y),
+            w - 2 * inset, ctrl_h,
+            facecolor="#D7DCE2" if not technical else "none",
+            edgecolor=accent, linewidth=0.7, alpha=0.75, zorder=13
+        ))
+        if not technical:
+            ax.add_patch(plt.Rectangle(
+                (x + inset + 4, ctrl_y + 2), max(8, (w - 2 * inset) * 0.34), max(3, ctrl_h - 4),
+                facecolor="#AAB3BD", edgecolor="none", alpha=0.45, zorder=14
+            ))
+            led_y = ctrl_y + ctrl_h * 0.55
+            for i, col in enumerate(["#00CC66", "#FF9900", "#CC3300"]):
+                lx = x + inset + (w - 2 * inset) * (0.75 + i * 0.07)
+                ax.add_patch(plt.Circle((lx, led_y), max(2, int(ctrl_h * 0.20)),
+                                        facecolor=col, edgecolor="none", zorder=15))
+
+        handle_cx = mid
+        handle_cy = ctrl_y - 28.0
+        _handle_h_oven(ax, handle_cx, handle_cy, technical=technical)
+        ax.plot([x + inset + 5, x + w - inset - 5], [ctrl_y - 6, ctrl_y - 6],
+                color=accent, linewidth=0.45, alpha=0.35, zorder=14)
+
+        ax.text(mid, _front_y + _front_vis_h * 0.42, "DW",
+                fontsize=max(7, int(w * 0.052)),
+                color="#666666" if not technical else "#999999",
+                ha="center", va="center", alpha=0.85, zorder=16)
+        return
 
     # Glavna vrata (integrisani front u boji kuhinje)
     ax.add_patch(plt.Rectangle(
@@ -1096,6 +1161,169 @@ def _draw_dishwasher(ax, x, y, w, h, accent, face, technical):
             fontsize=max(7, int(w * 0.052)),
             color="#666666" if not technical else "#999999",
             ha="center", va="center", alpha=0.85, zorder=16)
+
+
+def _draw_dishwasher_freestanding(ax, x, y, w, h, accent, technical):
+    """Samostojeća mašina za sudove: front kao realan appliance sa gornjom komandnom trakom i nožicama."""
+    inset = max(4, int(w * 0.035))
+    body_c = "#F7F7F5"
+    panel_c = "#ECECE8"
+    dark_c = "#6E7278"
+    ax.add_patch(plt.Rectangle(
+        (x + inset, y + inset),
+        w - 2 * inset, h - 2 * inset,
+        facecolor=body_c if not technical else "none",
+        edgecolor=accent, linewidth=0.9, zorder=12
+    ))
+    ctrl_h = max(16, int(h * 0.10))
+    ctrl_y = y + h - inset - ctrl_h - 2
+    ax.add_patch(plt.Rectangle(
+        (x + inset, ctrl_y),
+        w - 2 * inset, ctrl_h,
+        facecolor=panel_c if not technical else "none",
+        edgecolor=accent, linewidth=0.7, alpha=0.85, zorder=13
+    ))
+    if not technical:
+        ax.add_patch(plt.Rectangle(
+            (x + inset + 6, ctrl_y + 3),
+            max(18, (w - 2 * inset) * 0.26), max(4, ctrl_h - 6),
+            facecolor="#BFC4CB", edgecolor="none", alpha=0.45, zorder=14
+        ))
+    # Ručka u gornjoj zoni, kao na referenci.
+    hx0 = x + w * 0.36
+    hx1 = x + w * 0.60
+    hy = ctrl_y - max(10, int(h * 0.05))
+    ax.plot([hx0, hx1], [hy, hy], color=accent, linewidth=1.0, zorder=15)
+    ax.plot([hx0, hx0], [hy, hy + 5], color=accent, linewidth=0.8, zorder=15)
+    ax.plot([hx1, hx1], [hy, hy + 5], color=accent, linewidth=0.8, zorder=15)
+    # Desni display i dugmad.
+    disp_w = max(12, int(w * 0.12))
+    disp_h = max(5, int(ctrl_h * 0.30))
+    disp_x = x + w * 0.74
+    disp_y = ctrl_y + ctrl_h * 0.46 - disp_h / 2
+    ax.add_patch(plt.Rectangle(
+        (disp_x, disp_y), disp_w, disp_h,
+        facecolor="#FAFAFA" if not technical else "none",
+        edgecolor=accent, linewidth=0.5, zorder=15
+    ))
+    for i in range(2):
+        bx = x + w * (0.90 + i * 0.04)
+        by = ctrl_y + ctrl_h * 0.48
+        ax.add_patch(plt.Circle((bx, by), max(1.5, int(ctrl_h * 0.10)),
+                                facecolor="none",
+                                edgecolor=accent, linewidth=0.6, zorder=15))
+    # Donji postolni lim i male nožice.
+    plinth_h = max(10, int(h * 0.06))
+    ax.plot([x + inset, x + w - inset], [y + plinth_h, y + plinth_h], color=accent, linewidth=0.8, zorder=14)
+    foot_w = max(10, int(w * 0.10))
+    foot_h = max(4, int(h * 0.016))
+    for px in (x + w * 0.10, x + w * 0.82):
+        ax.add_patch(plt.Rectangle(
+            (px, y + 1), foot_w, foot_h,
+            facecolor=dark_c if not technical else "none",
+            edgecolor=accent, linewidth=0.5, zorder=15
+        ))
+
+
+def _draw_oven_hob_freestanding(ax, x, y, w, h, accent, technical):
+    """Samostojeći šporet — čisti frontalni 2D pogled.
+
+    Važno:
+    - u 2D front modu ne prikazujemo dubinu ploče kao pogled odozgo
+    - zato ne crtamo sva 4 grejna mesta; vidi se samo prednja linija/oznaka ploče
+    """
+    inset = max(4, int(w * 0.035))
+    body_c = "#F7F7F5"
+    panel_c = "#F0F0EC"
+    base_c = "#6F6F72"
+    glass_c = "#8C8C8E"
+    ctrl_h = max(34, int(h * 0.13))
+    top_h = max(14, int(h * 0.07))
+    base_h = max(18, int(h * 0.10))
+    oven_h = h - ctrl_h - top_h - base_h
+    ctrl_y = y + h - top_h - ctrl_h
+    top_y = y + h - top_h
+    ax.add_patch(plt.Rectangle(
+        (x + inset, y + inset + base_h),
+        w - 2 * inset, max(4, oven_h),
+        facecolor=body_c if not technical else "none",
+        edgecolor=accent, linewidth=0.9, zorder=12
+    ))
+    ax.add_patch(plt.Rectangle(
+        (x + inset, ctrl_y),
+        w - 2 * inset, ctrl_h,
+        facecolor=panel_c if not technical else "none",
+        edgecolor=accent, linewidth=0.7, alpha=0.85, zorder=13
+    ))
+    ax.add_patch(plt.Rectangle(
+        (x + inset, top_y),
+        w - 2 * inset, top_h - inset,
+        facecolor="#EBEBE7" if not technical else "none",
+        edgecolor=accent, linewidth=0.7, alpha=0.9, zorder=13
+    ))
+    # Frontalni pogled: vidi se samo prednja linija ploče i dve prednje zone.
+    hob_line_y = top_y + top_h * 0.55
+    ax.plot([x + inset + 4, x + w - inset - 4], [hob_line_y, hob_line_y],
+            color=accent, linewidth=0.7, alpha=0.85, zorder=15)
+    ring_rx = max(8, int(w * 0.12))
+    ring_ry = max(1.8, top_h * 0.16)
+    for cx in (x + w * 0.30, x + w * 0.70):
+        ax.add_patch(plt.matplotlib.patches.Ellipse(
+            (cx, top_y + top_h * 0.72),
+            ring_rx * 2.0, ring_ry * 2.0,
+            facecolor="none",
+            edgecolor=accent, linewidth=0.7, zorder=15
+        ))
+        ax.add_patch(plt.matplotlib.patches.Ellipse(
+            (cx, top_y + top_h * 0.72),
+            ring_rx * 1.15, ring_ry * 1.15,
+            facecolor="none",
+            edgecolor=accent, linewidth=0.55, alpha=0.7, zorder=15
+        ))
+    win_inset = max(12, int(w * 0.10))
+    win_x = x + win_inset
+    win_w = w - 2 * win_inset
+    win_y = y + base_h + int(oven_h * 0.18)
+    win_h = int(oven_h * 0.44)
+    ax.add_patch(plt.Rectangle(
+        (win_x, win_y), win_w, win_h,
+        facecolor=glass_c if not technical else "none",
+        edgecolor="#555555", linewidth=1.0, zorder=14
+    ))
+    if not technical:
+        for off in (0.20, 0.42, 0.64):
+            ax.plot([win_x + win_w * off, win_x + win_w * (off + 0.10)],
+                    [win_y + 5, win_y + win_h - 5],
+                    color="#D7D7D7", linewidth=2.0, alpha=0.25, zorder=15)
+    _handle_h_oven(ax, x + w / 2, y + base_h + int(oven_h * 0.72), technical=technical)
+    # Dugmići + mali display.
+    for i in range(6):
+        bx = x + inset + (w - 2 * inset) * (0.10 + i * 0.12)
+        ax.add_patch(plt.Circle((bx, ctrl_y + ctrl_h * 0.52), max(2, int(ctrl_h * 0.12)),
+                                facecolor="#666666" if not technical else "none",
+                                edgecolor="#444444", linewidth=0.5, zorder=15))
+    disp_x = x + w * 0.46
+    disp_w = max(14, int(w * 0.10))
+    disp_h = max(6, int(ctrl_h * 0.24))
+    ax.add_patch(plt.Rectangle(
+        (disp_x, ctrl_y + ctrl_h * 0.52 - disp_h / 2), disp_w, disp_h,
+        facecolor="#D7D7D7" if not technical else "none",
+        edgecolor=accent, linewidth=0.5, zorder=15
+    ))
+    # Donji sokl uređaja i nožice.
+    ax.add_patch(plt.Rectangle(
+        (x + inset, y + 2), w - 2 * inset, base_h - 4,
+        facecolor=base_c if not technical else "none",
+        edgecolor=accent, linewidth=0.7, zorder=13
+    ))
+    foot_w = max(10, int(w * 0.10))
+    foot_h = max(5, int(h * 0.018))
+    for px in (x + w * 0.08, x + w * 0.82):
+        ax.add_patch(plt.Rectangle(
+            (px, y + 1), foot_w, foot_h,
+            facecolor=base_c if not technical else "none",
+            edgecolor=accent, linewidth=0.5, zorder=15
+        ))
 
 
 def _draw_fridge_under(ax, x, y, w, h, accent, face, technical):
@@ -1317,7 +1545,6 @@ def _draw_tall_doors(ax, x, y, w, h, accent, face, technical, m=None):
     door_inset = max(6, int(min(w, h) * 0.05))
     handle_edge_off = 30.0
     handle_side = str((m or {}).get("params", {}).get("handle_side", "right")).lower()
-    handle_bottom_off = 50.0
     half_len = DOOR_HANDLE_V_LEN / 2.0
     tid = str(m.get("template_id", "")).upper() if m else ""
     _params = (m.get("params", {}) or {}) if m else {}
@@ -1339,10 +1566,7 @@ def _draw_tall_doors(ax, x, y, w, h, accent, face, technical, m=None):
     if (not force_one and (force_two or w > 650)):
         # Dva vrata jedan pored drugog
         ax.plot([mid, mid], [y, y + h], color=accent, linewidth=0.8, zorder=12)
-        if _is_wardrobe:
-            handle_cy = _clamp_handle_cy(y, h, y + h * 0.50)
-        else:
-            handle_cy = _clamp_handle_cy(y, h, y + handle_bottom_off + half_len)
+        handle_cy = _clamp_handle_cy(y, h, y + h * 0.50)
         seam_off = handle_edge_off + DOOR_HANDLE_V_W / 2.0
         _handle_v(ax, mid - seam_off, handle_cy, technical=technical)
         _handle_v(ax, mid + seam_off, handle_cy, technical=technical)
@@ -1351,29 +1575,25 @@ def _draw_tall_doors(ax, x, y, w, h, accent, face, technical, m=None):
         split_y = y + int(h * 0.5)
         ax.plot([x, x + w], [split_y, split_y], color=accent, linewidth=0.8, zorder=12)
 
-        # Gornja vrata (iznad) — ručka bliže donjoj ivici tog krila
+        # Gornja vrata (iznad) — ručka centrirana po visini krila
         top_y0, top_h = split_y, (y + h) - split_y
-        if _is_wardrobe:
-            top_cy = _clamp_handle_cy(top_y0, top_h, top_y0 + top_h * 0.50)
-        else:
-            top_cy = _clamp_handle_cy(top_y0, top_h, top_y0 + handle_bottom_off + half_len)
+        top_cy = _clamp_handle_cy(top_y0, top_h, top_y0 + top_h * 0.50)
         if handle_side == "left":
             handle_cx = (x + door_inset) + (handle_edge_off + DOOR_HANDLE_V_W / 2.0)
         else:
             handle_cx = (x + w - door_inset) - (handle_edge_off + DOOR_HANDLE_V_W / 2.0)
         _handle_v(ax, handle_cx, top_cy, technical=technical)
 
-        # Donja vrata (ispod) — ručka bliže donjoj ivici tog krila
+        # Donja vrata (ispod) — ručka centrirana po visini krila
         bot_y0, bot_h = y, split_y - y
-        if _is_wardrobe:
-            bot_cy = _clamp_handle_cy(bot_y0, bot_h, bot_y0 + bot_h * 0.50)
-        else:
-            bot_cy = _clamp_handle_cy(bot_y0, bot_h, bot_y0 + handle_bottom_off + half_len)
+        bot_cy = _clamp_handle_cy(bot_y0, bot_h, bot_y0 + bot_h * 0.50)
         if handle_side == "left":
             handle_cx = (x + door_inset) + (handle_edge_off + DOOR_HANDLE_V_W / 2.0)
         else:
             handle_cx = (x + w - door_inset) - (handle_edge_off + DOOR_HANDLE_V_W / 2.0)
         _handle_v(ax, handle_cx, bot_cy, technical=technical)
+
+    _draw_shelf_hints(ax, x, y, w, h, accent, face, technical, m=m, zone_hint='tall')
 
 def _draw_open(ax, x, y, w, h, accent, face, technical, n_shelves=3):
     """Otvoreni element sa policama (iverica + kant)."""
@@ -1528,7 +1748,11 @@ def _draw_wall_doors(ax, x, y, w, h, accent, face, technical, m=None):
     handle_side = str((m or {}).get("params", {}).get("handle_side", "right")).lower()
     handle_bottom_off = 50.0
     half_len = DOOR_HANDLE_V_LEN / 2.0
-    handle_cy = _clamp_handle_cy(y, h, y + handle_bottom_off + half_len)
+    zone_key = str((m or {}).get("zone", "")).lower().strip()
+    if zone_key == "tall_top":
+        handle_cy = _clamp_handle_cy(y, h, y + h * 0.50)
+    else:
+        handle_cy = _clamp_handle_cy(y, h, y + handle_bottom_off + half_len)
 
     tid = str(m.get("template_id", "")).upper() if m else ""
     force_one = "1DOOR" in tid
@@ -1564,6 +1788,40 @@ def _draw_wall_doors(ax, x, y, w, h, accent, face, technical, m=None):
         else:
             handle_cx = (x + w - door_inset) - (handle_edge_off + DOOR_HANDLE_V_W / 2.0)
         _handle_v(ax, handle_cx, handle_cy, technical=technical)
+
+    _draw_shelf_hints(ax, x, y, w, h, accent, face, technical, m=m, zone_hint='wall')
+
+
+def _draw_shelf_hints(ax, x, y, w, h, accent, face, technical, m=None, zone_hint: str = ""):
+    params = (m.get("params", {}) or {}) if m else {}
+    tid = str((m or {}).get("template_id", "")).upper()
+    n_shelves = default_shelf_count(
+        tid,
+        zone=zone_hint,
+        h_mm=h,
+        params=params,
+        features={},
+    )
+    n_shelves = max(0, min(12, int(n_shelves or 0)))
+    if n_shelves <= 0:
+        return
+
+    inset = max(10, int(min(w, h) * 0.08))
+    inner_x0 = x + inset
+    inner_x1 = x + w - inset
+    if inner_x1 - inner_x0 < 30:
+        return
+    shelf_col = accent if technical else _darken_color(face, 0.78)
+    alpha = 0.45 if technical else 0.22
+    mid = x + w / 2.0
+    two_doors = ("2DOOR" in tid) or ("DOORS" in tid and "1DOOR" not in tid and w > 650)
+    for i in range(1, n_shelves + 1):
+        sy = y + int((h * i) / (n_shelves + 1))
+        if two_doors:
+            ax.plot([inner_x0 + 4, mid - 6], [sy, sy], color=shelf_col, linewidth=0.55, alpha=alpha, zorder=10)
+            ax.plot([mid + 6, inner_x1 - 4], [sy, sy], color=shelf_col, linewidth=0.55, alpha=alpha, zorder=10)
+        else:
+            ax.plot([inner_x0 + 4, inner_x1 - 4], [sy, sy], color=shelf_col, linewidth=0.55, alpha=alpha, zorder=10)
 
 def _draw_corner(ax, x, y, w, h, accent, face, technical, zone, m: Optional[Dict[str, Any]] = None):
     """Ugaoni element - razlikuje L front i dijagonalni front."""
@@ -1748,6 +2006,8 @@ def _draw_module_interior(ax, x: int, y: int, w: int, h: int,
         _draw_oven_hob(ax, x, y, w, h, accent, face, technical,
                        drawer_face=front_face,
                        has_drawer=True, worktop_thk_mm=worktop_thk_mm)
+    elif etype == "oven_hob_freestanding":
+        _draw_oven_hob_freestanding(ax, x, y, w, h, accent, technical)
     elif etype == "doors_drawers":
         _draw_base_doors_drawers(ax, x, y, w, h, accent, face, technical, params=params, m=m)
     elif etype == "sink":
@@ -1768,7 +2028,9 @@ def _draw_module_interior(ax, x: int, y: int, w: int, h: int,
         else:
             _draw_oven_micro(ax, x, y, w, h, accent, face, technical)
     elif etype == "dishwasher":
-        _draw_dishwasher(ax, x, y, w, h, accent, face, technical)
+        _draw_dishwasher(ax, x, y, w, h, accent, face, technical, m=m)
+    elif etype == "dishwasher_freestanding":
+        _draw_dishwasher_freestanding(ax, x, y, w, h, accent, technical)
     elif etype == "fridge_under":
         _draw_fridge_under(ax, x, y, w, h, accent, face, technical)
     elif etype == "fridge":
@@ -1962,6 +2224,7 @@ def _draw_module(ax, m: Dict[str, Any], x: int, y: int, w: int, h: int,
 
     mid_id = str(m.get("id", "?"))
     etype = _detect_type(m)
+    _is_freestanding_appliance = etype in ("dishwasher_freestanding", "oven_hob_freestanding")
     if not technical:
         if etype == "open":
             _fc_open = str(global_front_color or GLOBAL_FRONT_DEFAULT).strip()
@@ -1978,6 +2241,8 @@ def _draw_module(ax, m: Dict[str, Any], x: int, y: int, w: int, h: int,
             if _ac.startswith("#") and len(_ac) in (4, 7, 9):
                 face = _ac
                 accent = _contrast_accent(_ac)
+
+    _set_handle_palette(face)
 
     # Glavni okvir
     # NOTE: Za gornje nadgradnje (tall_top / wall_upper) ne crtamo donju ivicu
@@ -2004,7 +2269,7 @@ def _draw_module(ax, m: Dict[str, Any], x: int, y: int, w: int, h: int,
     # Selected highlight — CAD style (tamna ivica bez popune)
 
     # Bočna sena (desna ivica) — simulira dubinu elementa, 3D efekat u 2D
-    if not technical:
+    if not technical and not _is_freestanding_appliance:
         side_w = max(5, int(w * 0.055))  # širina bočne sene ~5.5% od w
         side_w = min(side_w, 24)         # maksimum 24mm
         ax.add_patch(plt.Rectangle(
@@ -2024,12 +2289,13 @@ def _draw_module(ax, m: Dict[str, Any], x: int, y: int, w: int, h: int,
 
     # Unutrasnja linija (rub fronta) — tanka, diskretna, svetlosiva
     inset_f = max(5, int(min(w, h) * 0.04))
-    ax.add_patch(plt.Rectangle(
-        (x + inset_f, y + inset_f), max(2, w - 2 * inset_f), max(2, h - 2 * inset_f),
-        facecolor="none",
-        edgecolor="#CCCCCC" if not technical else "#AAAAAA",
-        linewidth=0.4, alpha=0.5, zorder=11
-    ))
+    if not _is_freestanding_appliance:
+        ax.add_patch(plt.Rectangle(
+            (x + inset_f, y + inset_f), max(2, w - 2 * inset_f), max(2, h - 2 * inset_f),
+            facecolor="none",
+            edgecolor="#CCCCCC" if not technical else "#AAAAAA",
+            linewidth=0.4, alpha=0.5, zorder=11
+        ))
 
     # Unutrasnji sadrzaj (prosledi ceo modul i worktop_thk za params)
     _front_face = str(global_front_color or GLOBAL_FRONT_DEFAULT).strip()
@@ -2037,7 +2303,7 @@ def _draw_module(ax, m: Dict[str, Any], x: int, y: int, w: int, h: int,
                           m=m, front_face=_front_face, worktop_thk_mm=worktop_thk_mm)
 
     # Nosač radne ploče — dashed linija u tehničkom modu za base elemente
-    _NO_NOSAC_KW = ("FRIDGE", "DISHWASHER")
+    _NO_NOSAC_KW = ("FRIDGE", "DISHWASHER", "FREESTANDING")
     if (zone == "base" and technical
             and not any(kw in str(m.get("template_id", "")).upper() for kw in _NO_NOSAC_KW)):
         _NOSAC_H = 96  # standardna visina nosača (ista kao u cutlist.py)
@@ -2133,7 +2399,13 @@ def _draw_countertop(ax, kitchen: Dict[str, Any], mods: List[Dict[str, Any]],
     thickness_mm = int(round(float(wt.get("thickness", 0.0)) * 10.0))
     if thickness_mm <= 0:
         return
-    span = _base_span(mods, ("base",))
+    _base_mods = [
+        m for m in mods
+        if str(m.get("zone", "")).lower().strip() == "base"
+        and str(m.get("template_id", "")).upper() not in {"BASE_DISHWASHER_FREESTANDING", "BASE_OVEN_HOB_FREESTANDING"}
+        and int(m.get("w_mm", 0)) > 0
+    ]
+    span = _base_span(_base_mods, ("base",))
     if not span:
         return
     x0_total, x1_total = span
@@ -2159,6 +2431,7 @@ def _draw_countertop(ax, kitchen: Dict[str, Any], mods: List[Dict[str, Any]],
     base_segs = sorted(
         [(int(m.get("x_mm", 0)), int(m.get("x_mm", 0)) + int(m.get("w_mm", 0)))
          for m in mods if str(m.get("zone", "")).lower().strip() == "base"
+         and str(m.get("template_id", "")).upper() not in {"BASE_DISHWASHER_FREESTANDING", "BASE_OVEN_HOB_FREESTANDING"}
          and int(m.get("w_mm", 0)) > 0],
         key=lambda s: s[0]
     )
@@ -2179,8 +2452,9 @@ def _draw_countertop(ax, kitchen: Dict[str, Any], mods: List[Dict[str, Any]],
         ax.plot([sx0, sx1], [y, y], color="#2A2624", linewidth=0.8, zorder=7)
 
     if not _tall_excl:
-        # Nema tall elemenata — crta se kao jedan blok
-        _draw_seg(x0_total, x1_total)
+        # Nema tall elemenata — crta se samo nad stvarnim base segmentima
+        for (ba, bb) in base_segs:
+            _draw_seg(ba, bb)
         return
 
     # Crta se samo nad BASE modulima koji nisu pokriveni tall/fridge
@@ -2201,7 +2475,13 @@ def _draw_kickboard(ax, kitchen: Dict[str, Any], mods: List[Dict[str, Any]],
         foot_mm = int(round(float(kitchen.get("foot_height", 0.0)) * 10.0))
     if foot_mm <= 0:
         return
-    span = _base_span(mods, ("base",))
+    _base_mods = [
+        m for m in mods
+        if str(m.get("zone", "")).lower().strip() == "base"
+        and str(m.get("template_id", "")).upper() not in {"BASE_DISHWASHER_FREESTANDING", "BASE_OVEN_HOB_FREESTANDING"}
+        and int(m.get("w_mm", 0)) > 0
+    ]
+    span = _base_span(_base_mods, ("base",))
     if not span:
         return
     x0, x1 = span
@@ -2469,7 +2749,7 @@ def _draw_free_space_info(ax, kitchen, mods, wall_len, wall_h, technical):
             # Strelica + tekst — samo u tehničkom modu
             if technical:
                 ax.annotate(
-                    f"← {free_right}mm slobodno",
+                    _free_space_label(kitchen, free_right),
                     xy=(rightmost, cy), xytext=(rightmost + free_right / 2, cy),
                     fontsize=6.0, ha="center", va="center",
                     color=accent_free, alpha=0.9, zorder=17,
@@ -2627,17 +2907,23 @@ def _hide_axes(ax) -> None:
         s.set_visible(False)
 
 
-def _setup_view(ax, wall_len: int, wall_h: int) -> None:
+def _setup_view(ax, wall_len: int, wall_h: int, *, technical: bool = False) -> None:
     # Asimetrični viewport:
     # - više prostora desno (da se ne seče desna strana/kote)
     # - više prostora dole, pa je ceo zid vizuelno pomeren malo naviše
-    left_pad = 170
-    right_pad = 620
-    bottom_pad = 420   # povećano: više prostora za tri nivoa kota
-    top_pad = 150
+    if technical:
+        left_pad = 130
+        right_pad = 260
+        bottom_pad = 280
+        top_pad = 150
+    else:
+        left_pad = 170
+        right_pad = 620
+        bottom_pad = 420
+        top_pad = 150
     ax.set_xlim(-left_pad, wall_len + right_pad)
     ax.set_ylim(-bottom_pad, wall_h + top_pad)
-    ax.set_aspect("auto")
+    ax.set_aspect("equal", adjustable="box")
 
 
 def _draw_grid(ax, wall_len: int, wall_h: int, show_grid: bool, step_mm: int) -> None:
@@ -2651,11 +2937,7 @@ def _draw_grid(ax, wall_len: int, wall_h: int, show_grid: bool, step_mm: int) ->
     ax.vlines(xs, 0, wall_h, colors="#AAAAAA", linewidth=0.35, alpha=0.20, zorder=2)
     ax.hlines(ys, 0, wall_len, colors="#AAAAAA", linewidth=0.35, alpha=0.20, zorder=2)
 
-    major_step = 0
-    if step_mm == 5:
-        major_step = 25
-    elif step_mm == 10:
-        major_step = 100
+    major_step = step * 10
 
     if major_step > 0:
         xs_major = np.arange(0, wall_len + 1, major_step)
@@ -2701,11 +2983,11 @@ def _draw_wall(ax, wall_len: int, wall_h: int, show_wall_labels: bool,
 
 
 def _dim_arrow_wall(ax, x0: int, x1: int, y: int, txt: str) -> None:
-    """Kota ukupne duzine zida — vizuelno istaknuta (tamno plava, boldovana)."""
+    """Kota ukupne duzine zida — isti stil kao glavna visinska kota zida."""
     if x1 <= x0:
         return
-    clr = "#1A5276"
-    lw = 1.4
+    clr = "#555555"
+    lw = 0.8
     ax.plot([x0, x0], [y - 11, y + 11], color=clr, linewidth=lw, zorder=50)
     ax.plot([x1, x1], [y - 11, y + 11], color=clr, linewidth=lw, zorder=50)
     ax.annotate("", xy=(x0, y), xytext=(x1, y),
@@ -2713,9 +2995,8 @@ def _dim_arrow_wall(ax, x0: int, x1: int, y: int, txt: str) -> None:
                                 shrinkA=0, shrinkB=0),
                 zorder=51)
     ax.text((x0 + x1) / 2, y - 14, txt,
-            fontsize=FONT_DIM + 2, ha="center", va="top",
-            color=clr, fontweight="bold", zorder=52,
-            bbox=dict(boxstyle="round,pad=0.25", fc="#EAF4FB", ec=clr, alpha=0.9, lw=0.6))
+            fontsize=FONT_DIM, ha="center", va="top",
+            color=clr, fontweight="normal", zorder=52)
 
 
 # =========================================================
@@ -2736,9 +3017,9 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
     _vm = _norm_text(view_mode)
     technical = (_vm in ("tehnicki", "technical"))
 
-    _setup_view(ax, wall_len, wall_h)
+    _setup_view(ax, wall_len, wall_h, technical=technical)
     _draw_wall(ax, wall_len, wall_h, show_wall_labels=True, technical=technical)
-    _draw_grid(ax, wall_len, wall_h, show_grid=(show_grid and not technical), step_mm=grid_mm)
+    _draw_grid(ax, wall_len, wall_h, show_grid=(show_grid and technical), step_mm=grid_mm)
 
     # ── Zabranjene zone iz prostorije (prozori, vrata) ─────────────────────────
     if room and not technical:
@@ -2789,7 +3070,7 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
 
     # Clearance linije
     left_clear, right_clear, _ = _profile_clearance_mm(kitchen)
-    if show_bounds and not technical:
+    if show_bounds:
         ax.plot([left_clear, left_clear], [0, wall_h],
                 linestyle="--", color="#AAAAAA", linewidth=0.8, zorder=3)
         ax.plot([wall_len - right_clear, wall_len - right_clear], [0, wall_h],
@@ -2800,6 +3081,8 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
     _layout_viz = str(_kd_viz.get("layout", _kd_viz.get("kitchen_layout", "")) or "").lower().strip()
     if show_bounds and _layout_viz == "l_oblik" and _wk != "A":
         try:
+            _lang_viz = str((kitchen or {}).get("language", "sr") or "sr").lower().strip()
+            _corner_lbl = "Corner\nWall A" if _lang_viz == "en" else "Ugao\nZid A"
             from layout_engine import _l_corner_offsets_mm as _co_viz
             _lo_viz, _ro_viz = _co_viz(kitchen, _wk)
             _zone_h = float(foot_mm + int(kitchen.get("base_korpus_h_mm", 720)))
@@ -2811,7 +3094,7 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
                 ))
                 ax.text(
                     float(_lo_viz) / 2.0, _zone_h / 2.0,
-                    f"Ugao\nZid A\n({_lo_viz}mm)",
+                    f"{_corner_lbl}\n({_lo_viz}mm)",
                     fontsize=6.0, ha="center", va="center",
                     color="#4A4A4A", alpha=0.85, zorder=4,
                 )
@@ -2823,7 +3106,7 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
                 ))
                 ax.text(
                     float(wall_len) - float(_ro_viz) / 2.0, _zone_h / 2.0,
-                    f"Ugao\nZid A\n({_ro_viz}mm)",
+                    f"{_corner_lbl}\n({_ro_viz}mm)",
                     fontsize=6.0, ha="center", va="center",
                     color="#4A4A4A", alpha=0.85, zorder=4,
                 )
@@ -2839,21 +3122,21 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
     _global_front = str(kitchen.get("front_color", GLOBAL_FRONT_DEFAULT) or GLOBAL_FRONT_DEFAULT)
     _appliance_col = str(kitchen.get("appliance_color", APPLIANCE_COLOR) or APPLIANCE_COLOR)
     radna_visina = foot_mm + base_h_z + wt_mm
-    if radna_visina > 0 and show_bounds and not technical:
+    if radna_visina > 0 and show_bounds:
         ax.plot([0, wall_len], [radna_visina, radna_visina],
                 linestyle=":", color="#2E8B57", linewidth=1.0, alpha=0.55, zorder=4)
         # Tekst radne visine je vidljiv u _dim_vertical_stack (levo) — ovde ne prikazujemo
 
     # Donja ivica gornjih elemenata (plava isprekidana)
     wall_gap = int((zones.get("wall", {}) or {}).get("gap_from_base_mm", 0))
-    if wall_gap > 0 and show_bounds and not technical:
+    if wall_gap > 0 and show_bounds:
         ax.plot([0, wall_len], [wall_gap, wall_gap],
                 linestyle=":", color="#3A6FAD", linewidth=1.0, alpha=0.55, zorder=4)
         # Tekst wall_gap je vidljiv u _dim_vertical_stack (levo) — ovde ne prikazujemo
 
     # Gornja granica elemenata (crvena isprekidana)
     max_h_line = int(kitchen.get("max_element_height", 0) or 0)
-    if max_h_line > 0 and show_bounds and not technical:
+    if max_h_line > 0 and show_bounds:
         ax.plot([0, wall_len], [max_h_line, max_h_line],
                 linestyle="--", color="#C0392B", linewidth=0.9, alpha=0.7, zorder=4)
 
@@ -2917,11 +3200,11 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
             y0, zone_h = _zone_baseline_and_height(kitchen, zone)
             if h <= 0:
                 h = zone_h
-            _NO_FEET_KW = ("FRIDGE",)
+            _NO_FEET_KW = ("FRIDGE", "FREESTANDING")
             _skip_feet = any(kw in str(m.get("template_id", "")).upper() for kw in _NO_FEET_KW)
             if zone in ("base", "tall") and not _skip_feet:
                 _draw_feet(ax, x, w, foot_mm, technical=technical)
-            # Frižider/slobodnostojeci: crta se od poda (y0=0), bez stopica, bez praznine
+            # Frižider i samostojeći uređaji: crtaju se od poda (y0=0), bez stopica i bez praznine
             if _skip_feet and zone in ("base", "tall"):
                 y0 = 0
             _draw_module(ax, m, x, y0, w, h, zone=zone, technical=technical,
@@ -2964,7 +3247,7 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
                     if gap > 0:
                         _dim_arrow(ax, b, wall_len, -18, f"{gap}mm", above=False)
         # Nivo 3: ZID ukupno — najnize, plavo, boldovano
-        _dim_arrow_wall(ax, 0, wall_len, -155, f"ZID: {wall_len}mm")
+        _dim_arrow_wall(ax, 0, wall_len, -155, _wall_label(kitchen, wall_len))
 
         wall_segs = []
         for m in mods:
@@ -3133,13 +3416,15 @@ def _render_element_3d(m: Dict[str, Any], kitchen: Dict[str, Any]) -> str:
     foot_mm = _get_foot_mm(kitchen)
     # Fridge/tall-fridge start from floor (y0=0), no raised feet
     _NO_FEET_KW = ('FRIDGE',)
-    has_feet = (zone in ('base', 'tall') and foot_mm > 0
+    _render_plinth_in_body = (zone == "base" and foot_mm > 0)
+    _preview_foot_mm = 0 if _render_plinth_in_body else foot_mm
+    has_feet = (zone in ('base', 'tall') and _preview_foot_mm > 0
                 and not any(kw in tid for kw in _NO_FEET_KW))
-    y0 = foot_mm if has_feet else 0
+    y0 = _preview_foot_mm if has_feet else 0
 
     # Oblique projection depth vector
-    ANG = math.radians(30)
-    DS  = 0.45                          # foreshortening factor
+    ANG = math.radians(28)
+    DS  = 0.32                          # foreshortening factor; softer depth for PDF previews
     DX  = d_mm * DS * math.cos(ANG)    # rightward offset per mm of depth
     DY  = d_mm * DS * math.sin(ANG)    # upward offset per mm of depth
 
@@ -3163,18 +3448,20 @@ def _render_element_3d(m: Dict[str, Any], kitchen: Dict[str, Any]) -> str:
     wt     = kitchen.get('worktop', {}) or {}
     wt_mm  = (int(round(float(wt.get('thickness', 0.0)) * 10.0))
               if zone == 'base' else 0)
+    _show_worktop = False
+    _top_extra_mm = wt_mm if _show_worktop else 0
 
     # Axes limits — generous padding so depth faces are fully visible
     PAD    = max(25, int(w_mm * 0.04))
     xlim   = (-PAD, w_mm + DX + PAD)
-    ylim   = (-PAD, y0 + h_mm + wt_mm + DY + PAD)
+    ylim   = (-PAD, y0 + h_mm + _top_extra_mm + DY + PAD)
     tot_w  = xlim[1] - xlim[0]
     tot_h  = ylim[1] - ylim[0]
 
     # Figure size: height ≈ 3.5 in, width proportional
-    TARGET_H = 3.5
+    TARGET_H = 3.0
     sc     = TARGET_H / max(tot_h, 1)
-    fig_w  = max(2.0, min(6.0, tot_w * sc))
+    fig_w  = max(3.2, min(7.4, tot_w * sc * 1.18))
 
     fig = plt.figure(figsize=(fig_w, TARGET_H))
     ax  = fig.add_subplot(111)
@@ -3182,8 +3469,8 @@ def _render_element_3d(m: Dict[str, Any], kitchen: Dict[str, Any]) -> str:
     ax.set_ylim(*ylim)
     ax.set_aspect('equal')
     ax.axis('off')
-    fig.patch.set_facecolor('#EDEBE6')
-    ax.set_facecolor('#EDEBE6')
+    fig.patch.set_facecolor('#F4F1EA')
+    ax.set_facecolor('#F4F1EA')
 
     # Convenience: shift point (px,py) along the depth direction
     def dep(px, py):
@@ -3202,7 +3489,7 @@ def _render_element_3d(m: Dict[str, Any], kitchen: Dict[str, Any]) -> str:
                              fc=SIDE_C, ec=EDGE, lw=0.8, zorder=5))
 
     # ── Top face / worktop ────────────────────────────────────────────────────
-    if wt_mm > 0:
+    if _show_worktop:
         # Worktop front strip (visible front edge, dark)
         ax.add_patch(plt.Polygon([
             (fx,        fy + h_mm),
@@ -3225,12 +3512,44 @@ def _render_element_3d(m: Dict[str, Any], kitchen: Dict[str, Any]) -> str:
             dep(fx,        fy + h_mm + wt_mm),
         ], closed=True, fc='#3C3835', ec=EDGE, lw=0.8, zorder=6))
     else:
-        ax.add_patch(plt.Polygon([
-            (fx,        fy + h_mm),
-            (fx + w_mm, fy + h_mm),
-            dep(fx + w_mm, fy + h_mm),
-            dep(fx,        fy + h_mm),
-        ], closed=True, fc=TOP_C, ec=EDGE, lw=0.8, zorder=5))
+        if zone == "base":
+            _rail_inset_front = max(18.0, min(34.0, d_mm * 0.07))
+            _rail_inset_back = max(22.0, min(42.0, d_mm * 0.08))
+            _rail_h = max(14.0, min(20.0, h_mm * 0.028))
+            _rail_face = "#DDD8D0"
+            _rail_side = "#B9B2A9"
+            for _depth_off in (_rail_inset_front, d_mm - _rail_inset_back):
+                _x0 = fx
+                _x1 = fx + w_mm
+                _y0 = fy + h_mm - _rail_h
+                _f0 = (_x0 + (_depth_off * DS * math.cos(ANG)), _y0 + (_depth_off * DS * math.sin(ANG)))
+                _f1 = (_x1 + (_depth_off * DS * math.cos(ANG)), _y0 + (_depth_off * DS * math.sin(ANG)))
+                _b1 = (_f1[0], _f1[1] + _rail_h)
+                _b0 = (_f0[0], _f0[1] + _rail_h)
+                ax.add_patch(plt.Polygon(
+                    [_f0, _f1, _b1, _b0],
+                    closed=True, fc=_rail_face, ec=EDGE, lw=0.7, zorder=8
+                ))
+                _cap_depth = max(8.0, min(14.0, d_mm * 0.025))
+                ax.add_patch(plt.Polygon(
+                    [_f1, (_f1[0] + _cap_depth * DS * math.cos(ANG), _f1[1] + _cap_depth * DS * math.sin(ANG)),
+                     (_b1[0] + _cap_depth * DS * math.cos(ANG), _b1[1] + _cap_depth * DS * math.sin(ANG)), _b1],
+                    closed=True, fc=_rail_side, ec=EDGE, lw=0.55, zorder=7
+                ))
+            ax.plot([fx, dep(fx, fy + h_mm)[0]], [fy + h_mm, dep(fx, fy + h_mm)[1]],
+                    color=EDGE, linewidth=0.8, alpha=0.85, zorder=10)
+            ax.plot([fx + w_mm, dep(fx + w_mm, fy + h_mm)[0]], [fy + h_mm, dep(fx + w_mm, fy + h_mm)[1]],
+                    color=EDGE, linewidth=0.8, alpha=0.85, zorder=10)
+            ax.plot([dep(fx, fy + h_mm)[0], dep(fx + w_mm, fy + h_mm)[0]],
+                    [dep(fx, fy + h_mm)[1], dep(fx + w_mm, fy + h_mm)[1]],
+                    color=EDGE, linewidth=0.75, alpha=0.7, zorder=10)
+        else:
+            ax.add_patch(plt.Polygon([
+                (fx,        fy + h_mm),
+                (fx + w_mm, fy + h_mm),
+                dep(fx + w_mm, fy + h_mm),
+                dep(fx,        fy + h_mm),
+            ], closed=True, fc=TOP_C, ec=EDGE, lw=0.8, zorder=5))
 
     # ── Front face (main rectangle) ───────────────────────────────────────────
     ax.add_patch(plt.Polygon([
@@ -3247,7 +3566,92 @@ def _render_element_3d(m: Dict[str, Any], kitchen: Dict[str, Any]) -> str:
     etype = _detect_type(m)
     _draw_module_interior(ax, int(fx), int(fy), w_mm, h_mm,
                           zone, etype, ACCENT, FACE, False,
-                          m=m, worktop_thk_mm=wt_mm)
+                          m=m, worktop_thk_mm=_top_extra_mm)
+
+    if _render_plinth_in_body:
+        _plinth_h = max(72.0, min(100.0, foot_mm * 0.62))
+        _plinth_inset = max(26.0, min(42.0, d_mm * 0.07))
+        _plinth_face = "#F1EEE8"
+        _plinth_side = "#D4CDC3"
+        _shadow = "#B8B0A6"
+        ax.add_patch(plt.Polygon(
+            [
+                (fx + _plinth_inset, fy),
+                (fx + w_mm - _plinth_inset, fy),
+                (fx + w_mm - _plinth_inset, fy + _plinth_h),
+                (fx + _plinth_inset, fy + _plinth_h),
+            ],
+            closed=True, fc=_plinth_face, ec=EDGE, lw=0.7, zorder=9
+        ))
+        _pr0 = dep(fx + w_mm - _plinth_inset, fy)
+        _pr1 = dep(fx + w_mm - _plinth_inset, fy + _plinth_h)
+        ax.add_patch(plt.Polygon(
+            [
+                (fx + w_mm - _plinth_inset, fy),
+                _pr0,
+                _pr1,
+                (fx + w_mm - _plinth_inset, fy + _plinth_h),
+            ],
+            closed=True, fc=_plinth_side, ec=EDGE, lw=0.6, zorder=8
+        ))
+        ax.plot(
+            [fx + _plinth_inset, fx + w_mm - _plinth_inset],
+            [fy + _plinth_h, fy + _plinth_h],
+            color=_shadow, linewidth=0.8, alpha=0.65, zorder=10
+        )
+        ax.plot(
+            [fx + _plinth_inset, fx + _plinth_inset],
+            [fy, fy + _plinth_h],
+            color=_shadow, linewidth=0.55, alpha=0.55, zorder=10
+        )
+
+    if etype == "sink" and _show_worktop:
+        _params = (m.get("params", {}) or {})
+        _cut_w = float(_params.get("sink_cutout_width_mm", max(400.0, min(w_mm - 80.0, 500.0))) or 0.0)
+        _cut_d = float(_params.get("sink_cutout_depth_mm", max(400.0, min(d_mm - 40.0, 480.0))) or 0.0)
+        _cut_x_local = float(_params.get("sink_cutout_x_mm", max((w_mm - _cut_w) / 2.0, 0.0)) or 0.0)
+        _cut_x_local = max(25.0, min(float(w_mm) - _cut_w - 25.0, _cut_x_local))
+        _top_y = fy + h_mm + _top_extra_mm
+        _front_setback = max(55.0, min(95.0, d_mm * 0.16))
+        _back_margin = max(20.0, min(35.0, d_mm * 0.06))
+        _cut_d = max(220.0, min(d_mm - _front_setback - _back_margin, _cut_d))
+        _sx0 = fx + _cut_x_local
+        _sx1 = _sx0 + _cut_w
+        _front_left = (_sx0, _top_y)
+        _front_right = (_sx1, _top_y)
+        _back_right = (
+            _sx1 + (_cut_d * DS * math.cos(ANG)),
+            _top_y + (_cut_d * DS * math.sin(ANG)),
+        )
+        _back_left = (
+            _sx0 + (_cut_d * DS * math.cos(ANG)),
+            _top_y + (_cut_d * DS * math.sin(ANG)),
+        )
+        # Sink rim / cutout on the worktop top face
+        ax.add_patch(plt.Polygon(
+            [_front_left, _front_right, _back_right, _back_left],
+            closed=True, fc='#CACFD5', ec='#7B8087', lw=0.9, zorder=8
+        ))
+        _rim = max(12.0, min(18.0, _cut_w * 0.035))
+        _bowl_front_left = (_front_left[0] + _rim, _front_left[1] + _rim * 0.18)
+        _bowl_front_right = (_front_right[0] - _rim, _front_right[1] + _rim * 0.18)
+        _bowl_back_right = (_back_right[0] - _rim, _back_right[1] - _rim * 0.10)
+        _bowl_back_left = (_back_left[0] + _rim, _back_left[1] - _rim * 0.10)
+        ax.add_patch(plt.Polygon(
+            [_bowl_front_left, _bowl_front_right, _bowl_back_right, _bowl_back_left],
+            closed=True, fc='#949CA5', ec='#636B73', lw=0.8, zorder=9
+        ))
+        # Inner bowl shading so it reads as a sink, not just a faucet
+        _inner_offset = max(10.0, min(14.0, _cut_w * 0.025))
+        ax.add_patch(plt.Polygon(
+            [
+                (_bowl_front_left[0] + _inner_offset, _bowl_front_left[1] + _inner_offset * 0.08),
+                (_bowl_front_right[0] - _inner_offset, _bowl_front_right[1] + _inner_offset * 0.08),
+                (_bowl_back_right[0] - _inner_offset, _bowl_back_right[1] - _inner_offset * 0.04),
+                (_bowl_back_left[0] + _inner_offset, _bowl_back_left[1] - _inner_offset * 0.04),
+            ],
+            closed=True, fc='#7C8791', ec='none', alpha=0.85, zorder=10
+        ))
 
     if etype == "corner":
         is_diag = "DIAGONAL" in tid
@@ -3285,7 +3689,7 @@ def _render_element_3d(m: Dict[str, Any], kitchen: Dict[str, Any]) -> str:
             p1 = dep(split_x, fy + h_mm * 0.06)
             p2 = dep(split_x, fy + h_mm * 0.94)
             ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=ACCENT, lw=0.9, zorder=10)
-        if wt_mm > 0 and zone == "base":
+        if _show_worktop and zone == "base":
             wt_top = [
                 dep(wx0, fy + h_mm + wt_mm),
                 dep(w_mm, fy + h_mm + wt_mm),

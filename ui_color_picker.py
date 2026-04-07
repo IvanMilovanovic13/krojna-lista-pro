@@ -3,9 +3,38 @@ from __future__ import annotations
 
 from typing import Any
 import logging
-from i18n import BTN_BOJA_PRIMENI, BTN_BOJA_RESET, TIP_BOJA_PRIMENI, TIP_BOJA_RESET
+from i18n import tr
 
 _LOG = logging.getLogger(__name__)
+
+
+_COLOR_PRESET_NAMES_EN = {
+    "Beli dekor": "White decor",
+    "Svetli drvni dekor": "Light wood decor",
+    "Bukva": "Beech",
+    "Jela": "Fir",
+    "Hrast": "Oak",
+    "Bor": "Pine",
+    "Aris": "Aris",
+    "Mahagoni": "Mahogany",
+    "Tresnja": "Cherry",
+    "Kesten": "Chestnut",
+    "Tik": "Teak",
+    "Palisander": "Rosewood",
+    "Orah": "Walnut",
+    "Maslina": "Olive",
+    "Zelena": "Green",
+    "Bagrem": "Acacia",
+    "Ebanovina": "Ebony",
+}
+_COLOR_PRESET_NAMES_SR = {str(v): str(k) for k, v in _COLOR_PRESET_NAMES_EN.items()}
+
+
+def _translate_preset_name(name: str, lang: str) -> str:
+    txt = str(name or "")
+    if str(lang or "sr").lower().strip() == "en":
+        return _COLOR_PRESET_NAMES_EN.get(txt, txt)
+    return _COLOR_PRESET_NAMES_SR.get(txt, txt)
 
 
 def is_dark_hex(hex_c: str) -> bool:
@@ -27,6 +56,7 @@ def render_color_picker(
     title: str = "Boja fronta",
     columns: int = 4,
     swatch_h: int = 28,
+    lang: str = "sr",
 ) -> None:
     """Renderuje color/dekor picker u trenutnom NiceGUI kontekstu."""
     _preview = [None]
@@ -64,7 +94,7 @@ def render_color_picker(
         ):
             for _entry in presets:
                 _hex = str(_entry.get("hex", "") or "").strip()
-                _name = str(_entry.get("name", "") or "").strip()
+                _name = _translate_preset_name(str(_entry.get("name", "") or "").strip(), lang)
                 _bg = str(_entry.get("swatch", _hex) or _hex).strip()
                 _sel = _selected == _hex.upper()
                 _border = "2px solid #111" if _sel else "1px solid #c7c7c7"
@@ -81,14 +111,14 @@ def render_color_picker(
                     ).style("max-width:100%;")
 
         with ui.row().classes("w-full items-center gap-1 mt-1"):
-            ui.button(BTN_BOJA_RESET, on_click=lambda: _pick(_default_hex)).props("dense flat").classes(
+            ui.button(tr("common.cancel", lang), on_click=lambda: _pick(_default_hex)).props("dense flat").classes(
                 "text-xs text-gray-400 px-1"
-            ).tooltip(TIP_BOJA_RESET)
+            ).tooltip(tr("common.cancel", lang))
             _custom_inp = ui.input(placeholder="#RRGGBB").props(
                 "dense outlined"
             ).classes("flex-1 text-xs font-mono")
             if color_ref.get("value"):
                 _custom_inp.value = color_ref["value"]
-            ui.button(BTN_BOJA_PRIMENI, on_click=lambda: _pick(str(_custom_inp.value).strip())).props(
+            ui.button(tr("edit.apply", lang), on_click=lambda: _pick(str(_custom_inp.value).strip())).props(
                 "dense flat"
-            ).classes("text-xs px-1 text-gray-700").tooltip(TIP_BOJA_PRIMENI)
+            ).classes("text-xs px-1 text-gray-700").tooltip(tr("edit.apply", lang))

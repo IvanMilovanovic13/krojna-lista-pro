@@ -8,11 +8,317 @@
 **Naziv app:** Krojna Lista PRO
 **Cilj:** Web aplikacija za jednostavno projektovanje kuhinje/nameštaja i dobijanje profesionalne krojne liste.
 **Tech stack:** Python + NiceGUI + Matplotlib + ReportLab + Pandas
+**Preporuceni Python:** 3.13
 
 **Scope odluka (12.03.2026):**
 - `krojna_lista_pro` je iskljucivo aplikacija za kuhinju
 - TV / ormari / hodnik / kupatilo / kancelarija izlaze iz scope-a ove app
 - za te scenarije koristi se posebna aplikacija `krojna_studio`
+
+---
+
+## VAZECE STANJE PROJEKTA - 28.03.2026
+
+Ova sekcija ima prednost nad starijim delovima dokumenta kada postoji razlika izmedju plana i stvarnog stanja repoa.
+
+### Sta danas stvarno postoji
+
+- monolitna `NiceGUI` / Python web aplikacija
+- core kitchen workflow:
+  - wizard
+  - elementi
+  - settings
+  - cut list
+  - PDF / XLSX / CSV export
+- javni web sloj:
+  - `/pricing`
+  - `/login`
+  - `/register`
+- post-login dashboard / projekti tok
+- auth sloj:
+  - users
+  - auth sessions
+  - password reset tokens
+  - cleanup auth artefakata
+- billing sloj:
+  - billing modeli
+  - webhook obrada
+  - checkout / portal tok
+  - access gate pravila
+- persistence sloj:
+  - SQLite / Postgres backend apstrakcija
+  - project store
+  - autosave
+  - recent projects
+  - export_jobs
+- export worker sloj:
+  - queue u bazi
+  - `queued/running/done/failed`
+  - dedicated worker mode
+- ops / readiness sloj:
+  - CLI dijagnostika
+  - `/ops/readiness`
+  - interni `Ops` ekran
+- deploy osnova:
+  - `Dockerfile`
+  - staging i production compose fajlovi
+  - deploy dokumentacija
+
+### Potvrdeno proverom
+
+- automatski testovi: `186/186 PASS`
+- export consistency sloj: implementiran
+- post-login dashboard: implementiran
+- access gate + billing state UX: implementirani
+- export worker runtime summary i testovi: implementirani
+- readiness/reporting sloj: implementiran
+- Postgres runtime radi kroz projektni `venv`
+- dodat `RUN_READINESS.ps1` za konzistentno pokretanje readiness provere
+- `tall_top` 2D prikaz je korigovan tako da rucke na vratima budu centrirane po visini elementa
+- `tall` 2D prikaz je dodatno korigovan tako da hinged visoki elementi nemaju vise rucke prenisko
+- config/env sloj je ojacan tako da staging env fajlovi imaju ispravan lokalni prioritet bez pregazivanja eksplicitnih sistemskih varijabli
+- dodat je lokalni staging runner (`RUN_STAGING.ps1`) tako da staging start i readiness koriste isti jasan env put
+- `RUN_READINESS.ps1` sada uvek forsira trazeni readiness target, tako da rezultat vise ne zavisi od prethodno nasledjenog `APP_ENV`
+- Stripe readiness sada prepoznaje placeholder env vrednosti i ne tretira ih kao validnu staging/prod konfiguraciju
+- staging readiness je dodatno uskladjen sa planom tako da `HTTP BASE_URL` sada predstavlja blocker, a ne samo warning
+- billing provider je prebacen sa Stripe-a na `Lemon Squeezy`, uz novi config/runtime/webhook sloj i azurirane staging/production env sablone
+- worktop PDF servisni tekst je dodatno pojasnjen tako da jasno razlikuje finished dimension i CUT basis za radionicu
+- validation warning sloj sada hvata i module koji pocinju pre pocetka zida (`x < 0`), bez prekida export toka
+- PDF tabelarni prikaz je citljiviji jer se duge napomene i servisne instrukcije sada lome u vise redova i poravnavaju odozgo
+- kriticna proizvodna upozorenja su u PDF-u pomerena ispred kompletne tabele okova, tako da rizici budu vidljivi pre detalja
+- validation warning sloj sada hvata i previsoke `tall_top` popune u odnosu na realan slobodan prostor iznad visokog elementa
+- validation warning sloj sada hvata i previsok `wall_upper` drugi red kada nema dovoljno slobodnog prostora do plafona
+- ugaoni susedni warning scenariji su dodatno osigurani regression testom za clearance i collision logiku
+- ugaona zastita za `CORNER_DOOR_SWING` je sada dodatno zakljucana regression testom
+- support warning scenariji za `wall_upper` i `tall_top` su sada dodatno osigurani regression testovima
+- `SIDE_WALL_DOOR` warning za jednokrilna vrata uz levi/desni zid je sada dodatno osiguran regression testom
+- `MODULE_OUT_OF_BOUNDS` warning za element koji izlazi van duzine zida je sada dodatno osiguran regression testom
+- globalni `FRONT_GAP` warning za nepreporucen zazor fronta je sada dodatno osiguran regression testom
+- `SINGLE_DOOR_WIDTH` warning za preiroka jednokrilna vrata je sada dodatno osiguran regression testom
+- `DRAWER_STACK` warning za zbir fioka koji prakticno puni celu visinu modula je sada dodatno osiguran regression testom
+- `DRAWER_FRONT_MIN` warning za prenisku fioku je sada dodatno osiguran regression testom
+- obe `DOOR_DRAWER` warning grane su sada dodatno osigurane regression testom
+- `WALL_DEPTH` warning za predubok viseci element je sada dodatno osiguran regression testom
+- `BASE_DEPTH` warning za preplitak donji element je sada dodatno osiguran regression testom
+- `TALL_DEPTH` warning za preplitak visoki element je sada dodatno osiguran regression testom
+- `DISHWASHER_WIDTH` warning za usku masinu za sudove je sada dodatno osiguran regression testom
+- `FRIDGE_WIDTH` warning za uski frizider modul je sada dodatno osiguran regression testom
+- `COOKING_WIDTH` warning za preusku rernu/plocu kolonu je sada dodatno osiguran regression testom
+- `HOB_WIDTH` warning za preusku samostalnu plocu je sada dodatno osiguran regression testom
+- `SINK_WIDTH` warning za preuski sudoperski element je sada dodatno osiguran regression testom
+- dodatno su regression testovima osigurani i warning minimumi za `DRAWER_DEPTH`, `LIFTUP_WIDTH` i `TALL_HEIGHT`
+- dodatno su regression testovima osigurani i appliance minimumi za `WALL_APPLIANCE_WIDTH`, `WALL_APPLIANCE_DEPTH` i `TALL_APPLIANCE_WIDTH`
+- dodatno su regression testovima osigurani i depth minimumi za `TALL_APPLIANCE_DEPTH`, `FREESTANDING_DEPTH` i `FREESTANDING_FRIDGE_DEPTH`
+- store load owner check je ojacan tako da drugi korisnik vise ne moze da ucita projekat samo preko tudjeg `project_id`
+- export job owner check je dodatno ojacan tako da drugi korisnik vise ne moze da cita export job zapis samo preko tudjeg `job_id`
+- audit log vidljivost je suzena tako da samo `admin` vidi globalne audit tragove, dok `local_beta` i ostali korisnici vide samo svoje
+- project store `touch/open` tok je dodatno suzen tako da ni osvezavanje `last_opened_at` vise ne moze da pogodi tudji projekat preko stranog ID-ja
+- `ops` tab je sada dostupan samo `admin` tier-u, pa `local_beta` vise nema UI pristup globalnim runtime, auth i billing podacima
+- dodat je i backend scope guard za `get_ops_runtime_summary()`, tako da ne-admin poziv vise ne vraca globalni ops payload
+- dodat je i backend scope guard za `get_release_readiness_summary()`, tako da ne-admin poziv vise ne vraca staging/production readiness payload
+- release readiness proverava i origin konzistentnost Stripe return URL-ova, pa staging/production vise ne mogu lazno da prodju sa checkout/portal URL-ovima na pogresnom hostu
+- engleski naziv aplikacije je uskladjen kroz toolbar, help, project IO i export sloj na `Cut List PRO`, bez stare mesovite varijante `Cutting List PRO`
+- logout/session resilience je ojacana tako da lokalno odjavljivanje sada ne zavisi od uspesnog revoke/audit upisa u backend, nego uvek cisti lokalni session token i vraca fallback sesiju
+- session restore inicijalizacija je dodatno ucvrscena tako da storage/persisted-token greska sada sigurno zavrsava na lokalnoj fallback sesiji umesto na praznom ili polu-ucitanom runtime stanju
+- local session reset sada cisti i aktivni project binding (`current_project_id/name/source`), pa posle logout/fallback toka ne ostaju tragovi prethodnog korisnickog projekta
+- session access refresh sada bezbedno vraca lokalni fallback kada korisnicki zapis vise ne postoji u storage sloju, umesto da zadrzi stale account state u runtime-u
+- billing summary i checkout/portal helperi vise nisu dostupni za lokalnu fallback sesiju, nego samo za stvarne password/auth korisnike
+- checkout/portal helperi sada proveravaju da li je Stripe runtime stvarno konfigurisan pre pokusaja billing toka, pa korisnik dobija jasan odgovor umesto nepotpunog Stripe pada
+- billing UI vise ne crta checkout/portal akcije kada Stripe runtime nije stvarno spreman, pa dashboard/auth/access-gate ne nude nedovrsen billing tok
+- Stripe checkout i portal tok sada prezivljavaju lokalni `subscription` persist pad posle uspesno dobijenog URL-a, pa korisnik ne gubi validan Stripe redirect zbog internog store problema
+- Stripe customer create tok sada prezivljava i lokalni persist `customer_id` pada, pa validan Stripe customer vise ne obara checkout/portal nastavak samo zbog internog store problema
+- export limiter sada automatski cisti stale `queued/running` jobove pre novog enqueue-a, pa zaglavljeni stari eksporti vise ne blokiraju sledeci export zahtev
+- export job status update je prepravljen na Postgres-safe SQL bez `NULL` neodredjenih parametara, pa `psycopg` vise ne puca pri `running/done/failed` prelazima
+- promena sesije na drugog korisnika sada automatski cisti aktivni project binding, pa login/register vise ne nose `current_project_id/name/source` iz prethodne sesije
+- dashboard session akcije sada osvezavaju i toolbar, tako da posle logout ili povratka na lokalnu sesiju header odmah prikazuje tacan session state bez stale labela
+- session refresh tok sada ima i exception-level fallback: ako storage/user lookup pukne, app se vraca na lokalnu fallback sesiju umesto da ostane u stale account stanju
+- login i register vise ne prebacuju runtime na novog korisnika pre uspesnog browser session creation koraka, pa auth session greska ne moze da ostavi app u polulogovanom stanju
+- login/register atomicity je prosirena i na browser storage persist korak: session token mora prvo uspesno da se upise, inace se novokreirana auth sesija rollback-uje, dok je audit log sada best-effort i vise ne moze da srusi uspesan auth tok
+
+### Novi dogovoreni proizvodni model - 01.04.2026.
+
+Ovo je od sada obavezni produktni i UX pravac za aplikaciju. Dalji rad na loginu, dashboardu, billingu, access-gate sloju i eksportima mora da prati bas ovaj model.
+
+Osnovna ideja:
+
+- aplikacija mora da bude maksimalno jednostavna za laika
+- korisnik ne sme da dobije prenatrpane ekrane
+- naplata se vezuje za otkljucavanje PRO funkcija, ne za sam ulaz u aplikaciju
+
+Dogovoreni nivoi pristupa:
+
+1. `Demo`
+- mora da postoji odvojen demo ulaz
+- demo korisnik moze da vidi kako aplikacija radi
+- demo korisnik moze da vidi krojnu listu samo za unapred pripremljen demo projekat
+- demo nije puni rad na licnim projektima i nije puni export tok
+
+2. `Free`
+- korisnik pravi nalog i prijavljuje se
+- posle logina bira `Free` varijantu ogranicenog trajanja, trenutno planiranu kao oko `5h`
+- free korisnik moze da dizajnira kuhinju i radi osnovni editor tok
+- free korisnik moze da cuva projekat
+- free korisnik ne sme da udje u svoju krojnu listu
+- free korisnik ne sme da preuzima `PDF`, `Excel`, `CSV` niti druge eksport dokumente
+
+3. `Paid`
+- korisnik posle logina bira placeni pristup:
+  - `7 dana`
+  - `1 mesec`
+- ako izabere placenu varijantu, aplikacija ga vodi na poseban checkout prozor
+- posle uspesne uplate pristup se vezuje za njegov nalog / email kroz billing i webhook tok
+- placeni korisnik tokom aktivnog perioda dobija pun pristup:
+  - krojna lista
+  - PDF
+  - Excel
+  - CSV
+  - ostale PRO funkcije
+
+Obavezna UX pravila:
+
+- javni `/login` mora da bude cist ekran sa:
+  - nazivom aplikacije
+  - email
+  - password
+  - `Forgot password?`
+  - `Sign up`
+- javni `/register` mora da bude jednako cist i bez viska elemenata
+- posle `logout` korisnik mora da ide na javni login ekran, ne na interni wizard/dashboard
+- prvi ekran posle logina mora da bude jednostavan izbor pristupa i rada, bez duplih lista projekata, bez previse admin/billing kartica i bez zbunjujuceg rasporeda
+
+Obavezna pravila pristupa:
+
+- free korisnik moze da crta i cuva projekat
+- free korisnik ne moze da otvori svoju krojnu listu
+- free korisnik ne moze da izvozi dokumente
+- paid korisnik moze da koristi krojnu listu i sve eksporte
+- demo tok ostaje odvojen od pravog korisnickog rada
+
+Operativna posledica:
+
+- billing i access-gate UI vise ne treba voditi kao genericki veliki dashboard
+- sledeci razvoj treba da ide ka modelu `plan selection -> editor access -> gated exports`
+- `Lemon Squeezy` ostaje billing provider za ovu fazu, jer je to realan pravac za rad iz Srbije
+- prvi konkretan implementiran korak iz ovog modela je vec uradjen:
+  - `free/trial` korisnik moze da koristi editor i da cuva projekat
+  - `free/trial` korisnik ne moze da otvori `Krojna lista`
+  - `free/trial` korisniku je `Krojna lista` uklonjena iz toolbar navigacije
+  - demo projekat i dalje moze da prikaze krojnu listu
+- sledeci konkretan implementiran korak je takodje uradjen:
+  - post-login ekran za `free/trial` korisnika vise nije genericki dashboard
+  - korisnik sada dobija jasan izbor:
+    - `Free 5h`
+    - `PRO 7 dana`
+    - `PRO 1 mesec`
+  - `7 dana` checkout sada koristi weekly Lemon Squeezy plan
+  - `1 mesec` checkout sada koristi monthly Lemon Squeezy plan
+- backend export zastita je dodatno uvedena:
+  - novi export download vise nije javni staticki link
+  - download sada proverava sesiju, vlasnistvo export job-a i placeni pristup
+  - free korisnik ne moze da dodje do PDF/Excel/CSV fajla ni direktnim linkom
+
+### Glavni otvoreni operativni blocker danas
+
+- `DATABASE_URL` vec radi kao Postgres kada se koristi projektni interpreter
+- readiness je sada ociscen od laznog Python/driver problema
+- stvarni preostali staging/production blockeri su:
+  - `APP_ENV`
+  - `HTTPS BASE_URL`
+  - custom `SECRET_KEY`
+  - Lemon Squeezy API/webhook podaci i variant ID-jevi
+- ali staging/hosting vise nije prvi sledeci korak rada
+- novi obavezni redosled je:
+  - prvo lokalno dovesti proizvod sto blize finalnom stanju
+  - zavrsiti i proveriti UI/UX tokove
+  - zavrsiti ostale jezike i i18n proveru
+  - dovesti krojnu listu, PDF/Excel/CSV i warning sloj do maksimalne tacnosti
+  - uraditi sistematski QA kroz realne kuhinjske scenarije
+  - tek posle toga raditi staging readiness i hosting
+- to znaci:
+  - staging treba da sluzi za finalnu operativnu proveru
+  - staging ne treba koristiti kao zamenu za lokalno zatvaranje proizvoda
+
+### Gde smo sada, najkrace
+
+- zavrsni `P1.6 / P1.7` polish-hardening blok je prakticno zakljucan
+- auth/session/billing runtime hardening je znacajno ispred starijeg roadmap teksta
+- trenutna najtacnija faza projekta je:
+  - late beta
+  - production hardening
+  - lokalno zatvaranje proizvoda pre staging-a
+
+### Referentna tacka za nastavak
+
+- ovde je tacno mesto od kog treba nastaviti u sledecoj sesiji
+- poslednji zavrseni blok:
+  - auth/session/billing hardening
+  - Stripe runtime/resilience
+  - export queue stale cleanup
+  - Postgres-safe export status update
+- trenutno potvrdeno stanje:
+  - `186/186 PASS`
+  - dokumentacija uskladjena
+- sledeci prvi korak:
+  - odraditi audit i zavrsnicu lokalnog proizvoda pre hostinga:
+    - UI/UX polish
+    - jezici / i18n
+    - krojna lista i export tacnost
+    - sistematski QA kroz realne scenarije
+- sledeci operativni korak posle toga:
+  - zavrsiti stvarni staging readiness sa pravim staging env vrednostima i spustiti readiness blockere na `0`
+
+### Obavezni QA blok pre hostinga - krojna lista i export
+
+Pre staging-a i hostinga mora da se odradi rucni prolaz kroz reprezentativne kuhinjske scenarije.
+
+Za svaku probnu kuhinju obavezno proveriti:
+
+- dimenzije modula
+- korpus ploce, frontove, ledja i police
+- worktop duzine i cutout logiku
+- hardware i potrosni materijal
+- warning logiku
+- `summary_all` i `summary_detaljna`
+- PDF / Excel / CSV doslednost
+- nekoliko kljucnih stavki rucnom racunicom
+
+Obavezni redosled scenarija:
+
+1. jedan zid - mala jednostavna kuhinja
+2. jedan zid - sudopera + ploca za kuvanje
+3. jedan zid - fioke + masina za sudove
+4. tall block - frizider + oven/micro kolona
+5. L-kuhinja sa ugaonim donjim elementom
+6. galley kuhinja sa dve linije
+7. U-kuhinja sa vise worktop segmenata
+8. raised dishwasher scenario
+9. filler / end panel scenario
+10. namerno problematican scenario za warning proveru
+
+Preporuceni red rada:
+
+- prvo `1 / 2 / 3`
+- zatim `5 / 6 / 7`
+- pa `4 / 8 / 9`
+- na kraju `10`
+
+## PRAVILO ODRZAVANJA DOKUMENTACIJE
+
+Od 27.03.2026 ovo je obavezno pravilo rada:
+
+- svaka izmena u aplikaciji mora odmah da bude upisana u dokumentaciju
+- obavezno azurirati:
+  - `ROADMAP_DO_100.md`
+  - `MASTER_PROJEKAT.md`
+- ne zatvarati task dok dokumentacija nije uskladjena sa kodom
+
+Radni redosled:
+
+1. izmena koda
+2. provera testom ili runtime proverom
+3. update `ROADMAP_DO_100.md`
+4. update `MASTER_PROJEKAT.md`
+5. tek onda je task zatvoren
 
 ---
 
@@ -1486,7 +1792,8 @@ python smoke_scenarios.py
 ```
 
 **Ručni test (vizuelna provjera):**
-1. Pokrenuti aplikaciju: `python app.py`
+1. Prvo postavljanje okruzenja: `SETUP_VENV.ps1`
+2. Pokrenuti aplikaciju: `venv\Scripts\python.exe app.py` ili `RUN_KITCHEN.ps1`
 2. Wizard → L-oblik desni ugao → Zid A: 3000mm, Zid B: 2400mm
 3. Dodati BASE_2DOOR na Zid A (3 komada)
 4. Prebaciti na Zid B
@@ -1626,7 +1933,7 @@ Status: `POSLE zatvaranja P1/P2A-1, pre javnog pustanja`
 Cilj:
 - da aplikacija ne ostane samo lokalni alat
 - da korisnik moze da se registruje / uloguje
-- da plati pristup na odredjeno vreme
+   - da plati pristup na odredjeno vreme
 - da aplikacija radi na javnom domenu sa SSL i backup-om
 
 Sta mora da postoji:
@@ -1636,8 +1943,9 @@ Sta mora da postoji:
    - reset lozinke
    - osnovne role: `admin`, `paid_user`, `trial_user`
 2. Naplata i pretplata
-   - mesecna ili godisnja pretplata
-   - probni period ako se odluci
+   - `Free` ograniceni pristup
+   - `7 dana`
+   - `1 mesec`
    - automatska aktivacija / deaktivacija pristupa po statusu pretplate
    - evidencija transakcije i statusa pretplate
 3. Produkcioni deployment
@@ -1659,7 +1967,7 @@ Sta mora da postoji:
 Preporuceni tehnicki model:
 - `NiceGUI app` kao glavni web UI i aplikacioni server
 - `Supabase Auth + Postgres` za login, korisnike i status pretplate
-- `Stripe` za naplatu pretplate
+- `Lemon Squeezy` za naplatu pretplate
 - `Docker` + `Caddy` ili `Nginx` za produkcioni deployment
 - hosting:
   - jednostavniji start: `Render` ili `Railway`
@@ -1672,8 +1980,8 @@ Tehnicke stavke za realizaciju:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
-   - `STRIPE_SECRET_KEY`
-   - `STRIPE_WEBHOOK_SECRET`
+   - `LEMON_SQUEEZY_API_KEY`
+   - `LEMON_SQUEEZY_WEBHOOK_SECRET`
 2. Napraviti tabelu / model pretplate po korisniku
 3. Dodati route / page za:
    - login
@@ -1938,3 +2246,151 @@ Smoke status:
 - `DIAGONAL_CORNER_PREVIEW_3D_OK=True`
 - `MULTIWALL_L_BASIC_OK=True`
 - `MULTIWALL_CUTLIST_OK=True`
+
+---
+
+## AKTUELNI PRIORITETI I AGENDA - april 2026
+
+### Prioriteti
+
+1. `i18n + dijakritika u PDF-u`
+2. `PDF polish`
+3. `Canvas + sidebar`
+4. `Wizard navigacija`
+5. `Inline validacija`
+6. `matplotlib -> SVG` kao posebna faza
+
+### Tacna Agenda
+
+Sta radimo sada:
+
+1. zatvaranje `kompletnog i18n UI sloja`
+2. zatvaranje `PDF i18n + dijakritika` sloja
+3. zavrsni `PDF polish`
+4. zatim `Canvas + sidebar`
+5. zatim `Wizard navigacija`
+6. zatim `Inline validacija`
+
+### Operativni i18n Roadmap
+
+Cilj:
+
+- cela aplikacija mora da prati `state.language`
+- sav UI, editor, canvas, warning poruke i export tekstovi moraju ici kroz `tr(key, lang)`
+- fallback na `en` sme da postoji, ali korisnik ne sme da vidi `?????`, sirove kljuceve ni hardcoded srpske stringove
+
+Faza 1. `UI hardcoded konstante`
+
+- `ui_panels.py`
+- `ui_edit_panel.py`
+- `ui_add_above_dialogs.py`
+- `ui_color_picker.py`
+- ukloniti stare `BTN_*`, `DLG_*`, `LBL_*` konstante koje su samo srpske tamo gde se jos koriste kao tekst za UI
+- svuda koristiti `tr(key, getattr(state, "language", "sr"))`
+
+Faza 2. `Elementi / katalog / param panel`
+
+- tabovi `Donji / Gornji / Visoki / Ugradni`
+- nazivi svih elemenata u katalogu
+- param panel za izabrani element
+- edit panel labele i akcije
+- poruke posle dodavanja / izmene elementa
+
+Faza 3. `Canvas / visualization`
+
+- `visualization.py`
+- sve inline `if lang == "en" else "sr"` pattern-e prebaciti na `tr()`
+- oznake zidova, zone, kotne i pomocne labele moraju biti prevodive na svih 7 jezika
+
+Faza 4. `PDF export`
+
+- `ui_pdf_export.py`
+- ukloniti lokalne `_t(sr, en)` helper pattern-e
+- koristiti postojeci `cutlist.*` / `common.*` / `nova.*` gde se poklapaju
+- sta ne postoji dodati kao novi prevodivi kljuc
+- montazne instrukcije, naslovi sekcija i legende moraju biti na izabranom jeziku
+
+Faza 5. `Cutlist / Excel / CSV`
+
+- `cutlist.py`
+- kolone tabela moraju ici kroz `cutlist.col_*`
+- sekcije kroz `cutlist.section_*`
+- helper tekstovi, summary i warning poruke ne smeju ostati SR/EN-only
+
+Faza 6. `Refresh pri promeni jezika`
+
+- ne raditi reload cele strane kao default
+- koristiti ciljani refresh po panelima:
+  - toolbar
+  - `nova`
+  - `elementi`
+  - po potrebi `podesavanja`
+- jezik mora ostati upisan u `state.language` i da se normalno vraca kroz sesiju
+
+Faza 7. `Verifikacija`
+
+- `python test_i18n.py`
+- cilj: `0 FAIL`
+- manuelna provera:
+  - `Español`
+  - `Русский`
+  - `中文 (简体)`
+  - `हिन्दी`
+- proveriti:
+  - dashboard
+  - elementi
+  - param panel
+  - krojna lista tab
+  - PDF
+  - Excel / CSV
+
+### Sta Je Ukupno Ostalo Da Se Uradi
+
+1. `Kompletan i18n finish`
+- UI komponente bez hardcoded SR stringova
+- katalog elemenata i tabovi
+- param / edit panel
+- canvas labele
+- warning poruke
+- PDF / Excel / CSV
+
+2. `PDF i18n / dijakritika`
+- montazne instrukcije
+- koraci i pomocni tekstovi
+- proveriti da PDF helperi ne zaobilaze centralni i18n sloj
+
+3. `PDF polish`
+- by-element preview realizam
+- konzistentne duzina/sirina vrednosti u tabelama
+- preglednost sekcija i uklanjanje nelogicnih polja
+
+4. `Krojna lista / export tacnost`
+- nastavak rucnog QA kroz scenario dokument
+- appliance moduli, worktop, warningi, servis paket
+
+5. `Canvas + sidebar UX`
+- vise prostora za crtanje
+- skupljivi ili laksi sidebar
+- bolja citljivost na manjim ekranima
+- ciljani refresh bez nepotrebnog rerendera canvasa
+
+6. `Wizard UX`
+- povratak na prethodne korake bez gubitka podataka
+- laksa korekcija ranijih izbora
+
+7. `Inline validacija`
+- greske uz polje
+- poruka ostaje dok korisnik ne ispravi unos
+
+8. `Sistematski QA`
+- scenario checklists
+- PDF / Excel / CSV doslednost
+- runtime provereni tokovi
+- `test_i18n.py` mora biti zelen
+
+9. `Staging / hosting`
+- tek posle lokalnog zatvaranja proizvoda
+
+10. `SVG / veci editor rewrite`
+- posebna kasnija faza
+- ne blokira trenutni finish proizvoda

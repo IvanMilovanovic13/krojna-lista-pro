@@ -14,6 +14,7 @@ from state_logic import suggest_corner_neighbor_guidance
 from visualization import render_element_preview
 from layout_engine import layout_audit
 from ui_room_helpers import ensure_room_walls, get_room_wall
+from drawer_logic import redistribute_drawers_equal
 import matplotlib
 import pandas as pd
 matplotlib.use('Agg')
@@ -383,6 +384,65 @@ def smoke_add_edit_layout() -> tuple[bool, str]:
     return layout_audit(state.kitchen)
 
 
+def smoke_drawer_flow() -> tuple[bool, str]:
+    reset_state()
+    state.kitchen = _default_kitchen()
+    state.room = _default_room()
+
+    mod = add_module_instance_local(
+        template_id="BASE_DRAWERS_3",
+        zone="base",
+        x_mm=0,
+        w_mm=600,
+        h_mm=720,
+        d_mm=560,
+        gap_after_mm=0,
+        label="Donji (fioke)",
+        params={
+            "n_drawers": 4,
+            "drawer_heights": [170, 170, 170, 170],
+            "drawers": [
+                {"height": 170, "locked": False},
+                {"height": 170, "locked": False},
+                {"height": 170, "locked": False},
+                {"height": 170, "locked": False},
+            ],
+        },
+    )
+
+    p = mod.get("params", {}) or {}
+    if int(p.get("n_drawers", 0) or 0) != 4:
+        return False, f"FAIL_drawer_count_not_preserved:{p.get('n_drawers')}"
+    dh = list(p.get("drawer_heights", []) or [])
+    if dh != [170, 170, 170, 170]:
+        return False, f"FAIL_drawer_heights_not_preserved:{dh}"
+    dr = list(p.get("drawers", []) or [])
+    if len(dr) != 4:
+        return False, f"FAIL_drawers_model_len:{len(dr)}"
+
+    redistributed = redistribute_drawers_equal(
+        [170, 170, 170, 170],
+        changed_idx=0,
+        requested_height=185,
+        locks={},
+        total_target=680,
+    )
+    if redistributed != [185, 165, 165, 165]:
+        return False, f"FAIL_drawer_redistribute_equal:{redistributed}"
+
+    redistributed_locked = redistribute_drawers_equal(
+        [185, 165, 165, 165],
+        changed_idx=1,
+        requested_height=175,
+        locks={0: True},
+        total_target=680,
+    )
+    if redistributed_locked != [185, 175, 160, 160]:
+        return False, f"FAIL_drawer_redistribute_locked:{redistributed_locked}"
+
+    return True, "OK"
+
+
 def smoke_room_openings_walls() -> tuple[bool, str]:
     room = _default_room()
     ensure_room_walls(room)
@@ -434,6 +494,43 @@ def smoke_grid_modes() -> tuple[bool, str]:
             )
             fig.tight_layout(pad=0.2)
             plt.close(fig)
+        return True, "OK"
+    except Exception as ex:
+        return False, f"FAIL: {ex}"
+
+
+def smoke_bounds_toggle_modes() -> tuple[bool, str]:
+    """Zone overlay toggle must affect both catalog and technical 2D views."""
+    k = _default_kitchen()
+    k["max_element_height"] = 2400
+    k["modules"] = [
+        {
+            "id": 1, "template_id": "BASE_1DOOR", "label": "Donji (1 vrata)",
+            "zone": "base", "x_mm": 0, "w_mm": 600, "h_mm": 720, "d_mm": 560, "params": {},
+        },
+        {
+            "id": 2, "template_id": "WALL_1DOOR", "label": "Gornji (1 vrata)",
+            "zone": "wall", "x_mm": 0, "w_mm": 600, "h_mm": 720, "d_mm": 320, "params": {},
+        },
+    ]
+    try:
+        results: dict[str, tuple[int, int]] = {}
+        for view in ("Katalog", "Tehnički"):
+            for bounds in (False, True):
+                fig = plt.figure(figsize=(12, 5))
+                ax = fig.add_subplot(111)
+                _render(
+                    ax=ax, kitchen=k, view_mode=view,
+                    show_grid=True, grid_mm=5, show_bounds=bounds,
+                    kickboard=True, ceiling_filler=False,
+                )
+                results[f"{view}:{bounds}"] = (len(ax.lines), len(ax.patches))
+                plt.close(fig)
+
+        if results["Katalog:True"][0] <= results["Katalog:False"][0]:
+            return False, "FAIL_catalog_bounds_toggle_no_effect"
+        if results["Tehnički:True"][0] <= results["Tehnički:False"][0]:
+            return False, "FAIL_technical_bounds_toggle_no_effect"
         return True, "OK"
     except Exception as ex:
         return False, f"FAIL: {ex}"
@@ -900,7 +997,7 @@ def smoke_shopping_hardware() -> tuple[bool, str]:
     expected_hw = {
         "Spojnica susednih korpusa",
         "Klipsa za soklu",
-        "Vijak / ugaonik za radnu plocu",
+        "Vijak / ugaonik za radnu ploču",
         "Zaptivna lajsna / silikon uz zid",
     }
     missing_hw = sorted(expected_hw - names)
@@ -944,9 +1041,9 @@ def smoke_fastener_and_grouping_hardware() -> tuple[bool, str]:
     names = set(hw["Naziv"].astype(str).tolist())
     expected = {
         "Vijak za sarku",
-        "Vijak za klizac",
-        "Vijak / ekser za ledja",
-        "Vijak za zidni nosac / sinu",
+        "Vijak za klizač",
+        "Vijak / ekser za leđa",
+        "Vijak za zidni nosač / šinu",
     }
     missing = sorted(expected - names)
     if missing:

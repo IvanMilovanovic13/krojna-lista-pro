@@ -6,6 +6,7 @@ import logging
 from typing import Any, Callable
 from visualization import _y_for_wall_upper, _y_for_tall_top
 from layout_engine import _l_corner_offsets_mm
+from module_rules import dishwasher_installation_metrics
 
 _LOG = logging.getLogger(__name__)
 
@@ -55,6 +56,38 @@ def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
 def _shade(c: str, factor: float) -> str:
     r, g, b = _hex_to_rgb(c)
     return _rgb_to_hex((r * factor, g * factor, b * factor))
+
+
+def _handle_palette_for_front(front_c: str) -> tuple[str, str]:
+    r, g, b = _hex_to_rgb(front_c)
+    brightness = (r * 299 + g * 587 + b * 114) / 1000
+    if brightness >= 150:
+        return ('#30363D', '#C9D0D7')
+    return ('#E5E9EF', '#FFFFFF')
+
+
+_HANDLE_3D_SCALE = 1.4
+_HANDLE_BAR_TH = 0.013 * _HANDLE_3D_SCALE
+_HANDLE_BAR_DP = 0.018 * _HANDLE_3D_SCALE
+_HANDLE_HI_TH = 0.006 * _HANDLE_3D_SCALE
+_HANDLE_HI_DP = 0.009 * _HANDLE_3D_SCALE
+_HANDLE_HI_TH_NARROW = 0.004 * _HANDLE_3D_SCALE
+_HANDLE_HI_DP_NARROW = 0.007 * _HANDLE_3D_SCALE
+_HANDLE_TALL_TH = 0.018 * _HANDLE_3D_SCALE
+_HANDLE_TALL_DP = 0.026 * _HANDLE_3D_SCALE
+_HANDLE_FRIDGE_TH = 0.020 * _HANDLE_3D_SCALE
+_HANDLE_FRIDGE_DP = 0.032 * _HANDLE_3D_SCALE
+_HANDLE_FRIDGE_HI_TH = 0.009 * _HANDLE_3D_SCALE
+_HANDLE_FRIDGE_HI_DP = 0.014 * _HANDLE_3D_SCALE
+_HANDLE_OVEN_TH = 0.010 * _HANDLE_3D_SCALE
+_HANDLE_OVEN_DP = 0.013 * _HANDLE_3D_SCALE
+_HANDLE_OVEN_HI_DP = 0.010 * _HANDLE_3D_SCALE
+_HANDLE_DRAWER_TH = 0.011 * _HANDLE_3D_SCALE
+_HANDLE_DRAWER_DP = 0.014 * _HANDLE_3D_SCALE
+_HANDLE_PANEL_TH = 0.012 * _HANDLE_3D_SCALE
+_HANDLE_PANEL_DP = 0.018 * _HANDLE_3D_SCALE
+_HANDLE_CORNER_TALL_TH = 0.014 * _HANDLE_3D_SCALE
+_HANDLE_CORNER_TALL_DP = 0.020 * _HANDLE_3D_SCALE
 
 
 def to_scene_coords(
@@ -387,9 +420,10 @@ def render_kitchen_elements_scene_3d(
             except Exception as ex:
                 _LOG.debug("3D baseline resolve failed (zone=%s, id=%s): %s", _z, _m.get('id', -1), ex)
                 _y0 = 0
-            # Sudopera ima vlastitu inox ploču — isključi je iz globalnog radnog stola
-            _is_sink_chk = ('SINK' in _tid) or ('SUDOPER' in _lbl)
-            if _z == 'base' and not _is_sink_chk:
+            # Samostojeći uređaji moraju stajati na podu, ne na zonskoj stopici.
+            if _tid in {'TALL_FRIDGE_FREESTANDING', 'BASE_DISHWASHER_FREESTANDING', 'BASE_OVEN_HOB_FREESTANDING'}:
+                _y0 = 0
+            if _z == 'base' and _tid not in {'BASE_DISHWASHER_FREESTANDING', 'BASE_OVEN_HOB_FREESTANDING'}:
                 _worktop_segments.append((_x, _w, float(_y0), _h))
 
             _bx = (_x + _w / 2.0) * s
@@ -409,9 +443,8 @@ def render_kitchen_elements_scene_3d(
             _carcass_c = '#ECEAE6'
             _side_c = _shade(_carcass_c, 0.88)   # bočna sjena
             _top_c = _shade(_carcass_c, 0.92)     # gornja ploča
-            # Ručke: tamnosivi inox profil — čitljiv na bilo kojoj boji fronta
-            _handle_c = '#404850'
-            _handle_hi = '#D0D8DF'
+            # Ručke prate svetlinu fronta: svetli front -> tamna ručka, tamni front -> svetla ručka
+            _handle_c, _handle_hi = _handle_palette_for_front(_front_c)
             _shadow_c = '#5F6772'
             _edge_c = '#707780'
             _inox_light = '#cfd5db'
@@ -426,12 +459,14 @@ def render_kitchen_elements_scene_3d(
             )
             _is_sink = (_tid in TEMPLATE_SINK) or ('SINK' in _tid) or ('SUDOPER' in _lbl)
             _is_cooking_unit = ('COOKING_UNIT' in _tid)
+            _is_cooking_freestanding = (_tid == 'BASE_OVEN_HOB_FREESTANDING')
             _is_oven = ('OVEN' in _tid) or ('RERN' in _lbl)
             _is_hob = ('HOB' in _tid) or ('PLOCA' in _lbl) or ('PLOČA' in _lbl)
             _is_fridge = (_tid in TEMPLATE_FRIDGE) or (
                 ('FRIDGE' in _tid) or ('FREEZER' in _tid) or ('FRIZ' in _lbl) or
                 ('FRIŽ' in _lbl) or ('ZAMRZ' in _lbl)
             )
+            _is_dish_freestanding = (_tid == 'BASE_DISHWASHER_FREESTANDING')
             _is_dish = ('DISHWASHER' in _tid) or ('SUDOV' in _lbl) or ('MASIN' in _lbl) or ('MAŠIN' in _lbl)
             # NOTE:
             # `independent_depth` nije pouzdan indikator "aparata" za bojenje fronta.
@@ -515,7 +550,7 @@ def render_kitchen_elements_scene_3d(
                 ).material('#2E3440', opacity=0.45)
 
             # Toe kick (plintha) ispod donjih elemenata — prostire se od poda do dna korpusa
-            if _z == 'base' and float(_y0) > 0:
+            if _z == 'base' and float(_y0) > 0 and _tid not in {'BASE_DISHWASHER_FREESTANDING', 'BASE_OVEN_HOB_FREESTANDING'}:
                 sc.box((_w - 10) * s, float(_y0) * s, 0.035).move(
                     _bx,
                     (float(_y0) / 2.0) * s,
@@ -569,12 +604,12 @@ def render_kitchen_elements_scene_3d(
                     _face = sc.box((_w - 14) * s, _dh * s, 0.012).move(_bx, _cy, _front_z).material(_front_c, opacity=1.0)
                     # handle (jači kontrast i debljina)
                     _hl = min(220.0, _w * 0.50) * s
-                    sc.box(_hl, 0.013, 0.018).move(
+                    sc.box(_hl, _HANDLE_BAR_TH, _HANDLE_BAR_DP).move(
                         _bx,
                         _cy,
                         _front_z + 0.010,
                     ).material(_handle_c, opacity=1.0)
-                    sc.box(_hl * 0.92, 0.006, 0.009).move(
+                    sc.box(_hl * 0.92, _HANDLE_HI_TH, _HANDLE_HI_DP).move(
                         _bx,
                         _cy + 0.001,
                         _front_z + 0.013,
@@ -594,8 +629,8 @@ def render_kitchen_elements_scene_3d(
                 _drawer_cy = (float(_y0) + _h - _gap - (_drawer_h / 2.0)) * s
                 _face = sc.box((_w - 14) * s, _drawer_h * s, 0.012).move(_bx, _drawer_cy, _front_z).material(_front_c, opacity=1.0)
                 _hl = min(220.0, _w * 0.50) * s
-                sc.box(_hl, 0.013, 0.018).move(_bx, _drawer_cy, _front_z + 0.010).material(_handle_c, opacity=1.0)
-                sc.box(_hl * 0.92, 0.006, 0.009).move(_bx, _drawer_cy + 0.001, _front_z + 0.013).material(_handle_hi, opacity=0.95)
+                sc.box(_hl, _HANDLE_BAR_TH, _HANDLE_BAR_DP).move(_bx, _drawer_cy, _front_z + 0.010).material(_handle_c, opacity=1.0)
+                sc.box(_hl * 0.92, _HANDLE_HI_TH, _HANDLE_HI_DP).move(_bx, _drawer_cy + 0.001, _front_z + 0.013).material(_handle_hi, opacity=0.95)
                 _door_h = _h - _drawer_h - (_gap * 3)
                 _dw = (_w - (_gap * 3)) / 2
                 _door_cy = (float(_y0) + _gap + (_door_h / 2.0)) * s
@@ -604,8 +639,8 @@ def render_kitchen_elements_scene_3d(
                     _dface = sc.box(_dw * s, _door_h * s, 0.012).move(_cx, _door_cy, _front_z).material(_front_c, opacity=1.0)
                     _hx = _cx + ((_dw * s) * (0.33 if _i == 0 else -0.33))
                     _vh = min(220.0, _door_h * 0.34) * s
-                    sc.box(0.013, _vh, 0.018).move(_hx, _door_cy, _front_z + 0.010).material(_handle_c, opacity=1.0)
-                    sc.box(0.006, _vh * 0.9, 0.009).move(_hx + 0.002, _door_cy + 0.001, _front_z + 0.013).material(_handle_hi, opacity=0.95)
+                    sc.box(_HANDLE_BAR_TH, _vh, _HANDLE_BAR_DP).move(_hx, _door_cy, _front_z + 0.010).material(_handle_c, opacity=1.0)
+                    sc.box(_HANDLE_HI_TH, _vh * 0.9, _HANDLE_HI_DP).move(_hx + 0.002, _door_cy + 0.001, _front_z + 0.013).material(_handle_hi, opacity=0.95)
                     try:
                         _dface.on_click(lambda e, mid=int(_m.get('id', -1)): (
                             setattr(state, 'selected_edit_id', mid),
@@ -644,12 +679,12 @@ def render_kitchen_elements_scene_3d(
                     # Ručke ostaju metalne.
                     _upper_handle_h = min(260.0, _h * 0.30) * s
                     _lower_handle_h = min(220.0, _h * 0.24) * s
-                    sc.box(0.018, _upper_handle_h, 0.026).move(
+                    sc.box(_HANDLE_TALL_TH, _upper_handle_h, _HANDLE_TALL_DP).move(
                         _bx + (_w * s * 0.36),
                         _by + (_h * s * 0.16),
                         _front_z + 0.018,
                     ).material(_handle_c, opacity=1.0)
-                    sc.box(0.018, _lower_handle_h, 0.026).move(
+                    sc.box(_HANDLE_TALL_TH, _lower_handle_h, _HANDLE_TALL_DP).move(
                         _bx + (_w * s * 0.36),
                         _by - (_h * s * 0.26),
                         _front_z + 0.018,
@@ -669,42 +704,103 @@ def render_kitchen_elements_scene_3d(
                         _by - (_h * s * 0.22),
                         _front_z + 0.014,
                     ).material(_inox_dark, opacity=1.0)
-                    sc.box(0.020, min(480.0, _h * 0.68) * s, 0.032).move(
+                    sc.box(_HANDLE_FRIDGE_TH, min(480.0, _h * 0.68) * s, _HANDLE_FRIDGE_DP).move(
                         _bx + (_w * s * 0.36),
                         _by,
                         _front_z + 0.020,
                     ).material(_inox_dark, opacity=1.0)
-                    sc.box(0.009, min(460.0, _h * 0.64) * s, 0.014).move(
+                    sc.box(_HANDLE_FRIDGE_HI_TH, min(460.0, _h * 0.64) * s, _HANDLE_FRIDGE_HI_DP).move(
                         _bx + (_w * s * 0.36) + 0.002,
                         _by + 0.002,
                         _front_z + 0.026,
                     ).material(_inox_light, opacity=0.90)
-            elif _is_dish:
-                # Ugradna mašina za sudove sa front panelom u boji kuhinje
+            elif _is_dish_freestanding:
                 _dish_face = sc.box((_w - 14) * s, (_h - 12) * s, 0.012).move(
                     _bx, _by, _front_z
-                ).material(_front_c, opacity=1.0)
-                # Gornja tehnička traka + komandna zona (diskretno inox/crno)
+                ).material('#E7ECF1', opacity=1.0)
                 _panel_h = max(46.0, min(70.0, _h * 0.10))
                 _panel_y = (_by + (_h * s / 2)) - ((_panel_h * s) / 2) - 0.004
                 sc.box((_w - 18) * s, _panel_h * s, 0.014).move(
                     _bx, _panel_y, _front_z + 0.004
-                ).material('#b9bfc7', opacity=0.95)
+                ).material('#C9D1D9', opacity=0.95)
                 sc.box((_w * 0.18) * s, (_panel_h * 0.55) * s, 0.015).move(
                     _bx, _panel_y, _front_z + 0.010
                 ).material('#2f3b4a', opacity=0.95)
-                # Ručka kao kod ostalih frontova
-                _hl = min(220.0, _w * 0.50) * s
-                sc.box(_hl, 0.013, 0.018).move(
-                    _bx,
-                    _by - ((_h * s) * 0.36),
-                    _front_z + 0.010,
-                ).material(_handle_c, opacity=1.0)
-                sc.box(_hl * 0.92, 0.006, 0.009).move(
-                    _bx,
-                    _by - ((_h * s) * 0.36) + 0.002,
-                    _front_z + 0.013,
-                ).material(_handle_hi, opacity=0.95)
+                try:
+                    _dish_face.on_click(lambda e, mid=int(_m.get('id', -1)): (
+                        setattr(state, 'selected_edit_id', mid),
+                        setattr(state, 'mode', 'edit'),
+                        main_content_refresh(),
+                    ))
+                except Exception as ex:
+                    _LOG.debug("3D click-bind failed (dishwasher freestanding, id=%s): %s", _m.get('id', -1), ex)
+            elif _is_dish:
+                _dish = dishwasher_installation_metrics(state.kitchen, _m)
+                _raised = bool(_dish.get("dishwasher_raised_mode", False))
+                _front_h = float(_dish.get("dishwasher_front_height", 720))
+                _lower_fill_h = float(_dish.get("dishwasher_lower_filler_height", 0))
+
+                if _raised and _lower_fill_h > 0:
+                    _front_vis_h = max(40.0, min(_h, _front_h))
+                    _filler_vis_h = max(20.0, min(_h - _front_vis_h, _lower_fill_h))
+                    _front_cy = (_y0 + _filler_vis_h + (_front_vis_h / 2.0)) * s
+                    _filler_cy = (_y0 + (_filler_vis_h / 2.0)) * s
+
+                    _dish_face = sc.box((_w - 14) * s, max(0.02, (_front_vis_h - 12) * s), 0.012).move(
+                        _bx, _front_cy, _front_z
+                    ).material(_front_c, opacity=1.0)
+                    sc.box((_w - 14) * s, max(0.02, (_filler_vis_h - 10) * s), 0.012).move(
+                        _bx, _filler_cy, _front_z
+                    ).material(_front_c, opacity=0.96)
+                    sc.box((_w - 16) * s, 0.004, 0.012).move(
+                        _bx, (_y0 + _filler_vis_h) * s, _front_z + 0.004
+                    ).material(_shade(_carcass_c, 0.68), opacity=0.85)
+
+                    _panel_h = max(46.0, min(70.0, _front_vis_h * 0.10))
+                    _panel_y = (_front_cy + (_front_vis_h * s / 2)) - ((_panel_h * s) / 2) - 0.004
+                    sc.box((_w - 18) * s, _panel_h * s, 0.014).move(
+                        _bx, _panel_y, _front_z + 0.004
+                    ).material('#b9bfc7', opacity=0.95)
+                    sc.box((_w * 0.18) * s, (_panel_h * 0.55) * s, 0.015).move(
+                        _bx, _panel_y, _front_z + 0.010
+                    ).material('#2f3b4a', opacity=0.95)
+                    _hl = min(220.0, _w * 0.50) * s
+                    sc.box(_hl, _HANDLE_BAR_TH, _HANDLE_BAR_DP).move(
+                        _bx,
+                        _panel_y - (_panel_h * s * 0.85),
+                        _front_z + 0.010,
+                    ).material(_handle_c, opacity=1.0)
+                    sc.box(_hl * 0.92, _HANDLE_HI_TH, _HANDLE_HI_DP).move(
+                        _bx,
+                        _panel_y - (_panel_h * s * 0.85) + 0.002,
+                        _front_z + 0.013,
+                    ).material(_handle_hi, opacity=0.95)
+                else:
+                    # Ugradna mašina za sudove sa front panelom u boji kuhinje
+                    _dish_face = sc.box((_w - 14) * s, (_h - 12) * s, 0.012).move(
+                        _bx, _by, _front_z
+                    ).material(_front_c, opacity=1.0)
+                    # Gornja tehnička traka + komandna zona (diskretno inox/crno)
+                    _panel_h = max(46.0, min(70.0, _h * 0.10))
+                    _panel_y = (_by + (_h * s / 2)) - ((_panel_h * s) / 2) - 0.004
+                    sc.box((_w - 18) * s, _panel_h * s, 0.014).move(
+                        _bx, _panel_y, _front_z + 0.004
+                    ).material('#b9bfc7', opacity=0.95)
+                    sc.box((_w * 0.18) * s, (_panel_h * 0.55) * s, 0.015).move(
+                        _bx, _panel_y, _front_z + 0.010
+                    ).material('#2f3b4a', opacity=0.95)
+                    # Ručka kao kod ostalih frontova
+                    _hl = min(220.0, _w * 0.50) * s
+                    sc.box(_hl, _HANDLE_BAR_TH, _HANDLE_BAR_DP).move(
+                        _bx,
+                        _by - ((_h * s) * 0.36),
+                        _front_z + 0.010,
+                    ).material(_handle_c, opacity=1.0)
+                    sc.box(_hl * 0.92, _HANDLE_HI_TH, _HANDLE_HI_DP).move(
+                        _bx,
+                        _by - ((_h * s) * 0.36) + 0.002,
+                        _front_z + 0.013,
+                    ).material(_handle_hi, opacity=0.95)
                 try:
                     _dish_face.on_click(lambda e, mid=int(_m.get('id', -1)): (
                         setattr(state, 'selected_edit_id', mid),
@@ -713,6 +809,31 @@ def render_kitchen_elements_scene_3d(
                     ))
                 except Exception as ex:
                     _LOG.debug("3D click-bind failed (dishwasher, id=%s): %s", _m.get('id', -1), ex)
+            elif _is_cooking_freestanding:
+                _ctrl_h = max(42.0, _h * 0.10)
+                _oven_h = max(300.0, _h - _ctrl_h - 18.0)
+                _y_top = float(_y0) + _h
+                _y_ctrl_c = _y_top - (_ctrl_h / 2.0) - 6.0
+                _y_oven_c = float(_y0) + (_oven_h / 2.0) + 6.0
+                sc.box((_w - 12) * s, _ctrl_h * s, 0.012).move(_bx, _y_ctrl_c * s, _front_z).material(_inox_light, opacity=1.0)
+                sc.box((_w - 12) * s, _oven_h * s, 0.012).move(_bx, _y_oven_c * s, _front_z).material(_inox_mid, opacity=1.0)
+                sc.box((_w - 28) * s, (_oven_h - 24) * s, 0.014).move(
+                    _bx, _y_oven_c * s, _front_z + 0.004
+                ).material('#111827', opacity=0.92)
+                _oh = min(230.0, _w * 0.52) * s
+                sc.box(_oh, _HANDLE_OVEN_TH, _HANDLE_OVEN_DP).move(
+                    _bx, (_y_oven_c + (_oven_h * 0.26)) * s, _front_z + 0.010
+                ).material(_handle_c, opacity=1.0)
+                sc.box(_oh * 0.92, _HANDLE_HI_TH, _HANDLE_OVEN_HI_DP).move(
+                    _bx, (_y_oven_c + (_oven_h * 0.26) + 2.0) * s, _front_z + 0.013
+                ).material(_handle_hi, opacity=0.95)
+                _knob_r = 0.010
+                sc.sphere(_knob_r).move((_bx - (_w * 0.22) * s), _y_ctrl_c * s, _front_z + 0.010).material('#e5e7eb', opacity=1.0)
+                sc.sphere(_knob_r).move((_bx + (_w * 0.22) * s), _y_ctrl_c * s, _front_z + 0.010).material('#e5e7eb', opacity=1.0)
+                sc.box((_w * 0.16) * s, 0.016, 0.012).move(_bx, _y_ctrl_c * s, _front_z + 0.010).material('#111827', opacity=0.95)
+                sc.box((_w - 8) * s, 0.012, (_d_mm - 8) * s).move(
+                    _bx, (_by + (_h * s / 2)) + 0.006, _bz
+                ).material('#111827', opacity=0.97)
             elif _is_cooking_unit:
                 # Base cooking unit: hob top + oven door + bottom drawer.
                 _ctrl_h = max(42.0, _h * 0.10)
@@ -734,18 +855,18 @@ def render_kitchen_elements_scene_3d(
                     _bx, _y_oven_c * s, _front_z + 0.004
                 ).material('#111827', opacity=0.92)
 
-                # Oven horizontal handle
+                # Oven horizontal handle — pri vrhu vrata
                 _oh = min(230.0, _w * 0.52) * s
-                sc.box(_oh, 0.010, 0.013).move(
-                    _bx, (_y_oven_c - (_oven_h * 0.26)) * s, _front_z + 0.010
+                sc.box(_oh, _HANDLE_OVEN_TH, _HANDLE_OVEN_DP).move(
+                    _bx, (_y_oven_c + (_oven_h * 0.26)) * s, _front_z + 0.010
                 ).material(_handle_c, opacity=1.0)
-                sc.box(_oh * 0.92, 0.006, 0.010).move(
-                    _bx, (_y_oven_c - (_oven_h * 0.26) + 2.0) * s, _front_z + 0.013
+                sc.box(_oh * 0.92, _HANDLE_HI_TH, _HANDLE_OVEN_HI_DP).move(
+                    _bx, (_y_oven_c + (_oven_h * 0.26) + 2.0) * s, _front_z + 0.013
                 ).material(_handle_hi, opacity=0.95)
 
                 # Bottom drawer handle
                 _dh = min(210.0, _w * 0.45) * s
-                sc.box(_dh, 0.011, 0.014).move(
+                sc.box(_dh, _HANDLE_DRAWER_TH, _HANDLE_DRAWER_DP).move(
                     _bx, _y_drawer_c * s, _front_z + 0.010
                 ).material(_handle_c, opacity=1.0)
 
@@ -782,12 +903,12 @@ def render_kitchen_elements_scene_3d(
                     _front_z + 0.004,
                 ).material('#111827', opacity=0.92)
                 _ap_hl = min(240.0, _w * 0.54) * s
-                sc.box(_ap_hl, 0.009, 0.012).move(
+                sc.box(_ap_hl, _HANDLE_HI_DP, _HANDLE_PANEL_TH).move(
                     _bx,
                     (_by - _glass_h * 0.25),
                     _front_z + 0.010,
                 ).material(_handle_c, opacity=1.0)
-                sc.box(_ap_hl * 0.92, 0.006, 0.010).move(
+                sc.box(_ap_hl * 0.92, _HANDLE_HI_TH, _HANDLE_OVEN_HI_DP).move(
                     _bx,
                     (_by - _glass_h * 0.25) + 0.002,
                     _front_z + 0.013,
@@ -808,12 +929,12 @@ def render_kitchen_elements_scene_3d(
                         _face = sc.box(_dw * s, (_h - 12) * s, 0.012).move(_cx, _by, _front_z).material(_front_c, opacity=1.0)
                         _hx = _cx + ((_dw * s) * (0.33 if _i == 0 else -0.33))
                         _vh = min(220.0, _h * 0.34) * s
-                        sc.box(0.013, _vh, 0.018).move(
+                        sc.box(_HANDLE_BAR_TH, _vh, _HANDLE_BAR_DP).move(
                             _hx,
                             _by,
                             _front_z + 0.010,
                         ).material(_handle_c, opacity=1.0)
-                        sc.box(0.006, _vh * 0.9, 0.009).move(
+                        sc.box(_HANDLE_HI_TH, _vh * 0.9, _HANDLE_HI_DP).move(
                             _hx + 0.002,
                             _by + 0.002,
                             _front_z + 0.013,
@@ -829,49 +950,82 @@ def render_kitchen_elements_scene_3d(
                 else:
                     _face = sc.box((_w - 14) * s, (_h - 12) * s, 0.012).move(_bx, _by, _front_z).material(_front_c, opacity=1.0)
                     _hl = min(220.0, _w * 0.50) * s
-                    sc.box(_hl, 0.013, 0.018).move(
+                    sc.box(_hl, _HANDLE_BAR_TH, _HANDLE_BAR_DP).move(
                         _bx,
                         _by - ((_h * s) * 0.33),
                         _front_z + 0.010,
                     ).material(_handle_c, opacity=1.0)
-                    sc.box(_hl * 0.92, 0.006, 0.009).move(
+                    sc.box(_hl * 0.92, _HANDLE_HI_TH, _HANDLE_HI_DP).move(
                         _bx,
                         _by - ((_h * s) * 0.33) + 0.002,
                         _front_z + 0.013,
                     ).material(_handle_hi, opacity=0.95)
-                # Sudopera: inox radna površina, korito i slavina
-                _sink_top_c = '#C8CDD3'   # inox radna površina
-                _sink_bowl_c = '#9EA8B2'  # tamnije korito (udubljeno)
-                _sink_rim_c  = '#B2BAC2'  # rub korita
+                # Sudopera koristi standardnu radnu ploču, ali dobija ugradni inox insert.
                 _faucet_c    = '#BEC6CE'  # tijelo slavine (brushed chrome)
                 _faucet_hi   = '#DDE4EA'  # odsjaj slavine
-                # Debljina inox radne ploče = ista kao globalni radni sto
+                _sink_rim_c  = '#C9CED4'
+                _sink_cutout_c = '#707780'
+                _sink_bowl_c = '#A9B2BB'
+                _sink_bowl_d = '#8C97A2'
+                # Debljina radne ploče = ista kao globalni radni sto
                 _wt_k = (state.kitchen.get('worktop', {}) or {})
                 _wt_thk_s = max(20.0, float(_wt_k.get('thickness', 4.0)) * 10.0)
                 _cab_top = _by + (_h * s / 2.0)               # vrh korpusa u 3D
-                _inox_center_y = _cab_top + (_wt_thk_s * s / 2.0)
-                _inox_top_y    = _cab_top + (_wt_thk_s * s)   # gornja površina inox ploče
-                # Inox radna ploča (iste dimenzije kao globalni radni sto)
-                sc.box((_w - 10) * s, _wt_thk_s * s, (_d_mm - 10) * s).move(
-                    _bx, _inox_center_y, _bz,
-                ).material(_sink_top_c, opacity=1.0)
-                # Korito — usjek u inox ploči (isti centar Y, malo dublji od ploče)
-                _bowl_w = max((_w * 0.42) * s, 0.30)
-                _bowl_d = (_d_mm * 0.48) * s
-                sc.box(_bowl_w, _wt_thk_s * s + 0.025, _bowl_d).move(
-                    _bx - (_w * 0.05 * s),
-                    _inox_center_y,
-                    (_d_mm * 0.52) * s,
-                ).material(_sink_bowl_c, opacity=1.0)
-                # Rub korita (highlight na gornjoj ivici korita)
-                sc.box(_bowl_w + 0.008, 0.006, _bowl_d + 0.008).move(
-                    _bx - (_w * 0.05 * s),
-                    _inox_top_y + 0.001,
-                    (_d_mm * 0.52) * s,
-                ).material(_sink_rim_c, opacity=0.80)
-                # Slavina — vertikalni vrat (stoji IZNAD inox ploče)
+                _worktop_top_y = _cab_top + (_wt_thk_s * s)
+                _insert_w = min((_w - 70.0), _w * 0.78) * s
+                _insert_d = min((_d_mm - 90.0), _d_mm * 0.62) * s
+                _insert_x = _bx
+                _insert_z = (_d_mm * 0.50) * s
+                _insert_top_y = _worktop_top_y + 0.0018
+                _cutout_y = _worktop_top_y - 0.0045
+                _insert_mid_y = _worktop_top_y - 0.010
+
+                if _insert_w > 0.12 and _insert_d > 0.12:
+                    sc.box(_insert_w * 0.98, 0.010, _insert_d * 0.98).move(
+                        _insert_x,
+                        _cutout_y,
+                        _insert_z,
+                    ).material(_sink_cutout_c, opacity=1.0)
+                    sc.box(_insert_w, 0.007, _insert_d).move(
+                        _insert_x,
+                        _insert_top_y,
+                        _insert_z,
+                    ).material(_sink_rim_c, opacity=1.0)
+
+                    _n_bowls = 2 if _w >= 700 else 1
+                    if _n_bowls == 1:
+                        _bowl_w = _insert_w * 0.72
+                        _bowl_d = _insert_d * 0.72
+                        _bowl_x = _insert_x
+                        sc.box(_bowl_w, 0.030, _bowl_d).move(
+                            _bowl_x,
+                            _insert_mid_y - 0.014,
+                            _insert_z,
+                        ).material(_sink_bowl_c, opacity=1.0)
+                        sc.box(_bowl_w * 0.90, 0.020, _bowl_d * 0.90).move(
+                            _bowl_x,
+                            _insert_mid_y - 0.017,
+                            _insert_z,
+                        ).material(_sink_bowl_d, opacity=1.0)
+                    else:
+                        _bowl_w = (_insert_w * 0.78) / 2.0
+                        _bowl_gap = _insert_w * 0.06
+                        _bowl_d = _insert_d * 0.70
+                        for _sx in (-1, 1):
+                            _bowl_x = _insert_x + _sx * ((_bowl_w / 2.0) + (_bowl_gap / 2.0))
+                            sc.box(_bowl_w, 0.030, _bowl_d).move(
+                                _bowl_x,
+                                _insert_mid_y - 0.014,
+                                _insert_z,
+                            ).material(_sink_bowl_c, opacity=1.0)
+                            sc.box(_bowl_w * 0.90, 0.020, _bowl_d * 0.90).move(
+                                _bowl_x,
+                                _insert_mid_y - 0.017,
+                                _insert_z,
+                            ).material(_sink_bowl_d, opacity=1.0)
+                # Slavina — vertikalni vrat (stoji iznad standardne radne ploče)
                 _faucet_x = _bx - (_w * 0.05 * s)
-                _faucet_base_y = _inox_top_y
+                _faucet_base_y = _worktop_top_y
                 sc.box(0.022, 0.095, 0.022).move(
                     _faucet_x,
                     _faucet_base_y + 0.048,
@@ -914,12 +1068,12 @@ def render_kitchen_elements_scene_3d(
                         _face = sc.box(_dw * s, (_h - 12) * s, 0.012).move(_cx, _by, _front_z).material(_front_c, opacity=1.0)
                         _hx = _cx + ((_dw * s) * (0.33 if _i == 0 else -0.33))
                         _vh = min(240.0, _h * 0.36) * s
-                        sc.box(0.013, _vh, 0.018).move(
+                        sc.box(_HANDLE_BAR_TH, _vh, _HANDLE_BAR_DP).move(
                             _hx,
                             _by,
                             _front_z + 0.010,
                         ).material(_handle_c, opacity=1.0)
-                        sc.box(0.006, _vh * 0.9, 0.009).move(
+                        sc.box(_HANDLE_HI_TH, _vh * 0.9, _HANDLE_HI_DP).move(
                             _hx + 0.002,
                             _by + 0.002,
                             _front_z + 0.013,
@@ -940,21 +1094,21 @@ def render_kitchen_elements_scene_3d(
                     if _h_side in ('left', 'right'):
                         _hx = _bx + (_w * s * (0.36 if _h_side == 'right' else -0.36))
                         _hy_off = (_h * s * 0.12) if _is_wall else 0.0
-                        sc.box(0.013, _vh_len, 0.018).move(
+                        sc.box(_HANDLE_BAR_TH, _vh_len, _HANDLE_BAR_DP).move(
                             _hx, _by - _hy_off, _front_z + 0.010
                         ).material(_handle_c, opacity=1.0)
-                        sc.box(0.004, _vh_len * 0.90, 0.007).move(
+                        sc.box(_HANDLE_HI_TH_NARROW, _vh_len * 0.90, _HANDLE_HI_DP_NARROW).move(
                             _hx + 0.002, _by - _hy_off + 0.001, _front_z + 0.013
                         ).material(_handle_hi, opacity=0.95)
                     else:
                         # center = horizontalna ručka
                         _hl = min(220.0, _w * 0.52) * s
-                        sc.box(_hl, 0.013, 0.018).move(
+                        sc.box(_hl, _HANDLE_BAR_TH, _HANDLE_BAR_DP).move(
                             _bx,
                             _by - ((_h * s) * 0.34 if _is_wall else (_h * s) * 0.36),
                             _front_z + 0.010,
                         ).material(_handle_c, opacity=1.0)
-                        sc.box(_hl * 0.92, 0.006, 0.009).move(
+                        sc.box(_hl * 0.92, _HANDLE_HI_TH, _HANDLE_HI_DP).move(
                             _bx,
                             _by - ((_h * s) * 0.34 if _is_wall else (_h * s) * 0.36) + 0.002,
                             _front_z + 0.013,
@@ -971,7 +1125,7 @@ def render_kitchen_elements_scene_3d(
                 if _is_liftup:
                     _split_y = _by + (_h * s * 0.07)
                     sc.box((_w - 14) * s, 0.006, 0.010).move(_bx, _split_y, _front_z + 0.008).material('#4b5563', opacity=0.75)
-                    sc.box(min(200.0, _w * 0.48) * s, 0.012, 0.018).move(_bx, _by - (_h * s * 0.35), _front_z + 0.018).material(_handle_c, opacity=1.0)
+                    sc.box(min(200.0, _w * 0.48) * s, _HANDLE_PANEL_TH, _HANDLE_PANEL_DP).move(_bx, _by - (_h * s * 0.35), _front_z + 0.018).material(_handle_c, opacity=1.0)
 
             # Corner (L-oblik) – pravo 3D L-krilo prema posmatraču
             if _is_corner:
@@ -1046,17 +1200,17 @@ def render_kitchen_elements_scene_3d(
                     sc.box(max(0.016, _diag_len), (_h - 10) * s, 0.018).move(
                         _diag_x, _by, _diag_z
                     ).rotate(0, -0.78 if _is_left_c else 0.78, 0).material(_front_c, opacity=1.0)
-                    sc.box(max(0.12, _diag_len * 0.42), 0.012, 0.020).move(
+                    sc.box(max(0.12, _diag_len * 0.42), _HANDLE_PANEL_TH, _HANDLE_CORNER_TALL_DP).move(
                         _diag_x, _by, _diag_z + 0.010
                     ).rotate(0, -0.78 if _is_left_c else 0.78, 0).material(_handle_c, opacity=0.95)
                     if _is_wall_corner:
-                        sc.box(0.014, max(0.08, (_h - 40) * s), max(0.10, _diag_len * 0.30)).move(
+                        sc.box(_HANDLE_CORNER_TALL_TH, max(0.08, (_h - 40) * s), max(0.10, _diag_len * 0.30)).move(
                             _diag_x + (0.010 if _is_left_c else -0.010),
                             _by - (_h * s * 0.08),
                             _diag_z,
                         ).rotate(0, -0.78 if _is_left_c else 0.78, 0).material(_handle_c, opacity=0.92)
                 elif _z == 'base':
-                    sc.box(max(0.08, _wing_face_x * 0.36), 0.012, 0.018).move(
+                    sc.box(max(0.08, _wing_face_x * 0.36), _HANDLE_PANEL_TH, _HANDLE_PANEL_DP).move(
                         _wing_cx,
                         _by - (_h * s * 0.18),
                         _wing_front_z + 0.004,
@@ -1072,7 +1226,7 @@ def render_kitchen_elements_scene_3d(
                         _wing_cx, _wt_y, _wing_front_z - 0.004
                     ).material('#7A726A', opacity=1.0)
                 elif _is_wall_corner:
-                    sc.box(0.014, max(0.08, (_h - 34) * s), 0.020).move(
+                    sc.box(_HANDLE_CORNER_TALL_TH, max(0.08, (_h - 34) * s), _HANDLE_CORNER_TALL_DP).move(
                         _wing_cx + ((_wing_face_x * 0.28) if _is_left_c else -(_wing_face_x * 0.28)),
                         _by - (_h * s * 0.06),
                         _wing_front_z + 0.006,

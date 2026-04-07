@@ -25,6 +25,15 @@ def switch_tab(
     render_toolbar_refresh,
     logger,
 ) -> None:
+    if key == "krojna":
+        from state_logic import get_cutlist_access_state
+
+        cutlist_access = get_cutlist_access_state()
+        if str(cutlist_access.get("allowed", "")).lower() != "true":
+            ui.notify(str(cutlist_access.get("reason", "") or "Krojna lista nije dostupna."), type="warning")
+            safe_refresh(main_content_refresh, logger)
+            ui.timer(0.05, lambda: safe_refresh(render_toolbar_refresh, logger), once=True)
+            return
     if key in ("elementi", "krojna") and not getattr(state, "room_setup_done", False):
         state.active_tab = "wizard"
         state.wizard_step = 4

@@ -1,0 +1,16 @@
+.git
+.idea
+.claude
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+tmp_app_stdout.log
+tmp_app_stderr.log
+data/project_store.db
+data/recent_projects
+data/autosave_*.json
+data/recent_projects_index*.json

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Callable
+from i18n import tr
 
 from i18n import (
     BTN_OBRISI_ELEMENT,
@@ -34,6 +35,7 @@ from i18n import (
     SEC_SMER_GODA,
 )
 from ui_panels_helpers import format_user_error
+from ui_catalog_config import translate_template_label
 
 
 def render_module_properties_panel(
@@ -49,10 +51,14 @@ def render_module_properties_panel(
     delete_module_local: Callable[[int], Any],
     solve_layout: Callable[..., Any],
 ) -> None:
+    _lang = str(getattr(state, 'language', 'sr') or 'sr').lower().strip()
+    def _t(key: str, **fmt: object) -> str:
+        return tr(key, _lang, **fmt)
     try:
         _module_properties_panel_inner(
             ui=ui,
             state=state,
+            _tr_fn=_t,
             logger=logger,
             nacrt_refresh=nacrt_refresh,
             sidebar_refresh=sidebar_refresh,
@@ -75,6 +81,7 @@ def _module_properties_panel_inner(
     *,
     ui: Any,
     state: Any,
+    _tr_fn: Callable[..., str],
     logger: Any,
     nacrt_refresh: Callable[[], None],
     sidebar_refresh: Callable[[], None],
@@ -84,6 +91,10 @@ def _module_properties_panel_inner(
     delete_module_local: Callable[[int], Any],
     solve_layout: Callable[..., Any],
 ) -> None:
+    _lang = str(getattr(state, 'language', 'sr') or 'sr').lower().strip()
+    def _txt(sr: str, en: str) -> str:
+        return en if _lang == 'en' else sr
+
     if state.selected_edit_id <= 0:
         with ui.column().classes(
             'w-full h-full flex flex-col items-center justify-center p-6 gap-3'
@@ -110,10 +121,10 @@ def _module_properties_panel_inner(
     params = m.get('params') or {}
 
     zone_badge = {
-        'base': ('Donji', '#DCFCE7', '#166534'),
-        'wall': ('Gornji', '#DBEAFE', '#1E40AF'),
-        'wall_upper': ('Gornji+', '#CFFAFE', '#155E75'),
-        'tall': ('Visoki', '#F3E8FF', '#6B21A8'),
+        'base': (_txt('Donji', 'Base'), '#DCFCE7', '#166534'),
+        'wall': (_txt('Gornji', 'Wall'), '#DBEAFE', '#1E40AF'),
+        'wall_upper': (_txt('Gornji+', 'Wall+'), '#CFFAFE', '#155E75'),
+        'tall': (_txt('Visoki', 'Tall'), '#F3E8FF', '#6B21A8'),
     }.get(zone_m, (zone_m.upper(), '#F3F4F6', '#374151'))
 
     cur_grain = str(params.get('grain_dir', 'V') or 'V').upper()
@@ -148,7 +159,7 @@ def _module_properties_panel_inner(
                     ui.element('span').classes('text-[10px] font-bold px-2 py-0.5 rounded').style(
                         f'background:{zbg};color:{ztxt};'
                     ).text = zl
-                    ui.label(LBL_SVOJSTVA).classes('text-sm font-bold text-gray-700')
+                    ui.label(_txt('Svojstva', 'Properties')).classes('text-sm font-bold text-gray-700')
                 ui.button(
                     icon='close',
                     on_click=lambda: (
@@ -158,7 +169,7 @@ def _module_properties_panel_inner(
                         sidebar_refresh(),
                     )
                 ).props('flat round dense').classes('text-gray-400')
-            tmpl_label = str(m.get('label', m.get('template_id', '?')))
+            tmpl_label = translate_template_label(str(m.get('label', m.get('template_id', '?'))), _lang)
             ui.label(tmpl_label).classes('text-xs text-gray-500 mt-0.5 truncate w-full')
             dims_txt = f"{m.get('w_mm','?')} x {m.get('h_mm','?')} x {m.get('d_mm','?')} mm"
             ui.label(dims_txt).classes('text-[10px] text-gray-400 font-mono mt-0.5')
@@ -209,46 +220,46 @@ def _module_properties_panel_inner(
                 sec_locked = None
 
                 with ui.column().classes('w-full gap-1.5'):
-                    ui.label(SEC_NAZIV).classes(
+                    ui.label(_txt('Naziv', 'Name')).classes(
                         'text-[9px] font-bold uppercase tracking-widest text-gray-400'
                     )
                     lbl_inp = ui.input(
                         value=str(m.get('label', '')),
-                        placeholder=LBL_NAZIV_ELEMENTA_PLACEHOLDER,
+                        placeholder=_txt('Naziv elementa', 'Unit name'),
                     ).props('outlined dense').classes('w-full')
 
                 with ui.column().classes('w-full gap-1.5'):
-                    ui.label(SEC_DIMENZIJE).classes(
+                    ui.label(_txt('Dimenzije', 'Dimensions')).classes(
                         'text-[9px] font-bold uppercase tracking-widest text-gray-400'
                     )
                     with ui.grid(columns=2).classes('w-full gap-2'):
                         with ui.column().classes('gap-0.5'):
-                            ui.label(LBL_SIRINA_MM).classes('text-[10px] text-gray-500')
+                            ui.label(_txt('Širina [mm]', 'Width [mm]')).classes('text-[10px] text-gray-500')
                             w_inp = ui.number(
                                 value=int(m.get('w_mm', 0)),
                                 min=100, max=3000, step=10,
                             ).props('outlined dense').classes('w-full')
                         with ui.column().classes('gap-0.5'):
-                            ui.label(LBL_VISINA_MAX_ONLY_FMT.format(max_h=max_h)).classes('text-[10px] text-gray-500')
+                            ui.label(_txt(f'Visina ≤{max_h}', f'Height ≤{max_h}')).classes('text-[10px] text-gray-500')
                             h_inp = ui.number(
                                 value=min(int(m.get('h_mm', 0)), max_h),
                                 min=100, max=max_h, step=10,
                             ).props('outlined dense').classes('w-full')
                         with ui.column().classes('gap-0.5'):
-                            ui.label(LBL_DUBINA_MM).classes('text-[10px] text-gray-500')
+                            ui.label(_txt('Dubina [mm]', 'Depth [mm]')).classes('text-[10px] text-gray-500')
                             d_inp = ui.number(
                                 value=int(m.get('d_mm', 0)),
                                 min=100, max=2000, step=10,
                             ).props('outlined dense').classes('w-full')
                         with ui.column().classes('gap-0.5'):
-                            ui.label(LBL_RAZMAK_MM).classes('text-[10px] text-gray-500')
+                            ui.label(_txt('Razmak [mm]', 'Gap [mm]')).classes('text-[10px] text-gray-500')
                             g_inp = ui.number(
                                 value=int(m.get('gap_after_mm', 0)),
                                 min=0, max=500, step=1,
                             ).props('outlined dense').classes('w-full')
 
                 with ui.column().classes('w-full gap-1.5'):
-                    ui.label(SEC_DUBINA_MODE).classes(
+                    ui.label(_txt('Režim dubine', 'Depth mode')).classes(
                         'text-[9px] font-bold uppercase tracking-widest text-gray-400'
                     )
                     depth_mode_sel = ui.select(
@@ -257,7 +268,7 @@ def _module_properties_panel_inner(
                     ).props('outlined dense').classes('w-full')
 
                 with ui.column().classes('w-full gap-1.5'):
-                    ui.label(SEC_SMER_GODA).classes(
+                    ui.label(_txt('Smer goda', 'Grain direction')).classes(
                         'text-[9px] font-bold uppercase tracking-widest text-gray-400'
                     )
                     grain_sel = ui.select(
@@ -267,20 +278,20 @@ def _module_properties_panel_inner(
 
                 if is_wardrobe:
                     with ui.column().classes('w-full gap-1.5'):
-                        ui.label('UNUTRASNJI RASPORED').classes(
+                        ui.label(_tr_fn('elements.wardrobe_layout')).classes(
                             'text-[9px] font-bold uppercase tracking-widest text-gray-400'
                         )
                         wardrobe_front_sel = ui.select(
-                            {'doors': 'Spolja (vrata)', 'inside': 'Unutra (bez vrata)', 'both': 'Oba prikaza'},
+                            {'doors': _tr_fn('elements.front_outside'), 'inside': _tr_fn('elements.front_inside'), 'both': _tr_fn('elements.front_both')},
                             value=str(params.get('front_style', 'both') or 'both'),
                         ).props('outlined dense').classes('w-full')
                         wardrobe_door_mode_sel = ui.select(
-                            {'hinged': 'Krilna vrata', 'sliding': 'Klizna vrata'},
+                            {'hinged': _tr_fn('elements.doors_hinged'), 'sliding': _tr_fn('elements.doors_sliding')},
                             value=str(params.get('door_mode', 'sliding' if 'SLIDING' in cur_tid else 'hinged') or 'hinged'),
                         ).props('outlined dense').classes('w-full')
                         with ui.grid(columns=2).classes('w-full gap-2'):
                             with ui.column().classes('gap-0.5'):
-                                ui.label('Police').classes('text-[10px] text-gray-500')
+                                ui.label(_tr_fn('elements.shelves')).classes('text-[10px] text-gray-500')
                                 _ws = int(params.get('n_shelves', 4))
                                 wardrobe_shelves_inp = ui.number(
                                     value=_ws,
@@ -290,7 +301,7 @@ def _module_properties_panel_inner(
                                     min=_s_min, max=_s_max, value=_ws, step=1
                                 ).props('label-always').classes('w-full -mt-1')
                             with ui.column().classes('gap-0.5'):
-                                ui.label('Fioke').classes('text-[10px] text-gray-500')
+                                ui.label(_tr_fn('elements.drawers')).classes('text-[10px] text-gray-500')
                                 _wd = int(params.get('n_drawers', 2))
                                 wardrobe_drawers_inp = ui.number(
                                     value=_wd,
@@ -300,7 +311,7 @@ def _module_properties_panel_inner(
                                     min=_d_min, max=_d_max, value=_wd, step=1
                                 ).props('label-always').classes('w-full -mt-1')
                             with ui.column().classes('gap-0.5'):
-                                ui.label('Kačenje').classes('text-[10px] text-gray-500')
+                                ui.label(_tr_fn('elements.hanging')).classes('text-[10px] text-gray-500')
                                 _wh = int(params.get('hanger_sections', 1))
                                 wardrobe_hangers_inp = ui.number(
                                     value=_wh,
@@ -318,57 +329,57 @@ def _module_properties_panel_inner(
                         _right = dict(_sec.get('right') or {})
                         _top = dict(_sec.get('top') or {})
                         with ui.column().classes('w-full gap-1.5'):
-                            ui.label('SEKCIJE (LEVA / CENTAR / DESNA / SPREMNIK)').classes(
+                            ui.label(_tr_fn('elements.sections_title')).classes(
                                 'text-[9px] font-bold uppercase tracking-widest text-gray-400'
                             )
                             with ui.grid(columns=2).classes('w-full gap-2'):
                                 with ui.column().classes('gap-0.5'):
-                                    ui.label('Leva %').classes('text-[10px] text-gray-500')
+                                    ui.label(_tr_fn('elements.left_pct')).classes('text-[10px] text-gray-500')
                                     sec_left_pct = ui.number(value=int(_sec.get('left_pct', 33)), min=10, max=80, step=1).props('outlined dense').classes('w-full')
                                     sec_left_pct_sld = ui.slider(min=10, max=80, value=int(_sec.get('left_pct', 33)), step=1).props('label-always').classes('w-full -mt-1')
                                 with ui.column().classes('gap-0.5'):
-                                    ui.label('Centar %').classes('text-[10px] text-gray-500')
+                                    ui.label(_tr_fn('elements.center_pct')).classes('text-[10px] text-gray-500')
                                     sec_center_pct = ui.number(value=int(_sec.get('center_pct', 34)), min=10, max=80, step=1).props('outlined dense').classes('w-full')
                                     sec_center_pct_sld = ui.slider(min=10, max=80, value=int(_sec.get('center_pct', 34)), step=1).props('label-always').classes('w-full -mt-1')
                                 with ui.column().classes('gap-0.5'):
-                                    ui.label('Desna %').classes('text-[10px] text-gray-500')
+                                    ui.label(_tr_fn('elements.right_pct')).classes('text-[10px] text-gray-500')
                                     sec_right_pct = ui.number(value=int(_sec.get('right_pct', 33)), min=10, max=80, step=1).props('outlined dense').classes('w-full')
                                     sec_right_pct_sld = ui.slider(min=10, max=80, value=int(_sec.get('right_pct', 33)), step=1).props('label-always').classes('w-full -mt-1')
                                 with ui.column().classes('gap-0.5'):
-                                    ui.label('Spremnik H [mm]').classes('text-[10px] text-gray-500')
+                                    ui.label(_tr_fn('elements.top_box_h')).classes('text-[10px] text-gray-500')
                                     sec_top_h = ui.number(value=int(_sec.get('top_h_mm', 420)), min=_th_min, max=_th_max, step=10).props('outlined dense').classes('w-full')
                                     sec_top_h_sld = ui.slider(min=_th_min, max=_th_max, value=int(_sec.get('top_h_mm', 420)), step=10).props('label-always').classes('w-full -mt-1')
                             with ui.grid(columns=3).classes('w-full gap-2'):
                                 with ui.column().classes('gap-0.5'):
-                                    ui.label('Leva police').classes('text-[10px] text-gray-500')
+                                    ui.label(_tr_fn('elements.left_shelves')).classes('text-[10px] text-gray-500')
                                     sec_left_shelves = ui.number(value=int(_left.get('shelves', 4)), min=0, max=12, step=1).props('outlined dense').classes('w-full')
                                     sec_left_shelves_sld = ui.slider(min=0, max=12, value=int(_left.get('shelves', 4)), step=1).props('label-always').classes('w-full -mt-1')
                                 with ui.column().classes('gap-0.5'):
-                                    ui.label('Leva fioke').classes('text-[10px] text-gray-500')
+                                    ui.label(_tr_fn('elements.left_drawers')).classes('text-[10px] text-gray-500')
                                     sec_left_drawers = ui.number(value=int(_left.get('drawers', 1)), min=0, max=8, step=1).props('outlined dense').classes('w-full')
                                     sec_left_drawers_sld = ui.slider(min=0, max=8, value=int(_left.get('drawers', 1)), step=1).props('label-always').classes('w-full -mt-1')
                                 with ui.column().classes('gap-0.5'):
-                                    ui.label('Centar kacenje').classes('text-[10px] text-gray-500')
+                                    ui.label(_tr_fn('elements.center_hanging')).classes('text-[10px] text-gray-500')
                                     sec_center_hangers = ui.number(value=int(_center.get('hangers', 2)), min=0, max=3, step=1).props('outlined dense').classes('w-full')
                                     sec_center_hangers_sld = ui.slider(min=0, max=3, value=int(_center.get('hangers', 2)), step=1).props('label-always').classes('w-full -mt-1')
                                 with ui.column().classes('gap-0.5'):
-                                    ui.label('Desna police').classes('text-[10px] text-gray-500')
+                                    ui.label(_tr_fn('elements.right_shelves')).classes('text-[10px] text-gray-500')
                                     sec_right_shelves = ui.number(value=int(_right.get('shelves', 2)), min=0, max=12, step=1).props('outlined dense').classes('w-full')
                                     sec_right_shelves_sld = ui.slider(min=0, max=12, value=int(_right.get('shelves', 2)), step=1).props('label-always').classes('w-full -mt-1')
                                 with ui.column().classes('gap-0.5'):
-                                    ui.label('Desna fioke').classes('text-[10px] text-gray-500')
+                                    ui.label(_tr_fn('elements.right_drawers')).classes('text-[10px] text-gray-500')
                                     sec_right_drawers = ui.number(value=int(_right.get('drawers', 3)), min=0, max=8, step=1).props('outlined dense').classes('w-full')
                                     sec_right_drawers_sld = ui.slider(min=0, max=8, value=int(_right.get('drawers', 3)), step=1).props('label-always').classes('w-full -mt-1')
                                 with ui.column().classes('gap-0.5'):
-                                    ui.label('Desna kacenje').classes('text-[10px] text-gray-500')
+                                    ui.label(_tr_fn('elements.right_hanging')).classes('text-[10px] text-gray-500')
                                     sec_right_hangers = ui.number(value=int(_right.get('hangers', 1)), min=0, max=3, step=1).props('outlined dense').classes('w-full')
                                     sec_right_hangers_sld = ui.slider(min=0, max=3, value=int(_right.get('hangers', 1)), step=1).props('label-always').classes('w-full -mt-1')
                             with ui.row().classes('w-full items-center gap-2'):
                                 with ui.column().classes('gap-0.5 flex-1'):
-                                    ui.label('Spremnik police').classes('text-[10px] text-gray-500')
+                                    ui.label(_tr_fn('elements.top_box_shelves')).classes('text-[10px] text-gray-500')
                                     sec_top_shelves = ui.number(value=int(_top.get('shelves', 2)), min=0, max=8, step=1).props('outlined dense').classes('w-full')
                                     sec_top_shelves_sld = ui.slider(min=0, max=8, value=int(_top.get('shelves', 2)), step=1).props('label-always').classes('w-full -mt-1')
-                                sec_locked = ui.switch('Zakljucaj raspored', value=bool(_sec.get('locked', False))).classes('pt-4')
+                                sec_locked = ui.switch(_tr_fn('elements.lock_layout'), value=bool(_sec.get('locked', False))).classes('pt-4')
 
                 def _bind_num_slider(num_el, sld_el):
                     if (num_el is None) or (sld_el is None):
@@ -500,16 +511,34 @@ def _module_properties_panel_inner(
                 logger.debug("Inline quick-save solve_layout failed: %s", ex)
             nacrt_refresh()
         except Exception as ex:
-            ui.notify(NOTIFY_ERROR_FMT.format(err=format_user_error(ex)), type='negative', timeout=2500)
+            ui.notify(
+                NOTIFY_ERROR_FMT.format(
+                    err=format_user_error(ex, getattr(state, 'language', 'sr'))
+                ),
+                type='negative',
+                timeout=2500,
+            )
 
     try:
-        w_inp.on_change(_save_to_state)
-        h_inp.on_change(_save_to_state)
-        d_inp.on_change(_save_to_state)
-        g_inp.on_change(_save_to_state)
+        def _bind_commit(el):
+            if el is None:
+                return
+            try:
+                el.on('blur', _save_to_state)
+            except Exception:
+                pass
+            try:
+                el.on('keydown.enter', _save_to_state)
+            except Exception:
+                pass
+
+        _bind_commit(w_inp)
+        _bind_commit(h_inp)
+        _bind_commit(d_inp)
+        _bind_commit(g_inp)
+        _bind_commit(lbl_inp)
         grain_sel.on_change(_save_to_state)
         depth_mode_sel.on_change(_save_to_state)
-        lbl_inp.on_change(_save_to_state)
         if is_wardrobe:
             if wardrobe_front_sel is not None:
                 wardrobe_front_sel.on_change(_save_to_state)

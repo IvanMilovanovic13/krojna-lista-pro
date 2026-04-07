@@ -8,6 +8,8 @@
 
 ## 2) Stanje i poslovna logika
 - `state_logic.py` - globalni state, reset, save/load, CRUD modula.
+- `auth_models.py` - minimalni session/access skeleton za buduci login i billing.
+- `project_store.py` - lokalni SQLite temelj za buduce `users/projects` modele.
 - `layout_engine.py` - raspored i pakovanje elemenata po zidovima/zona.
 - `room_constraints.py` - ograni?enja zbog otvora/instalacija.
 
@@ -44,6 +46,9 @@
 - `module_templates.py` - u?itavanje/rezolucija template-a.
 - `i18n.py` - svi tekstovi/label-e na UI-u.
 - `requirements.txt` - zavisnosti.
+- `.python-version` - preporucena Python verzija za lokalni rad/deploy.
+- `SETUP_VENV.ps1` - automatsko pravljenje `venv` i instalacija paketa.
+- `SETUP_OKRUZENJE.md` - kratko uputstvo za setup i pokretanje.
 - `MASTER_PROJEKAT.md` - projektna bele?nica.
 
 ## 8) Testiranje
@@ -51,8 +56,7 @@
 - `test_wall_upper.py` - test specifi?ne logike gornjeg reda.
 
 ## 9) Referentni materijali i asseti
-- `data/rs_kako_tacno_izmeriti_kuhinju_extracted.txt` - izvu?en referentni tekst.
-- `data/prmeri_images/...` - slike iz Word primera.
+- Stari Word/image referentni artefakti vise nisu aktivni deo runtime projekta.
 - `fonts/DejaVuSans*.ttf` - fontovi za render/PDF.
 
 ---
