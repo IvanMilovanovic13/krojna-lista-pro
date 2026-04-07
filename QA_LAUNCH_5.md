@@ -15,7 +15,7 @@ Pravila:
 |---|---|---|---|---|---|---|
 | 1 | Jedan zid - osnovna kuhinja | carcass, frontovi, worktop, okov | PASS | `export_job_27_20260407_122029.pdf` | `export_job_28_20260407_122035.xlsx` | Provereno: 600+800 donji elementi, worktop 1420 mm, okov i dijakritika OK. |
 | 2 | Jedan zid - sudopera + ploca | cutout, worktop, servisne napomene | PASS | `export_job_31_20260407_123517.pdf` | `export_job_32_20260407_123523.xlsx` | Provereno: worktop 2220 mm, cutout sudopera/ploca OK, parcijalna ledja OK, sokla CUT 2200x100 OK. |
-| 3 | Jedan zid - fioke + masina za sudove | drawer box, klizaci, appliance | TODO |  |  |  |
+| 3 | Jedan zid - fioke + masina za sudove | drawer box, klizaci, appliance | PASS | `export_job_35_20260407_130120.pdf` | `export_job_36_20260407_130126.xlsx` | Provereno: worktop 2820 mm, sokla 2800x100, klizaci OK, MZS front + vezna letva OK, sudopera cutout OK. |
 | 4 | Visoki blok | visoki moduli, appliance, paneli | TODO |  |  |  |
 
 ## Opsta provera za svaki scenario
