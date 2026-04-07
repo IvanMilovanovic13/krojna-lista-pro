@@ -13,6 +13,13 @@ LANGUAGE_OPTIONS = {
     "hi": "हिन्दी",
 }
 
+# v1 launch exposes only reviewed languages. The remaining translations stay in
+# LANGUAGE_OPTIONS/_TRANSLATIONS for later polish and internal QA.
+VISIBLE_LANGUAGE_OPTIONS = {
+    "sr": LANGUAGE_OPTIONS["sr"],
+    "en": LANGUAGE_OPTIONS["en"],
+}
+
 LANGUAGE_FALLBACKS = {
     "sr": ("sr", "en"),
     "en": ("en", "sr"),
@@ -6497,7 +6504,7 @@ _TRANSLATIONS.setdefault('hi', {}).update({
 })
 
 def get_language_options() -> dict[str, str]:
-    return dict(LANGUAGE_OPTIONS)
+    return dict(VISIBLE_LANGUAGE_OPTIONS)
 
 
 def normalize_language_code(lang: str = "sr") -> str:

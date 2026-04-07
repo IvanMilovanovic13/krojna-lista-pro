@@ -103,12 +103,13 @@ def render_toolbar_layout(
 
         # Jezik — isti izgled kao ostala toolbar dugmad
         if language_options and callable(on_language_change):
+            visible_language = current_language if current_language in language_options else "sr"
             with ui.element('div').classes(
                 'flex items-center border-l border-gray-200 shrink-0'
             ).style('height:42px;'):
                 ui.select(
                     options=language_options,
-                    value=current_language,
+                    value=visible_language,
                     on_change=lambda e: on_language_change(str(e.value or 'sr')),
                 ).props('dense borderless').classes('toolbar-lang text-[11px] font-medium').style(
                     'min-width:78px; max-width:96px; height:42px;'

@@ -124,9 +124,11 @@ def _topbar(*, action_label: str, action_target: str, current_path: str) -> None
     with ui.row().classes("public-topbar w-full items-center justify-between px-5 py-4"):
         _brand()
         with ui.row().classes("items-center gap-2"):
+            _language_options = get_language_options()
+            _current_language = str(getattr(state, "language", "sr") or "sr")
             ui.select(
-                get_language_options(),
-                value=str(getattr(state, "language", "sr") or "sr"),
+                _language_options,
+                value=_current_language if _current_language in _language_options else "sr",
                 on_change=lambda e: (_set_language(str(e.value or "sr")), ui.navigate.to(current_path)),
             ).props("dense outlined").classes("public-lang")
             ui.button(_tr("public.home_btn"), on_click=lambda: ui.navigate.to("/pricing")).props("flat")
