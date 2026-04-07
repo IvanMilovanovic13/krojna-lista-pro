@@ -569,8 +569,9 @@ def render_edit_panel(
                                          max=int(corp_h - 180), step=1).props(
                     'dense outlined suffix=mm').classes('flex-1')
             _dd_sum_lbl = ui.label('').classes('text-xs text-gray-600')
+            _door_drawer_syncing = {'value': False}
 
-            def _update_dd_sum_hint(e=None):
+            def _update_dd_sum_hint():
                 try:
                     door_val = float(door_h_inp.value or 0)
                     drawer_val = float(drawer_h_inp.value or 0)
@@ -582,8 +583,30 @@ def render_edit_panel(
                 except Exception:
                     pass
 
-            door_h_inp.on('change', _update_dd_sum_hint)
-            drawer_h_inp.on('change', _update_dd_sum_hint)
+            def _on_door_change(e=None):
+                if _door_drawer_syncing['value']:
+                    return
+                try:
+                    _door_drawer_syncing['value'] = True
+                    door_val = max(180.0, min(float(door_h_inp.value or 0), corp_h - float(MIN_DRAWER_H)))
+                    drawer_h_inp.set_value(max(float(MIN_DRAWER_H), corp_h - door_val))
+                finally:
+                    _door_drawer_syncing['value'] = False
+                _update_dd_sum_hint()
+
+            def _on_drawer_change(e=None):
+                if _door_drawer_syncing['value']:
+                    return
+                try:
+                    _door_drawer_syncing['value'] = True
+                    drawer_val = max(float(MIN_DRAWER_H), min(float(drawer_h_inp.value or 0), corp_h - 180.0))
+                    door_h_inp.set_value(max(180.0, corp_h - drawer_val))
+                finally:
+                    _door_drawer_syncing['value'] = False
+                _update_dd_sum_hint()
+
+            door_h_inp.on('change', _on_door_change)
+            drawer_h_inp.on('change', _on_drawer_change)
             _update_dd_sum_hint()
         # ── Police (n_shelves) za zatvorene elemente s vratima ──────────────
         n_shelves_inp = None

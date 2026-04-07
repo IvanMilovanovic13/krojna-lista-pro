@@ -735,8 +735,9 @@ def render_params_panel(
                     ).props('dense').classes('flex-1 min-w-0')
 
                 drawer_h_lbl = ui.label('').classes('text-xs text-gray-700 font-bold mt-1')
+                _door_drawer_syncing = {'value': False}
 
-                def _update_door_drawer_hint(e=None):
+                def _update_door_drawer_hint():
                     try:
                         door_val = float(door_h_inp.value or 0)
                         drawer_val = float(drawer_h_inp.value or 0)
@@ -750,8 +751,30 @@ def render_params_panel(
                     except Exception:
                         pass
 
-                door_h_inp.on('change', _update_door_drawer_hint)
-                drawer_h_inp.on('change', _update_door_drawer_hint)
+                def _on_door_change(e=None):
+                    if _door_drawer_syncing['value']:
+                        return
+                    try:
+                        _door_drawer_syncing['value'] = True
+                        door_val = max(180.0, min(float(door_h_inp.value or 0), corp_h - float(MIN_DRAWER_H)))
+                        drawer_h_inp.set_value(max(float(MIN_DRAWER_H), corp_h - door_val))
+                    finally:
+                        _door_drawer_syncing['value'] = False
+                    _update_door_drawer_hint()
+
+                def _on_drawer_change(e=None):
+                    if _door_drawer_syncing['value']:
+                        return
+                    try:
+                        _door_drawer_syncing['value'] = True
+                        drawer_val = max(float(MIN_DRAWER_H), min(float(drawer_h_inp.value or 0), corp_h - 180.0))
+                        door_h_inp.set_value(max(180.0, corp_h - drawer_val))
+                    finally:
+                        _door_drawer_syncing['value'] = False
+                    _update_door_drawer_hint()
+
+                door_h_inp.on('change', _on_door_change)
+                drawer_h_inp.on('change', _on_drawer_change)
                 _update_door_drawer_hint()
 
         elif has_shelves:
