@@ -70,6 +70,35 @@ Ovo je trajna ideja i smer rada za ceo projekat:
 **Datum:** 22. mart 2026.
 **Namena:** Glavni radni dokument za zavrsavanje projekta do pune produkcione spremnosti.
 
+## Launch Agenda Update - 7. april 2026.
+
+Trenutno stanje rada:
+
+- `Git cleanup + stabilan checkpoint`: zavrseno
+- `Jezici za v1`: UI izbor ogranicen na `sr/en`, ostali jezici ostaju u kodu ali nisu v1 prodajni scope
+- `Rucni QA krojne liste`: zavrsena 4 v1 scenarija i upisana kao PASS u `QA_LAUNCH_5.md`
+- `Skupljivi sidebar`: zavrseno
+- `Wizard nazad`: zavrseno
+
+Odlozeno dok ne budu dostupni stvarni operativni podaci:
+
+- `Lemon Squeezy` konfiguracija:
+  - `LEMON_SQUEEZY_API_KEY`
+  - `LEMON_SQUEEZY_WEBHOOK_SECRET`
+  - `LEMON_SQUEEZY_STORE_ID`
+  - `LEMON_SQUEEZY_STORE_SUBDOMAIN`
+  - weekly/monthly variant ID-jevi
+- `HTTPS BASE_URL` za staging/production domen
+- non-default `SECRET_KEY` za staging/production
+- readiness spustiti na `0 blockers` tek posle stvarnih env vrednosti
+
+Sledeci lokalni blok pre hostinga:
+
+1. final full test + git checkpoint
+2. manual smoke kroz aplikaciju na `sr/en`
+3. proveriti admin/login stanje ako je potrebno za finalni tok
+4. pripremiti `Lemon/hosting checklist` za trenutak kada domen i Lemon Squeezy podaci budu spremni
+
 ## Reality Check - 28. mart 2026.
 
 Ovaj roadmap je od sada obavezan zivi dokument i mora pratiti stvarno stanje repoa, testova i runtime-a.

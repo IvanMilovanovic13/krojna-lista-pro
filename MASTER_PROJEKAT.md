@@ -17,6 +17,32 @@
 
 ---
 
+## LAUNCH AGENDA UPDATE - 07.04.2026
+
+Zatvoreno za v1 lokalni launch QA:
+
+- git cleanup i stabilan checkpoint
+- jezici za v1 ograniceni na `sr/en`
+- rucni QA 4 kuhinje zavrsen kao PASS u `QA_LAUNCH_5.md`
+- skupljivi sidebar u `Elementi`
+- jasniji `Nazad` u wizard toku
+
+Namerno odlozeno do trenutka kada budu spremni domen/server i Lemon Squeezy nalog:
+
+- `Lemon Squeezy` API/webhook/store/variant konfiguracija
+- `HTTPS BASE_URL`
+- non-default `SECRET_KEY`
+- readiness na `0 blockers`
+
+Sledeci lokalni koraci pre hostinga:
+
+1. final full test + git checkpoint
+2. manual smoke kroz aplikaciju na `sr/en`
+3. login/admin provera ako je potrebna za finalni tok
+4. priprema Lemon/hosting checklist-a za kasniji deploy blok
+
+---
+
 ## VAZECE STANJE PROJEKTA - 28.03.2026
 
 Ova sekcija ima prednost nad starijim delovima dokumenta kada postoji razlika izmedju plana i stvarnog stanja repoa.
