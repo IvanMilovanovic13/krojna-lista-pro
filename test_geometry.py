@@ -499,7 +499,7 @@ def test_cutlist_cooking_unit_uses_partial_back():
     nap_vals = " | ".join(cu["Napomena"].astype(str).tolist())
     has_partial = cu["Deo"].astype(str).str.contains("Parcijalna", case=False, na=False).any()
     mentions_open_zone = cu["Napomena"].astype(str).str.contains("otvorena radi ventilacije", case=False, na=False).any()
-    max_back_h = float(cu["Sirina [mm]"].max())
+    max_back_h = float(cu["Širina [mm]"].max())
     _log(has_partial and mentions_open_zone and max_back_h < 400, "cooking_unit_partial_back",
          f"OK: {deo_vals} / H={max_back_h:.0f}mm"
          if has_partial and mentions_open_zone and max_back_h < 400

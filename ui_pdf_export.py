@@ -765,7 +765,7 @@ def build_pdf_bytes(
                 str(int(float(r.get('Wall length [mm]', 0) or 0))) if str(r.get('Wall length [mm]', '')).strip() else '',
                 str(int(float(r.get('Required length [mm]', 0) or 0))) if str(r.get('Required length [mm]', '')).strip() else '',
                 str(int(float(r.get('Purchase length [mm]', 0) or 0))) if str(r.get('Purchase length [mm]', '')).strip() else '',
-                str(int(float(r.get('Sirina [mm]', 0) or 0))) if str(r.get('Sirina [mm]', '')).strip() else '',
+                str(int(float(r.get('Širina [mm]', 0) or 0))) if str(r.get('Širina [mm]', '')).strip() else '',
                 _safe(str(r.get('Field cut', ''))),
                 _safe(str(r.get('Joint type', ''))),
                 _safe(str(r.get('Cutouts', ''))),
@@ -782,7 +782,7 @@ def build_pdf_bytes(
                 _len_v = r.get('Dužina [mm]', '')
                 if str(_len_v).strip() == '':
                     _len_v = r.get('CUT_W [mm]', '')
-                _wid_v = r.get('Sirina [mm]', '')
+                _wid_v = r.get('Širina [mm]', '')
                 if str(_wid_v).strip() == '':
                     _wid_v = r.get('CUT_H [mm]', '')
                 _rows.append([
@@ -882,7 +882,7 @@ def build_pdf_bytes(
                     [_safe(_short_part_code(r.get('PartCode', ''))),
                      _safe(_friendly_part_name(r.get('Deo', ''), _lang)),
                      _safe_val((r.get('Dužina [mm]', '') if str(r.get('Dužina [mm]', '')).strip().lower() not in {'', 'nan', 'none', 'null'} else r.get('CUT_W [mm]', ''))),
-                     _safe_val((r.get('Sirina [mm]', '') if str(r.get('Sirina [mm]', '')).strip().lower() not in {'', 'nan', 'none', 'null'} else r.get('CUT_H [mm]', ''))),
+                     _safe_val((r.get('Širina [mm]', '') if str(r.get('Širina [mm]', '')).strip().lower() not in {'', 'nan', 'none', 'null'} else r.get('CUT_H [mm]', ''))),
                      str(r.get('Deb.', '')), str(int(r.get('Kol.', 0))),
                      _safe_val(r.get('Kant', ''), '-')]
                     for r in _mparts.to_dict('records')

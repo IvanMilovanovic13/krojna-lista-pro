@@ -1064,7 +1064,7 @@ def _carcass_piece(
         "L1": L1, "L2": L2, "K1": K1, "K2": K2,
         "Orijentacija": orient,
         "Dužina [mm]": fw,   # FIN dimenzija (gotova mera)
-        "Sirina [mm]": fh,   # FIN dimenzija (gotova mera)
+        "Širina [mm]": fh,   # FIN dimenzija (gotova mera)
         "CUT_W [mm]": cw,    # sirova mera pre kanta
         "CUT_H [mm]": ch,    # sirova mera pre kanta
         "CUT (W×H)": f"{cw:.1f} × {ch:.1f}",
@@ -1105,7 +1105,7 @@ def _front_row(
         "L1": 1, "L2": 1, "K1": 1, "K2": 1,
         "Orijentacija": "vertikalna",
         "Dužina [mm]": fw,   # FIN dimenzija (gotova mera)
-        "Sirina [mm]": fh,   # FIN dimenzija (gotova mera)
+        "Širina [mm]": fh,   # FIN dimenzija (gotova mera)
         "CUT_W [mm]": cw,
         "CUT_H [mm]": ch,
         "CUT (W×H)": f"{cw:.1f} × {ch:.1f}",
@@ -1554,7 +1554,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                         "L1": 0, "L2": 0, "K1": 0, "K2": 0,
                         "Orijentacija": "vertikalna",
                         "Dužina [mm]": _bw_arm,
-                        "Sirina [mm]": _bh_arm,
+                        "Širina [mm]": _bh_arm,
                         "CUT_W [mm]":  _bw_arm,
                         "CUT_H [mm]":  _bh_arm,
                         "CUT (W×H)":   f"{_bw_arm:.1f} × {_bh_arm:.1f}",
@@ -1597,7 +1597,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                     "L1": 0, "L2": 0, "K1": 0, "K2": 0,
                     "Orijentacija": "vertikalna",
                     "Dužina [mm]": bw,   # FIN = CUT (nema kanta)
-                    "Sirina [mm]": bh,   # FIN = CUT (nema kanta)
+                    "Širina [mm]": bh,   # FIN = CUT (nema kanta)
                     "CUT_W [mm]":  bw,
                     "CUT_H [mm]":  bh,
                     "CUT (W×H)":   f"{bw:.1f} × {bh:.1f}",
@@ -1966,7 +1966,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                 "Materijal":   "MDF",
                 "Deb. [mm]":   16,
                 "Dužina [mm]": x1 - x0,
-                "Sirina [mm]":  foot_h,
+                "Širina [mm]":  foot_h,
                 "CUT_W [mm]":   x1 - x0,
                 "CUT_H [mm]":   foot_h,
                 "Visina [mm]": foot_h,
@@ -2045,7 +2045,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                     "L1": 1, "L2": 0, "K1": 0, "K2": 0,
                     "Orijentacija": "horizontalna",
                     "Dužina [mm]":  float(_required_len),
-                    "Sirina [mm]":  float(wt_depth),
+                    "Širina [mm]":  float(wt_depth),
                     "CUT_W [mm]":   float(_required_len),
                     "CUT_H [mm]":   float(wt_depth),
                     "Required length [mm]": float(_required_len),
@@ -2082,7 +2082,7 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                     "L1": 1, "L2": 0, "K1": 0, "K2": 0,
                     "Orijentacija": "horizontalna",
                     "Dužina [mm]":  _nosac_w,
-                    "Sirina [mm]":  _nosac_h,
+                    "Širina [mm]":  _nosac_h,
                     "CUT_W [mm]":   _nosac_w + edge_thk,
                     "CUT_H [mm]":   _nosac_h,
                     "Napomena":     "Gornji vez — pričvršćuje radnu ploču (prednja ivica kantovana)",
@@ -2809,7 +2809,7 @@ def build_project_header(kitchen: Dict[str, Any], lang: str = "sr") -> pd.DataFr
     workshop_note = str(
         meta.get("workshop_note", "")
         or _t(
-            "U servisu raditi secenje i kantovanje po CUT merama. Otvore i posebne obrade proveriti po napomenama.",
+            "U servisu raditi sečenje i kantovanje po CUT merama. Otvore i posebne obrade proveriti po napomenama.",
             "In the workshop, do cutting and edging strictly by CUT dimensions. Verify openings and special machining against the notes.",
         )
     )
@@ -2984,7 +2984,7 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
             ("Nosač radne ploče", "Worktop support"),
             ("Nosač radne ploce", "Worktop support"),
             ("Leđa / prolaz", "Back panel / opening"),
-            ("Zona prikljucka", "Connection zone"),
+            ("Zona priključka", "Connection zone"),
             ("Ventilacija kolone", "Tall-unit ventilation"),
             ("Drvena tipla", "Wooden dowel"),
             ("Konfirmat vijak", "Confirmat screw"),
@@ -3340,7 +3340,7 @@ def _sanitize_export_df(
     part_col: str = "Deo",
     material_col: str = "Materijal",
     width_candidates: tuple[str, ...] = ("Dužina [mm]", "CUT_W [mm]", "width_mm"),
-    height_candidates: tuple[str, ...] = ("Sirina [mm]", "CUT_H [mm]", "height_mm"),
+    height_candidates: tuple[str, ...] = ("Širina [mm]", "CUT_H [mm]", "height_mm"),
 ) -> pd.DataFrame:
     if df is None or df.empty:
         return pd.DataFrame() if df is None else df.copy()
@@ -3387,7 +3387,7 @@ def get_final_cutlist_dataset(kitchen: Dict[str, Any], lang: str = "sr") -> Dict
                 part_col="Deo",
                 material_col="Materijal",
                 width_candidates=("CUT_W [mm]", "Dužina [mm]", "width_mm"),
-                height_candidates=("CUT_H [mm]", "Sirina [mm]", "height_mm"),
+                height_candidates=("CUT_H [mm]", "Širina [mm]", "height_mm"),
             ),
             _lang,
         )
@@ -3400,7 +3400,7 @@ def get_final_cutlist_dataset(kitchen: Dict[str, Any], lang: str = "sr") -> Dict
                 part_col="Deo",
                 material_col="Materijal",
                 width_candidates=("Dužina [mm]",),
-                height_candidates=("Sirina [mm]",),
+                height_candidates=("Širina [mm]",),
             ),
             _lang,
         )
@@ -3540,6 +3540,10 @@ def build_service_packet(
         proc_df = board_df[proc_mask].copy()
         if not proc_df.empty:
             for _r in proc_df.to_dict("records"):
+                _part_code = str(_r.get("PartCode", "") or "")
+                _part_name = str(_r.get("Deo", "") or "").strip().lower()
+                if _part_code.startswith("M0-W") or _part_name in {"radna ploča", "radna ploca", "worktop"}:
+                    continue
                 _nap = str(_r.get("Napomena", "") or "")
                 _nap_l = _nap.lower()
                 _tip = _t("Posebna obrada", "Special machining")
@@ -3621,7 +3625,7 @@ def build_service_packet(
                 _lower_fill_h = int(_dish.get("dishwasher_lower_filler_height", 0))
                 _lower_fill_cut_h = int(max(0.0, float(_lower_fill_h) - 2 * front_gap))
                 proc_rows.append(_proc_row(
-                    f"M{_mid:02d}", _zid, _lbl, _t("Zona prikljucka", "Connection zone"), "-", "-", 1,
+                    f"M{_mid:02d}", _zid, _lbl, _t("Zona priključka", "Connection zone"), "-", "-", 1,
                     _t("Instalacioni prolaz", "Service pass-through"), _t("Kuća / lice mesta", "On site"), _t("Po meri iz projekta", "According to project dimensions"),
                     _t(
                         "Proveriti prolaz creva i kabla za MZS bez konflikta sa korpusom i susednim elementima.",
@@ -3669,7 +3673,7 @@ def build_service_packet(
                     _mod,
                     _t("Radna ploča", "Worktop"),
                     _r.get("Dužina [mm]", ""),
-                    _r.get("Sirina [mm]", ""),
+                    _r.get("Širina [mm]", ""),
                     _r.get("Kol.", 1),
                     _t("Priprema i finalni rez", "Preparation and final cut"),
                     _t("Servis + lice mesta", "Workshop + on site") if _field_cut else _t("Servis", "Workshop"),
@@ -3720,7 +3724,7 @@ def build_service_packet(
             {"Grupa": _t("Alat koji treba kod kuće", "Tools needed on site"), "Naziv": _t("Metar + libela", "Tape measure + spirit level"), "Tip / Šifra": "-", "Kol.": 1,
              "Napomena": _t("Treba za proveru mera, ravni i nivelacije", "Needed to verify dimensions, plumb and levelling")},
             {"Grupa": _t("Alat koji treba kod kuće", "Tools needed on site"), "Naziv": _t("Stege", "Clamps"), "Tip / Šifra": "-", "Kol.": 2,
-             "Napomena": _t("Pomazu da delovi ostanu poravnati tokom sklapanja", "They help keep parts aligned during assembly")},
+             "Napomena": _t("Pomažu da delovi ostanu poravnati tokom sklapanja", "They help keep parts aligned during assembly")},
         ]
         if any(str((m or {}).get("zone", "")).lower() in ("wall", "wall_upper", "tall") for m in (kitchen.get("modules", []) or [])):
             extra_rows.append({
@@ -3920,7 +3924,7 @@ def build_cutlist_pdf_bytes(
     _COL_W: Dict[str, float] = {
         "RB": 10, "PartCode": 22, "Zid": 14, "Modul": 44, "Deo": 44,
         "Pozicija": 16, "SklopKorak": 14, "Kom": 11, "Kol.": 11,
-        "Dužina [mm]": 18, "Sirina [mm]": 18, "Deb.": 11, "Deb. [mm]": 11,
+        "Dužina [mm]": 18, "Širina [mm]": 18, "Deb.": 11, "Deb. [mm]": 11,
         "Visina [mm]": 16, "CUT_W [mm]": 18, "CUT_H [mm]": 18,
         "Materijal": 36, "Smer goda": 16, "Orijentacija": 20,
         "L1": 9, "L2": 9, "K1": 9, "K2": 9, "Kant": 16,
@@ -3934,7 +3938,7 @@ def build_cutlist_pdf_bytes(
 
     def _df_to_table(df: pd.DataFrame, cols: List[str]) -> Table:
         _table_df = df.copy()
-        for _fin_col, _cut_col in (("Dužina [mm]", "CUT_W [mm]"), ("Sirina [mm]", "CUT_H [mm]")):
+        for _fin_col, _cut_col in (("Dužina [mm]", "CUT_W [mm]"), ("Širina [mm]", "CUT_H [mm]")):
             if _fin_col in _table_df.columns and _cut_col in _table_df.columns:
                 _table_df[_fin_col] = _table_df[_fin_col].where(
                     _table_df[_fin_col].notna() & (_table_df[_fin_col].astype(str).str.strip().str.lower() != "nan") & (_table_df[_fin_col].astype(str).str.strip() != ""),
@@ -3942,13 +3946,13 @@ def build_cutlist_pdf_bytes(
                 )
         _available_cols = [c for c in cols if c in _table_df.columns]
         _is_summary_table = _available_cols == [
-            "RB", "Deo", "Kom", "Dužina [mm]", "Sirina [mm]", "Deb.",
+            "RB", "Deo", "Kom", "Dužina [mm]", "Širina [mm]", "Deb.",
             "Materijal", "Orijentacija", "L1", "L2", "K1", "K2",
         ]
         # Izracunaj colWidths — skaliraj na ukupnu sirinu stranice
         if _is_summary_table:
             _summary_w = {
-                "RB": 7, "Deo": 28, "Kom": 9, "Dužina [mm]": 15, "Sirina [mm]": 15,
+                "RB": 7, "Deo": 28, "Kom": 9, "Dužina [mm]": 15, "Širina [mm]": 15,
                 "Deb.": 7, "Materijal": 21, "Orijentacija": 9, "L1": 6, "L2": 6, "K1": 6, "K2": 6,
             }
             _raw_w = [_summary_w.get(c, _COL_W.get(c, 20)) for c in _available_cols]
@@ -4136,7 +4140,7 @@ def build_cutlist_pdf_bytes(
                 ),
                 axis=1,
             )
-        _cols_sum = ["RB", "Deo", "Kom", "Dužina [mm]", "Sirina [mm]", "Deb.",
+        _cols_sum = ["RB", "Deo", "Kom", "Dužina [mm]", "Širina [mm]", "Deb.",
                      "Materijal", "Orijentacija", "L1", "L2", "K1", "K2"]
         story.append(_df_to_table(df_sum_all, _cols_sum))
         story.append(Spacer(1, 8 * mm))
@@ -4165,7 +4169,7 @@ def build_cutlist_pdf_bytes(
                 ),
                 axis=1,
             )
-        _cols_det = ["PartCode", "Zid", "Modul", "Deo", "Pozicija", "SklopKorak", "Kom", "Dužina [mm]", "Sirina [mm]", "Deb.",
+        _cols_det = ["PartCode", "Zid", "Modul", "Deo", "Pozicija", "SklopKorak", "Kom", "Dužina [mm]", "Širina [mm]", "Deb.",
                      "Materijal", "Orijentacija", "L1", "L2", "K1", "K2"]
         story.append(_df_to_table(df_det, _cols_det))
         story.append(Spacer(1, 8 * mm))
@@ -4385,7 +4389,7 @@ def build_cutlist_pdf_bytes(
             _cuts = _mparts.copy()
             _cuts["Oznaka"] = _cuts["PartCode"].map(_short_part_code)
             _cuts["Deo"] = _cuts["Deo"].map(lambda v: _friendly_part_name(v, _lang))
-            for _fin_col, _cut_col in (("Dužina [mm]", "CUT_W [mm]"), ("Sirina [mm]", "CUT_H [mm]")):
+            for _fin_col, _cut_col in (("Dužina [mm]", "CUT_W [mm]"), ("Širina [mm]", "CUT_H [mm]")):
                 if _cut_col in _cuts.columns:
                     if _fin_col not in _cuts.columns:
                         _cuts[_fin_col] = _cuts[_cut_col]
@@ -4395,7 +4399,7 @@ def build_cutlist_pdf_bytes(
                             _cuts[_cut_col],
                         )
             story.append(Paragraph(_t("Rezovi", "Cut parts"), s_norm))
-            story.append(_df_to_table(_cuts.rename(columns={"Oznaka": _t("Oznaka", "Label"), "Deo": _t("Deo", "Part"), "Kol.": _t("Kom.", "Qty"), "Dužina [mm]": _t("Dužina [mm]", "Length [mm]"), "Sirina [mm]": _t("Širina [mm]", "Width [mm]"), "Deb.": _t("Deb.", "Thk."), "Kant": _t("Kant", "Edge")}), [_t("Oznaka", "Label"), _t("Deo", "Part"), "Pozicija", "SklopKorak", _t("Dužina [mm]", "Length [mm]"), _t("Širina [mm]", "Width [mm]"), _t("Deb.", "Thk."), _t("Kom.", "Qty"), _t("Kant", "Edge")]))
+            story.append(_df_to_table(_cuts.rename(columns={"Oznaka": _t("Oznaka", "Label"), "Deo": _t("Deo", "Part"), "Kol.": _t("Kom.", "Qty"), "Dužina [mm]": _t("Dužina [mm]", "Length [mm]"), "Širina [mm]": _t("Širina [mm]", "Width [mm]"), "Deb.": _t("Deb.", "Thk."), "Kant": _t("Kant", "Edge")}), [_t("Oznaka", "Label"), _t("Deo", "Part"), "Pozicija", "SklopKorak", _t("Dužina [mm]", "Length [mm]"), _t("Širina [mm]", "Width [mm]"), _t("Deb.", "Thk."), _t("Kom.", "Qty"), _t("Kant", "Edge")]))
             story.append(Spacer(1, 2 * mm))
 
             _role_notes: list[str] = []
@@ -4585,7 +4589,7 @@ def generate_cutlist_excel(
         ("CUT_W [mm]",  _t("CUT Duž.", "CUT Length"),      9),
         ("CUT_H [mm]",  _t("CUT Sir.", "CUT Width"),      9),
         ("Dužina [mm]", _t("FIN Duž.", "FIN Length"),      9),
-        ("Sirina [mm]", _t("FIN Sir.", "FIN Width"),      9),
+        ("Širina [mm]", _t("FIN Šir.", "FIN Width"),      9),
         ("Smer goda",   _t("Smer goda", "Grain"),     8),
         ("Kant",        _t("Kant", "Edge"),         24),
         ("L1",          "L1",            4),
@@ -4615,7 +4619,7 @@ def generate_cutlist_excel(
         ("Materijal", _t("Materijal", "Material"), 18),
         ("Deb.", "Deb.", 8),
         ("CUT_W [mm]", _t("CUT Dužina", "CUT Length"), 12),
-        ("CUT_H [mm]", _t("CUT Sirina", "CUT Width"), 12),
+        ("CUT_H [mm]", _t("CUT Širina", "CUT Width"), 12),
         ("Kant", _t("Kant", "Edge"), 24),
         ("Kol.", _t("Kol.", "Qty"), 8),
         ("Napomena za servis", _t("Napomena za servis", "Workshop note"), 42),
@@ -4627,7 +4631,7 @@ def generate_cutlist_excel(
         ("Deo", _t("Deo", "Part"), 24),
         ("Kol.", _t("Kol.", "Qty"), 6),
         ("CUT_W [mm]", _t("CUT Dužina", "CUT Length"), 10),
-        ("CUT_H [mm]", _t("CUT Sirina", "CUT Width"), 10),
+        ("CUT_H [mm]", _t("CUT Širina", "CUT Width"), 10),
         ("Kant", _t("Kant", "Edge"), 24),
         ("Napomena", _t("Napomena", "Note"), 36),
     ]
@@ -4637,7 +4641,7 @@ def generate_cutlist_excel(
         ("Modul", _t("Modul", "Module"), 22),
         ("Deo", _t("Deo", "Part"), 24),
         ("CUT_W [mm]", _t("CUT Dužina", "CUT Length"), 10),
-        ("CUT_H [mm]", _t("CUT Sirina", "CUT Width"), 10),
+        ("CUT_H [mm]", _t("CUT Širina", "CUT Width"), 10),
         ("Tip obrade", _t("Tip obrade", "Processing type"), 18),
         ("Izvodi", _t("Izvodi", "Operations"), 12),
         ("Osnov izvođenja", _t("Osnov izvođenja", "Execution basis"), 20),
@@ -4670,15 +4674,15 @@ def generate_cutlist_excel(
         ("Materijal",   _t("Materijal", "Material"),    14),
         ("Deb.",        "Deb.",          6),
         ("CUT_W [mm]",  _t("CUT Dužina", "CUT Length"),    9),
-        ("CUT_H [mm]",  _t("CUT Sirina", "CUT Width"),    9),
+        ("CUT_H [mm]",  _t("CUT Širina", "CUT Width"),    9),
         ("Dužina [mm]", _t("FIN Dužina", "FIN Length"),    9),
-        ("Sirina [mm]", _t("FIN Sirina", "FIN Width"),    9),
+        ("Širina [mm]", _t("FIN Širina", "FIN Width"),    9),
         ("Kol.",        _t("Kol.", "Qty"),          6),
         ("Kant",        _t("Kant", "Edge"),         24),
     ]
     NUM_FIELDS = {
         "Deb.", "Kol.", "CUT_W [mm]", "CUT_H [mm]",
-        "Dužina [mm]", "Sirina [mm]", "L1", "L2", "K1", "K2",
+        "Dužina [mm]", "Širina [mm]", "L1", "L2", "K1", "K2",
     }
 
     # ── Pomoćna funkcija za pisanje jednog lista ─────────────────────────────
@@ -4787,11 +4791,11 @@ def generate_cutlist_excel(
     if all_dfs:
         combined = pd.concat(all_dfs, ignore_index=True)
         # Osiguraj da kolone postoje
-        for col in ["Dužina [mm]", "Sirina [mm]", "Kant"]:
+        for col in ["Dužina [mm]", "Širina [mm]", "Kant"]:
             if col not in combined.columns:
                 combined[col] = ""
         grp = [c for c in
-               ["Materijal", "Deb.", "CUT_W [mm]", "CUT_H [mm]", "Dužina [mm]", "Sirina [mm]", "Kant"]
+               ["Materijal", "Deb.", "CUT_W [mm]", "CUT_H [mm]", "Dužina [mm]", "Širina [mm]", "Kant"]
                if c in combined.columns]
         summary = (
             combined
@@ -4813,7 +4817,7 @@ def generate_cutlist_excel(
         ("Deo",          _t("Deo", "Part"),          24),
         ("Kom",          _t("Kom", "Qty"),           5),
         ("Dužina [mm]",  _t("Dužina [mm]", "Length [mm]"),  10),
-        ("Sirina [mm]",  _t("Sirina [mm]", "Width [mm]"),  10),
+        ("Širina [mm]",  _t("Širina [mm]", "Width [mm]"),  10),
         ("Deb.",         "Deb. [mm]",     8),
         ("Materijal",    _t("Materijal", "Material"),    16),
         ("Smer goda",    _t("Orijent.", "Grain"),     10),
@@ -4828,7 +4832,7 @@ def generate_cutlist_excel(
         ("Deo",          _t("Deo", "Part"),          24),
         ("Kom",          _t("Kom", "Qty"),           5),
         ("Dužina [mm]",  _t("Dužina [mm]", "Length [mm]"),  10),
-        ("Sirina [mm]",  _t("Sirina [mm]", "Width [mm]"),  10),
+        ("Širina [mm]",  _t("Širina [mm]", "Width [mm]"),  10),
         ("Deb.",         "Deb. [mm]",     8),
         ("Materijal",    _t("Materijal", "Material"),    16),
         ("Smer goda",    _t("Orijent.", "Grain"),     10),
@@ -4959,7 +4963,7 @@ def generate_cutlist_csv(kitchen: Dict[str, Any], lang: str = "sr") -> bytes:
                 _sanitize_export_value(row.get("Deo", "")),
                 _sanitize_export_value(row.get("Materijal", "")),
                 _sanitize_export_value(row.get("Dužina [mm]", "")),
-                _sanitize_export_value(row.get("Sirina [mm]", "")),
+                _sanitize_export_value(row.get("Širina [mm]", "")),
                 _sanitize_export_value(row.get("Kom", row.get("Kol.", ""))),
                 edge_thk if bool(row.get("L1", False)) else "",
                 edge_thk if bool(row.get("L2", False)) else "",
@@ -4987,11 +4991,11 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame], lang: str = "sr"
     """
     Vraca sumarnu krojnu listu po PDF formatu:
       - summary_all: JEDNA objedinjena tabela svih ploča (identično strana 4 PDF-a)
-        Kolone: Deo | Kom | Dužina [mm] | Sirina [mm] | Deb. [mm] | Materijal | Orijent. | Kant L1 | Kant L2 | Kant K1 | Kant K2
+        Kolone: Deo | Kom | Dužina [mm] | Širina [mm] | Deb. [mm] | Materijal | Orijent. | Kant L1 | Kant L2 | Kant K1 | Kant K2
         Dimenzije su FIN (gotove mere posle kanta), sortirano po Deo
 
       - summary_detaljna: detaljna lista sa Modul kolonom (identično strane 5-7 PDF-a)
-        Kolone: Modul | Deo | Kom | Dužina [mm] | Sirina [mm] | Deb. [mm] | Materijal | Orijent. | ...
+        Kolone: Modul | Deo | Kom | Dužina [mm] | Širina [mm] | Deb. [mm] | Materijal | Orijent. | ...
 
       - summary_carcass / summary_fronts / summary_backs: backwards compat
     """
@@ -5015,7 +5019,7 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame], lang: str = "sr"
         ("drawer_boxes", "Sanduk fioke"),
         ("worktop", "Radna ploča"),
     ]
-    _needed_all = {"Deo", "Materijal", "Deb.", "Dužina [mm]", "Sirina [mm]", "Kol."}
+    _needed_all = {"Deo", "Materijal", "Deb.", "Dužina [mm]", "Širina [mm]", "Kol."}
 
     for sec_key, tip_label in _sec_to_tip:
         df = sections.get(sec_key)
@@ -5030,7 +5034,7 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame], lang: str = "sr"
     if all_frames:
         combined = pd.concat(all_frames, ignore_index=True)
         # Grupisanje: Deo + dimenzije + materijal + kant flags (FIN dimenzije)
-        grp_cols = ["_Tip", "Deo", "Materijal", "Deb.", "Dužina [mm]", "Sirina [mm]",
+        grp_cols = ["_Tip", "Deo", "Materijal", "Deb.", "Dužina [mm]", "Širina [mm]",
                     "Orijentacija", "Smer goda", "L1", "L2", "K1", "K2"]
         grp_cols = [c for c in grp_cols if c in combined.columns]
         # VAŽNO: popuniti NaN u grp_cols pre groupby!
@@ -5058,7 +5062,7 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame], lang: str = "sr"
             # Dodati redni broj
             agg.insert(0, "RB", range(1, len(agg) + 1))
             # Uредiti kolone po PDF redosledu
-            _cols_order = ["RB", "Deo", "Kom", "Dužina [mm]", "Sirina [mm]", "Deb.",
+            _cols_order = ["RB", "Deo", "Kom", "Dužina [mm]", "Širina [mm]", "Deb.",
                            "Materijal", "Smer goda", "Orijentacija", "L1", "L2", "K1", "K2", "Kant"]
             _cols_show = [c for c in _cols_order if c in agg.columns]
             result["summary_all"] = _translate_export_df(agg[_cols_show], lang)
@@ -5078,14 +5082,14 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame], lang: str = "sr"
 
     if det_frames:
         det = pd.concat(det_frames, ignore_index=True)
-        _det_needed = {"ID", "Modul", "Deo", "Kol.", "Dužina [mm]", "Sirina [mm]", "Deb.", "Materijal"}
+        _det_needed = {"ID", "Modul", "Deo", "Kol.", "Dužina [mm]", "Širina [mm]", "Deb.", "Materijal"}
         if _det_needed.issubset(set(det.columns)):
             det = det.rename(columns={"Kol.": "Kom"})
             # Compatibility: Cut List tab and PDF "by unit" views still expect ID and Kol.
             det["Kol."] = det["Kom"]
             _sort_cols = [c for c in ("ID", "Modul", "Deo") if c in det.columns]
             det = det.sort_values(_sort_cols).reset_index(drop=True)
-            _det_cols = ["ID", "PartCode", "Modul", "Deo", "Pozicija", "SklopKorak", "Kom", "Kol.", "Dužina [mm]", "Sirina [mm]", "Deb.",
+            _det_cols = ["ID", "PartCode", "Modul", "Deo", "Pozicija", "SklopKorak", "Kom", "Kol.", "Dužina [mm]", "Širina [mm]", "Deb.",
                          "Materijal", "Smer goda", "Orijentacija", "L1", "L2", "K1", "K2", "Kant", "Napomena"]
             _det_cols = [c for c in _det_cols if c in det.columns]
             result["summary_detaljna"] = _translate_export_df(det[_det_cols], lang)
@@ -5103,13 +5107,13 @@ def generate_cutlist_summary(sections: Dict[str, pd.DataFrame], lang: str = "sr"
         df = sections.get(sec_key)
         if df is None or df.empty:
             continue
-        needed = {"Materijal", "Deb.", "Dužina [mm]", "Sirina [mm]", "Kol."}
+        needed = {"Materijal", "Deb.", "Dužina [mm]", "Širina [mm]", "Kol."}
         if not needed.issubset(set(df.columns)):
             result[out_key] = _translate_export_df(df.copy(), lang)
             continue
         try:
             agg2 = (
-                df.groupby(["Materijal", "Deb.", "Dužina [mm]", "Sirina [mm]"], as_index=False)
+                df.groupby(["Materijal", "Deb.", "Dužina [mm]", "Širina [mm]"], as_index=False)
                 .agg({"Kol.": "sum"})
                 .sort_values(["Materijal", "Dužina [mm]"])
                 .reset_index(drop=True)

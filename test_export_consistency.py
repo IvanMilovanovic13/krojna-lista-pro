@@ -338,11 +338,11 @@ def run_export_consistency_check(lang: str = "en") -> tuple[bool, str]:
 def run_export_sanitization_check() -> tuple[bool, str]:
     df = pd.DataFrame(
         [
-            {"Deo": "Valid", "Materijal": "Chipboard", "Duzina [mm]": 500, "Sirina [mm]": 300, "Napomena": None},
-            {"Deo": "Zero length", "Materijal": "Chipboard", "Duzina [mm]": 0, "Sirina [mm]": 300, "Napomena": "bad"},
-            {"Deo": "", "Materijal": "Chipboard", "Duzina [mm]": 500, "Sirina [mm]": 300, "Napomena": "bad"},
-            {"Deo": "NaN row", "Materijal": float("nan"), "Duzina [mm]": 500, "Sirina [mm]": 300, "Napomena": "bad"},
-            {"Deo": "None dims", "Materijal": "Chipboard", "Duzina [mm]": None, "Sirina [mm]": 300, "Napomena": "bad"},
+            {"Deo": "Valid", "Materijal": "Chipboard", "Dužina [mm]": 500, "Širina [mm]": 300, "Napomena": None},
+            {"Deo": "Zero length", "Materijal": "Chipboard", "Dužina [mm]": 0, "Širina [mm]": 300, "Napomena": "bad"},
+            {"Deo": "", "Materijal": "Chipboard", "Dužina [mm]": 500, "Širina [mm]": 300, "Napomena": "bad"},
+            {"Deo": "NaN row", "Materijal": float("nan"), "Dužina [mm]": 500, "Širina [mm]": 300, "Napomena": "bad"},
+            {"Deo": "None dims", "Materijal": "Chipboard", "Dužina [mm]": None, "Širina [mm]": 300, "Napomena": "bad"},
         ]
     )
     out = _sanitize_export_df(
@@ -350,8 +350,8 @@ def run_export_sanitization_check() -> tuple[bool, str]:
         require_positive_dims=True,
         part_col="Deo",
         material_col="Materijal",
-        width_candidates=("Duzina [mm]",),
-        height_candidates=("Sirina [mm]",),
+        width_candidates=("Dužina [mm]",),
+        height_candidates=("Širina [mm]",),
     )
     if len(out) != 1:
         return False, f"sanitized_rows={len(out)}"
@@ -1753,7 +1753,7 @@ def run_raised_dishwasher_height_consistency_check() -> tuple[bool, str]:
     if filler.empty:
         return False, "dishwasher_lower_filler_missing"
     filler_row = filler.iloc[0]
-    if int(float(filler_row.get("Sirina [mm]", 0) or 0)) != 84:
+    if int(float(filler_row.get("Širina [mm]", 0) or 0)) != 84:
         return False, "dishwasher_lower_filler_fin_mismatch"
     filler_note = str(filler_row.get("Napomena", ""))
     if "gotova visina maske = 84 mm" not in filler_note:

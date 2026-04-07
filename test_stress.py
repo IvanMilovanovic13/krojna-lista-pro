@@ -196,10 +196,10 @@ def _check_fin_cut(sections: Dict, kitchen_id: int) -> List[str]:
             continue
         for _, row in df.iterrows():
             deo = str(row.get("Deo", "?"))[:20]
-            cut_w = float(row.get("CUT_W [mm]", row.get("Duzina [mm]", 0)))
-            cut_h = float(row.get("CUT_H [mm]", row.get("Sirina [mm]", 0)))
-            fin_w = float(row.get("Duzina [mm]", 0))
-            fin_h = float(row.get("Sirina [mm]", 0))
+            cut_w = float(row.get("CUT_W [mm]", row.get("Dužina [mm]", 0)))
+            cut_h = float(row.get("CUT_H [mm]", row.get("Širina [mm]", 0)))
+            fin_w = float(row.get("Dužina [mm]", 0))
+            fin_h = float(row.get("Širina [mm]", 0))
 
             # FIN nikad veci od CUT
             if fin_w > cut_w + TOL:
@@ -289,7 +289,7 @@ def _check_worktop_min_length(sections: Dict, kitchen: Dict, kitchen_id: int) ->
     if rp.empty:
         return errors
 
-    total_wt_w = float(rp["Duzina [mm]"].sum())
+    total_wt_w = float(rp["Dužina [mm]"].sum())
     if total_wt_w < total_base_w * 0.80:
         errors.append(
             f"K{kitchen_id}: radna ploca {total_wt_w:.0f}mm < 80% base sirine {total_base_w}mm"
