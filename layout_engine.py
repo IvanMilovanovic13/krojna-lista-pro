@@ -351,13 +351,29 @@ def _reflow_zone_pack(kitchen: Dict[str, Any], zone: str, wall_key: str | None =
     wall_len = _wall_len(kitchen, wall_key=wall_key)
     left, right = _profile_clearance_mm(kitchen)
 
+    _manual_mods = [m for m in mods if bool(m.get("manual_x", False))]
+    _regular_mods = [m for m in mods if not bool(m.get("manual_x", False))]
+    _manual_spans = sorted(_span_x(m) for m in _manual_mods)
+
+    def _overlaps_manual(x: int, w: int) -> Tuple[bool, int]:
+        seg = (x, x + w)
+        for (a, b) in _manual_spans:
+            if _overlaps(seg, (a, b)):
+                return True, int(b)
+        return False, x
+
     cursor = int(left)
-    for m in mods:
+    for m in _regular_mods:
         w = int(m.get("w_mm", 0))
         gap = int(m.get("gap_after_mm", 0))
 
         x = int(m.get("x_mm", 0))
         x = max(x, cursor)
+        while True:
+            ov, jump_to = _overlaps_manual(x, w)
+            if not ov:
+                break
+            x = int(jump_to)
 
         max_x = int(max(left, wall_len - right - w))
         if x > max_x:
@@ -563,13 +579,16 @@ def _compact_zone_skip_tall(
     # Ugaoni offset za L-kuhinju: Wall B regularni elementi ne smiju biti u ugaonoj zoni
     _left_off, _right_off = _l_corner_offsets_mm(kitchen, wall_key)
 
-    # Ugaoni moduli ostaju na anchor poziciji — odvajamo ih od regularnih modula
+    # Ugaoni i ručno pozicionirani moduli ostaju na svojoj poziciji — odvajamo ih od regularnih modula.
     _corner_mods = [m for m in mods if _is_corner_module(m)]
-    _regular_mods = [m for m in mods if not _is_corner_module(m)]
+    _manual_mods = [m for m in mods if bool(m.get("manual_x", False)) and not _is_corner_module(m)]
+    _regular_mods = [m for m in mods if not _is_corner_module(m) and not bool(m.get("manual_x", False))]
 
     spans = [(int(a), int(b)) for (a, b) in (tall_spans or []) if int(b) > int(a)]
     # Ugaoni moduli kao prepreka za regularne module (ne preslagujemo ih)
     spans.extend(_span_x(cm) for cm in _corner_mods)
+    # Ručno pozicionirani moduli kao prepreka za regularne module (poštujemo korisnikov X).
+    spans.extend(_span_x(mm) for mm in _manual_mods)
     # Virtualna desna ugaona prepreka (bez corner modula, ali postoji desni offset)
     if _right_off > 0 and not _corner_mods:
         _wl = _wall_len(kitchen, wall_key=wall_key)

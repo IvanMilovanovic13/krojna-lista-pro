@@ -713,6 +713,7 @@ def render_edit_panel(
                     if handle_side_sel is not None:
                         new_params_ref["handle_side"] = str(handle_side_sel.value)
                     _collect_drawer_params(new_params_ref)
+                    _manual_x = int(x.value) != int(fm.get("x_mm", 0))
                     update_module_local(
                         _frozen_id,
                         x_mm=int(x.value),
@@ -723,11 +724,8 @@ def render_edit_panel(
                         label=str(name_inp.value),
                         template_id=_frozen_tid,
                         params=new_params_ref,
+                        manual_x=_manual_x or bool(fm.get("manual_x", False)),
                     )
-                    try:
-                        solve_layout(state.kitchen, zone=_frozen_zone, mode="pack", wall_key=_frozen_wk)
-                    except Exception as ex:
-                        logger.debug("Edit drawer recalc input update failed: %s", ex)
                     # Ažuriraj depth_mode na modulu direktno
                     upd_mods = state.kitchen.get("modules", []) or []
                     upd_m = next((mm for mm in upd_mods if int(mm.get('id', -1)) == _frozen_id), None)

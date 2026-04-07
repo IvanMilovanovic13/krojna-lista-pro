@@ -943,6 +943,7 @@ def update_module_local(
     label: str,
     template_id: Optional[str] = None,
     params: Optional[Dict[str, Any]] = None,
+    manual_x: Optional[bool] = None,
 ) -> None:
     k = state.kitchen
     # snapshot pre-change (for safe rollback)
@@ -971,6 +972,8 @@ def update_module_local(
     m["d_mm"] = int(d_mm)
     m["gap_after_mm"] = int(gap_after_mm)
     m["label"] = str(label)
+    if manual_x is not None:
+        m["manual_x"] = bool(manual_x)
     if template_id:
         m["template_id"] = str(template_id)
         # zona se automatski vezuje za template
