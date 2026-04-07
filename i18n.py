@@ -6503,6 +6503,48 @@ _TRANSLATIONS.setdefault('hi', {}).update({
     "wizard.type_kitchen_desc": "Rasoi cabinets, worktop, sink"
 })
 
+_TRANSLATIONS["sr"].update({
+    "sidebar.collapse": "Sklopi panel",
+    "sidebar.expand": "Otvori panel",
+    "sidebar.collapsed_label": "Panel",
+})
+
+_TRANSLATIONS["en"].update({
+    "sidebar.collapse": "Collapse panel",
+    "sidebar.expand": "Expand panel",
+    "sidebar.collapsed_label": "Panel",
+})
+
+_TRANSLATIONS.setdefault("es", {}).update({
+    "sidebar.collapse": "Contraer panel",
+    "sidebar.expand": "Abrir panel",
+    "sidebar.collapsed_label": "Panel",
+})
+
+_TRANSLATIONS.setdefault("pt-br", {}).update({
+    "sidebar.collapse": "Recolher painel",
+    "sidebar.expand": "Abrir painel",
+    "sidebar.collapsed_label": "Painel",
+})
+
+_TRANSLATIONS.setdefault("ru", {}).update({
+    "sidebar.collapse": "Свернуть панель",
+    "sidebar.expand": "Открыть панель",
+    "sidebar.collapsed_label": "Панель",
+})
+
+_TRANSLATIONS.setdefault("zh-cn", {}).update({
+    "sidebar.collapse": "收起面板",
+    "sidebar.expand": "打开面板",
+    "sidebar.collapsed_label": "面板",
+})
+
+_TRANSLATIONS.setdefault("hi", {}).update({
+    "sidebar.collapse": "पैनल समेटें",
+    "sidebar.expand": "पैनल खोलें",
+    "sidebar.collapsed_label": "पैनल",
+})
+
 def get_language_options() -> dict[str, str]:
     return dict(VISIBLE_LANGUAGE_OPTIONS)
 

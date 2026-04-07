@@ -23,14 +23,42 @@ def render_elements_tab(
     """Renderuje ceo 'Elementi' tab (UI layout only)."""
     if not hasattr(state, 'element_canvas_mode'):
         setattr(state, 'element_canvas_mode', '2D')
+    if not hasattr(state, 'elements_sidebar_collapsed'):
+        setattr(state, 'elements_sidebar_collapsed', False)
+
+    def _set_sidebar_collapsed(value: bool) -> None:
+        setattr(state, 'elements_sidebar_collapsed', value)
+        main_content_refresh()
+
+    sidebar_collapsed = bool(getattr(state, 'elements_sidebar_collapsed', False))
 
     # Keep canvas fully visible under top toolbar/tab strip; prevent bottom clipping.
     with ui.row().classes('w-full h-[calc(100vh-72px)] gap-0 min-h-0 overflow-hidden'):
-        with ui.column().classes(
-            'left-panel-compact w-[260px] border-r border-gray-200 h-full min-h-0 flex flex-col '
-            'overflow-hidden bg-white shrink-0'
-        ):
-            sidebar_content()
+        if sidebar_collapsed:
+            with ui.column().classes(
+                'left-panel-compact w-[52px] border-r border-gray-200 h-full min-h-0 flex flex-col '
+                'items-center overflow-hidden bg-white shrink-0 py-2 gap-2'
+            ):
+                ui.button(
+                    icon='chevron_right',
+                    on_click=lambda: _set_sidebar_collapsed(False),
+                ).props('flat round dense').tooltip(tr_fn('sidebar.expand'))
+                ui.label(tr_fn('sidebar.collapsed_label')).classes(
+                    'text-[10px] font-semibold uppercase tracking-wide text-gray-500 text-center px-1'
+                )
+        else:
+            with ui.column().classes(
+                'left-panel-compact w-[260px] border-r border-gray-200 h-full min-h-0 flex flex-col '
+                'overflow-hidden bg-white shrink-0'
+            ):
+                with ui.row().classes(
+                    'w-full items-center justify-end px-2 py-1 bg-gray-50 border-b border-gray-200 shrink-0'
+                ):
+                    ui.button(
+                        icon='chevron_left',
+                        on_click=lambda: _set_sidebar_collapsed(True),
+                    ).props('flat round dense').tooltip(tr_fn('sidebar.collapse'))
+                sidebar_content()
 
         with ui.column().classes(
             'flex-1 h-full min-h-0 overflow-hidden flex flex-col bg-gray-100 relative'
