@@ -4587,7 +4587,7 @@ def generate_cutlist_excel(
         ("Deb.",        "Deb.",          6),
         ("Kol.",        _t("Kol.", "Qty"),          5),
         ("CUT_W [mm]",  _t("CUT Duž.", "CUT Length"),      9),
-        ("CUT_H [mm]",  _t("CUT Sir.", "CUT Width"),      9),
+        ("CUT_H [mm]",  _t("CUT Šir.", "CUT Width"),      9),
         ("Dužina [mm]", _t("FIN Duž.", "FIN Length"),      9),
         ("Širina [mm]", _t("FIN Šir.", "FIN Width"),      9),
         ("Smer goda",   _t("Smer goda", "Grain"),     8),

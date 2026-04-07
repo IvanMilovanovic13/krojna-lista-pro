@@ -661,7 +661,7 @@ def build_pdf_bytes(
     _svc_cuts = service_packet.get("service_cuts", pd.DataFrame())
     if _svc_cuts is not None and not _svc_cuts.empty:
         story.append(Paragraph(_t('Šta nosiš u servis - sečenje', 'What you take to the workshop - cutting'), H1))
-        _sh = [['RB', _t('Zid', 'Wall'), _t('Materijal', 'Material'), _t('Deb.', 'Thk.'), _t('CUT Duz.', 'Cut length'), _t('CUT Sir.', 'Cut width'), _t('Kant', 'Edge'), _t('Kol.', 'Qty')]]
+        _sh = [['RB', _t('Zid', 'Wall'), _t('Materijal', 'Material'), _t('Deb.', 'Thk.'), _t('CUT Duž.', 'Cut length'), _t('CUT Šir.', 'Cut width'), _t('Kant', 'Edge'), _t('Kol.', 'Qty')]]
         _sr = [[
             str(r.get('RB', '')),
             _safe_val(r.get('Zid', ''), '-'),
@@ -751,7 +751,7 @@ def build_pdf_bytes(
         if _sk == 'worktop':
             _sdh = [[
                 _t('Modul', 'Module'),
-                _t('Duz. zida', 'Wall L'),
+                _t('Duž. zida', 'Wall L'),
                 _t('Potrebno', 'Required'),
                 _t('Nabavno', 'Purchase'),
                 _t('Dub.', 'Depth'),
@@ -792,7 +792,7 @@ def build_pdf_bytes(
                     str(r.get('Deb.', '')), str(int(r.get('Kol.', 0))),
                     _safe_val(r.get('Kant', ''), '-'), _safe(str(r.get('Napomena', '')))
                 ])
-            _sdh = [[_t('Modul', 'Module'), _t('Deo', 'Part'), _t('Duz.', 'Length'), _t('Sir.', 'Width'), _t('Deb.', 'Thk.'), _t('Kol.', 'Qty'), _t('Kant', 'Edge'), _t('Napomena', 'Note')]]
+            _sdh = [[_t('Modul', 'Module'), _t('Deo', 'Part'), _t('Duž.', 'Length'), _t('Šir.', 'Width'), _t('Deb.', 'Thk.'), _t('Kol.', 'Qty'), _t('Kant', 'Edge'), _t('Napomena', 'Note')]]
             _sdr = _rows
             _sdt = Table(_sdh + _sdr,
                          colWidths=[PW*0.20, PW*0.13, PW*0.08, PW*0.08,
@@ -877,7 +877,7 @@ def build_pdf_bytes(
                     repeatRows=1,
                 )
                 _mtbl.setStyle(_tbl_style())
-                _ph = [[_t('Oznaka', 'Label'), _t('Deo', 'Part'), _t('Duz.', 'Length'), _t('Sir.', 'Width'), _t('Deb.', 'Thk.'), _t('Kol.', 'Qty'), _t('Kant', 'Edge')]]
+                _ph = [[_t('Oznaka', 'Label'), _t('Deo', 'Part'), _t('Duž.', 'Length'), _t('Šir.', 'Width'), _t('Deb.', 'Thk.'), _t('Kol.', 'Qty'), _t('Kant', 'Edge')]]
                 _pr = [
                     [_safe(_short_part_code(r.get('PartCode', ''))),
                      _safe(_friendly_part_name(r.get('Deo', ''), _lang)),
