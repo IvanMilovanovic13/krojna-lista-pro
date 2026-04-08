@@ -4293,6 +4293,8 @@ def build_cutlist_pdf_bytes(
             "Korak": "Passo",
             "Šta radiš": "O que fazer",
             "Sta radis": "O que fazer",
+            "Pojam": "Termo",
+            "Objašnjenje": "Explicação",
             "Zid": "Parede",
             "Modul": "Módulo",
             "Deo": "Peça",
