@@ -3,6 +3,38 @@
 
 ---
 
+## STATUS UPDATE - 8. april 2026.
+
+Najnoviji zavrseni UX / access koraci:
+
+- `501dd2c` `Gate wizard start behind account choice`
+  - anonimni korisnik vise ne ulazi direktno u wizard step 1
+  - pre wizard toka dobija jasan izbor:
+    - napravi nalog
+    - prijavi se
+    - nastavi lokalno bez naloga
+- `07ae359` `Lock cut list behind PRO access`
+  - `Krojna lista` i `PDF/Excel` UI su zakljucani za sve osim `pro/admin`
+  - local/trial korisnik vidi jasan PRO lock ekran i checkout CTA
+  - `pro/admin` korisnik i dalje vidi pun cutlist i export tok bez promene
+
+Izmenjeni fajlovi:
+
+- `ui_wizard_tab.py`
+- `ui_cutlist_tab.py`
+- `i18n.py`
+
+Potvrdeno testovima:
+
+- `venv\Scripts\python.exe run_all_tests.py --quick` -> `19 PASS / 0 FAIL`
+- `venv\Scripts\python.exe test_i18n.py` -> `202 PASS / 0 FAIL / 0 WARN`
+
+Otvoren sledeci korak:
+
+- rucni QA `wizard gate -> local continue -> cutlist paywall -> PRO unlock` na `sr/en`, pa po potrebi i ostalim jezicima
+
+---
+
 ## O PROJEKTU
 
 **Naziv app:** Krojna Lista PRO

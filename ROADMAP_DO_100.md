@@ -70,6 +70,45 @@ Ovo je trajna ideja i smer rada za ceo projekat:
 **Datum:** 22. mart 2026.
 **Namena:** Glavni radni dokument za zavrsavanje projekta do pune produkcione spremnosti.
 
+## UX / Access Update - 8. april 2026.
+
+Zavrseno:
+
+- `501dd2c` `Gate wizard start behind account choice`
+  - `wizard` step 1 vise nije vidljiv anonimnom korisniku
+  - pre ulaza u wizard prikazuje se jasan account gate
+  - korisnik moze na `nalog` ili da nastavi lokalno bez naloga
+- `07ae359` `Lock cut list behind PRO access`
+  - `Krojna lista` tab je zakljucan za sve koji nisu `pro/admin`
+  - locked ekran sada jasno objasnjava da su `PDF/Excel` i krojna lista deo `PRO`
+  - dodat checkout CTA preko postojeceg billing toka
+
+Tehnicki scope ove izmene:
+
+- `ui_wizard_tab.py`
+- `ui_cutlist_tab.py`
+- `i18n.py`
+
+Nije dirano:
+
+- `auth_models.py`
+- `state_logic.py`
+- `app.py`
+
+Potvrdeno:
+
+- `venv\Scripts\python.exe run_all_tests.py --quick` -> `19 PASS / 0 FAIL`
+- `venv\Scripts\python.exe test_i18n.py` -> `202 PASS / 0 FAIL / 0 WARN`
+
+Sledeci rucni QA za ovu stavku:
+
+1. anoniman korisnik vidi account gate pre wizard step 1
+2. `Napravi nalog` i `Prijavi se` vode na `nalog`
+3. `Nastavi lokalno bez naloga` otkljucava normalan wizard tok
+4. `trial/local` korisnik vidi lock screen u `Krojna lista`
+5. `pro/admin` korisnik vidi pun cutlist i export dugmad
+6. checkout dugme iz lock screena pokrece postojeci billing tok
+
 ## Launch Agenda Update - 7. april 2026.
 
 Trenutno stanje rada:
