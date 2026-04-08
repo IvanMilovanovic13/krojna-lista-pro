@@ -275,11 +275,12 @@ def render_nova_tab(
             _current_tier = str(getattr(state, 'current_access_tier', '') or '').strip().lower()
             billing_title, billing_desc, show_checkout, show_portal = _dashboard_billing_copy(billing)
             primary_title, primary_desc, primary_btn, primary_mode = _dashboard_primary_action_copy(billing)
+            _show_plan_cards = _current_tier in {'trial', 'local', 'local_beta', ''}
 
             with ui.card().classes('w-full p-6 bg-[#f7f5ef] border border-gray-200'):
                 ui.label('krojna lista PRO').classes('text-3xl font-bold text-gray-900')
                 ui.label('Dashboard / Projekti').classes('text-xs font-semibold uppercase tracking-[0.18em] text-gray-400')
-                if _current_tier == 'trial':
+                if _show_plan_cards:
                     ui.label(tr_fn('nova.plan_choose_title')).classes('text-lg text-gray-700')
                     ui.label(tr_fn('nova.plan_choose_desc')).classes('text-sm text-gray-500')
                 else:
@@ -329,6 +330,23 @@ def render_nova_tab(
                 with ui.card().classes('w-full p-5 bg-[#eefbf3] border border-[#b7e4c7]'):
                     ui.label(tr_fn('nova.paid_success_title')).classes('text-base font-bold text-[#166534]')
                     ui.label(tr_fn('nova.billing_state_paid_desc')).classes('text-sm text-[#166534]')
+
+            if _show_plan_cards:
+                with ui.row().classes('w-full gap-4 max-md:flex-col'):
+                    with ui.card().classes('flex-1 p-5 bg-white border border-gray-200'):
+                        ui.label(tr_fn('nova.plan_weekly_title')).classes('text-base font-bold text-gray-900')
+                        ui.label(tr_fn('nova.plan_weekly_desc')).classes('text-sm text-gray-600')
+                        ui.button(
+                            tr_fn('nova.plan_weekly_btn'),
+                            on_click=lambda: _start_paid_checkout('pro_weekly'),
+                        ).classes('w-full mt-4 bg-[#111] text-white')
+                    with ui.card().classes('flex-1 p-5 bg-white border border-gray-200'):
+                        ui.label(tr_fn('nova.plan_monthly_title')).classes('text-base font-bold text-gray-900')
+                        ui.label(tr_fn('nova.plan_monthly_desc')).classes('text-sm text-gray-600')
+                        ui.button(
+                            tr_fn('nova.plan_monthly_btn'),
+                            on_click=lambda: _start_paid_checkout('pro_monthly'),
+                        ).classes('w-full mt-4 bg-[#111] text-white')
 
             if billing_title or billing_desc:
                 with ui.card().classes('w-full p-5 bg-[#f8fafc] border border-gray-200'):
