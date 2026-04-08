@@ -3273,6 +3273,137 @@ def _translate_export_text_es(value: Any, column: str = "") -> str:
     return _apply_ordered_replacements(txt, common)
 
 
+def _translate_export_text_ru(value: Any, column: str = "") -> str:
+    txt = str(value or "")
+    col = str(column or "")
+
+    if col in {"Zid", "Wall"}:
+        return txt.replace("Zid ", "Стена ").replace("Wall ", "Стена ")
+
+    if col in {"Pozicija", "Position"}:
+        mapping = {
+            "LEVA": "ЛЕВАЯ", "LEVO": "ЛЕВАЯ", "LEFT": "ЛЕВАЯ",
+            "DESNA": "ПРАВАЯ", "DESNO": "ПРАВАЯ", "RIGHT": "ПРАВАЯ",
+            "GORE": "ВЕРХ", "TOP": "ВЕРХ",
+            "DOLE": "НИЗ", "BOTTOM": "НИЗ",
+            "CENTAR": "ЦЕНТР", "SREDINA": "ЦЕНТР", "CENTER": "ЦЕНТР",
+            "PREDNJA": "ПЕРЕД", "NAPRED": "ПЕРЕД", "FRONT": "ПЕРЕД",
+            "ZADNJA": "ЗАДНЯЯ", "POZADI": "ЗАДНЯЯ", "BACK": "ЗАДНЯЯ",
+        }
+        return mapping.get(txt.upper(), txt)
+
+    if col in {"Kategorija", "Category"}:
+        mapping = {
+            "okov": "фурнитура",
+            "potrosni": "расходники",
+            "consumable": "расходники",
+            "hardware": "фурнитура",
+            "warning": "предупреждение",
+        }
+        return mapping.get(txt.lower(), txt)
+
+    common: list[tuple[str, str]] = [
+        ("Krojna Lista PRO", "Карта раскроя PRO"), ("Krojna lista PRO", "Карта раскроя PRO"),
+        ("Krojna lista", "Карта раскроя"), ("Cut List PRO", "Карта раскроя PRO"), ("Cut List", "Карта раскроя"),
+        ("Project", "Проект"), ("Customer", "Клиент"), ("Room", "Помещение"), ("Kitchen", "Кухня"),
+        ("Wall size", "Размер стены"), ("Version", "Версия"), ("Generated", "Создано"),
+        ("Measured by", "Замерил"), ("Designed by", "Спроектировал"), ("Workshop note", "Примечание для мастерской"),
+        ("Wall A", "Стена A"), ("Wall B", "Стена B"), ("Wall C", "Стена C"),
+        ("Zid A", "Стена A"), ("Zid B", "Стена B"), ("Zid C", "Стена C"),
+        ("Donji (kuhinjska jedinica: rerna + ploča za kuvanje)", "Нижний модуль (духовка + варочная панель)"),
+        ("Donji (kuhinjska jedinica: rerna + ploca za kuvanje)", "Нижний модуль (духовка + варочная панель)"),
+        ("Rerna+ploča", "Духовка+панель"), ("Rerna+ploca", "Духовка+панель"),
+        ("Rerna + ploča", "Духовка + панель"), ("Rerna + ploca", "Духовка + панель"),
+        ("Donji (sudopera)", "Нижний модуль (мойка)"), ("Donji (2 vrata)", "Нижний модуль (2 двери)"),
+        ("Donji (1 vrata)", "Нижний модуль (1 дверь)"), ("Donji (vrata + fioka)", "Нижний модуль (двери + ящик)"),
+        ("Donji (fioke)", "Нижний модуль (ящики)"), ("Donji", "Нижний модуль"),
+        ("Gornji (aspirator / napa)", "Верхний модуль (вытяжка)"), ("Gornji (2 vrata)", "Верхний модуль (2 двери)"),
+        ("Gornji (1 vrata)", "Верхний модуль (1 дверь)"), ("Gornji", "Верхний модуль"),
+        ("Iverica Korpus", "ЛДСП корпус"), ("Iverica Front", "ЛДСП фасад"), ("Iverica Leđa", "ХДФ задник"),
+        ("Iverica", "ЛДСП"), ("Lesonit Leđa", "ХДФ задник"), ("Leđa", "Задник"),
+        ("Radna ploča Korpus", "Столешница"), ("Radna ploča", "Столешница"),
+        ("Leđna ploča", "Задняя панель"), ("Parcijalna leđna ploča", "Частичная задняя панель"),
+        ("Back panel / opening", "Задняя панель / проём"), ("Leđa / prolaz", "Задняя панель / проём"),
+        ("Leva strana", "Левая боковина"), ("Desna strana", "Правая боковина"),
+        ("Srednja vertikala", "Средняя вертикаль"), ("Polica (podesiva)", "Регулируемая полка"),
+        ("Polica", "Полка"), ("Plafon", "Верхняя панель"), ("Dno", "Нижняя панель"),
+        ("Dno sanduka fioke", "Дно ящика"), ("Prednja strana sanduka fioke", "Передняя стенка ящика"),
+        ("Zadnja strana sanduka fioke", "Задняя стенка ящика"), ("Bočna stranica sanduka fioke", "Боковина ящика"),
+        ("Dno sanduka", "Дно ящика"), ("Prednja strana sanduka", "Передняя стенка ящика"),
+        ("Zadnja strana sanduka", "Задняя стенка ящика"), ("Bočna ploča", "Боковина ящика"),
+        ("Front fioke (kuhinjska jedinica)", "Фасад ящика (духовка + панель)"), ("Front fioke", "Фасад ящика"),
+        ("Fioka ispod rerne", "Ящик под духовкой"), ("fioka ispod rerne", "ящик под духовкой"),
+        ("rerna ima sopstveni panel", "у духовки собственная панель"),
+        ("Vrata (ispod sudopere)", "Двери под мойкой"), ("Vrata (ispod ploče za kuvanje)", "Двери под варочной панелью"),
+        ("Vrata", "Двери"), ("Nosač radne ploče", "Опора столешницы"), ("Sokla (lajsna)", "Цоколь (планка)"),
+        ("Sokla", "Цоколь"), ("Radna ploča - Zid", "Столешница - Стена"), ("Sokla - Zid", "Цоколь - Стена"),
+        ("Filer panel", "Доборная панель"), ("Završna bočna ploča", "Торцевая боковая панель"),
+        ("Šarka", "Петля"), ("Ručka / pull", "Ручка"), ("Klizač za fioku", "Направляющая ящика"),
+        ("Nosač police (klin)", "Полкодержатель"), ("Nosač fronta fioke", "Крепление фасада ящика"),
+        ("Set nosača / ugaonika", "Комплект креплений / уголков"), ("Stopica (nogica)", "Регулируемая ножка"),
+        ("Konfirmat vijak", "Конфирмат"), ("Drvena tipla", "Деревянный шкант"),
+        ("Sanitarni silikon", "Санитарный силикон"), ("Sudopera", "Мойка"), ("Slavina", "Смеситель"),
+        ("Sifon i odvodni set", "Сифон и сливной комплект"), ("Baterija za sudoperu", "Смеситель для мойки"),
+        ("Ugradna sudopera", "Встраиваемая мойка"), ("Tipl + vijak", "Дюбель + шуруп"),
+        ("Wall plugs / anchors", "Дюбели / анкеры"), ("Po izboru korisnika", "По выбору пользователя"),
+        ("Podesiva h=100 mm", "Регулируемая h=100 мм"), ("Sifon + preliv + spojnice", "Сифон + перелив + соединители"),
+        ("Kupuje se kao gotov proizvod", "Покупается готовым изделием"), ("Kupuje se posebno", "Покупается отдельно"),
+        ("prema izboru korisnika", "по выбору пользователя"), ("Osnovni set po elementu", "Базовый комплект на модуль"),
+        ("1 par klizača", "1 пара направляющих"), ("1 polica × 4 klina", "1 полка × 4 держателя"),
+        ("2 vrata × 2 šarke", "2 двери × 2 петли"), ("Za front fioke ispod rerne", "Для фасада ящика под духовкой"),
+        ("Standardno za spoj korpusa (bočne+dno+plafon)", "Стандартно для соединения корпуса (боковины+низ+верх)"),
+        ("Pomoćni spoj i poravnanje", "Вспомогательное соединение и выравнивание"),
+        ("Gornji vez", "Верхняя стяжка"), ("pričvršćuje radnu ploču", "крепит столешницу"),
+        ("Segment zida", "Сегмент стены"), ("raspon", "диапазон"), ("utor 8mm", "паз 8 мм"),
+        ("Otvor za sudoperu", "Вырез под мойку"), ("Otvor za ploču", "Вырез под варочную панель"),
+        ("Utor za leđa", "Паз задней панели"), ("Ventilacija / otvor", "Вентиляция / проём"),
+        ("Posebna obrada", "Специальная обработка"), ("Servis + lice mesta", "Мастерская + на месте"),
+        ("Kuća / lice mesta", "Дом / на месте"), ("Servis", "Мастерская"),
+        ("Wall installation", "Монтаж на стену"), ("Purchased separately", "Покупается отдельно"),
+        ("Tools needed on site", "Инструменты на месте"), ("Anker za zid", "Стеновой анкер"),
+        ("Vijak za zidni nosač / šinu", "Шуруп для настенного крепления / рейки"),
+        ("Zidni nosač elementa", "Настенный крепёж модуля"), ("Nosač + šina za viseće elemente", "Крепёж + рейка для навесных модулей"),
+        ("Preporučena količina po modulu", "Рекомендуемое количество на модуль"),
+        ("Za pričvršćenje nosača, šine ili anti-tip seta; tip vijka prilagoditi zidu", "Для крепления держателя, рейки или антиопрокидывателя; тип шурупа подобрать под стену"),
+        ("Set za kačenje visećeg elementa", "Комплект для навесного модуля"),
+        ("Po šablonu proizvođača", "По шаблону производителя"), ("Po meri iz projekta", "По размерам проекта"),
+        ("Po geometriji zida i šablonu", "По геометрии стены и шаблону"),
+        ("Priprema i finalni rez", "Подготовка и финальный рез"),
+        ("Zidna mera / finished dimension", "Размер стены / финальный размер"),
+        ("CUT osnova / purchase segment", "База CUT / покупной сегмент"),
+        ("Servis radi isključivo po CUT merama", "Мастерская работает строго по размерам CUT"),
+        ("Finalni rez na licu mesta", "Финальная подрезка на месте"), ("Izrezi", "Вырезы"),
+        ("sudopera", "мойка"), ("ploča za kuvanje", "варочная панель"),
+        ("radnoj ploči", "столешнице"), ("radnu ploču", "столешницу"), ("radne ploče", "столешницы"),
+        ("radna ploča", "столешница"), ("šablonu", "шаблону"), ("proizvođača", "производителя"),
+        ("parcijalna leđa samo u donjoj servisnoj zoni, gornja zona iza rerne ostaje otvorena radi ventilacije i priključaka", "частичная задняя панель только в нижней сервисной зоне; верхняя зона за духовкой остаётся открытой для вентиляции и подключений"),
+    ]
+    note_replacements: list[tuple[str, str]] = [
+        ("In the workshop, do cutting and edging strictly by CUT dimensions. Verify openings and special machining against the notes.", "В мастерской выполнять раскрой и кромление строго по размерам CUT. Проёмы и специальную обработку сверять с примечаниями."),
+        ("In the workshop, cut strictly by CUT dimensions and verify edging in the separate table", "В мастерской резать строго по размерам CUT и проверить кромление в отдельной таблице"),
+        ("Take only cutting, edging and machining to the workshop", "В мастерскую передать только раскрой, кромление и обработку"),
+        ("The workshop should work only from the workshop packet tables", "Мастерская должна работать только по таблицам мастерского пакета"),
+        ("Purchase ready-made appliances, hardware and tools separately", "Готовую технику, фурнитуру и инструменты купить отдельно"),
+        ("These items are not part of cutting and must be sourced separately", "Эти позиции не относятся к раскрою и покупаются отдельно"),
+        ("Back panel groove", "Паз задней панели"), ("Sink cut-out", "Вырез под мойку"),
+        ("Hob cut-out", "Вырез под варочную панель"), ("Ventilation / opening", "Вентиляция / проём"),
+        ("Preparation and final cut", "Подготовка и финальный рез"), ("Workshop + on site", "Мастерская + на месте"),
+        ("Workshop", "Мастерская"), ("On site", "На месте"), ("According to project dimensions", "По размерам проекта"),
+        ("According to the manufacturer's template", "По шаблону производителя"),
+        ("According to wall geometry and template", "По геометрии стены и шаблону"),
+        ("Cut the sink opening in the worktop according to the sink manufacturer's template.", "Вырезать отверстие под мойку в столешнице по шаблону производителя мойки."),
+        ("Cut the hob opening in the worktop according to the manufacturer's template.", "Вырезать отверстие под варочную панель в столешнице по шаблону производителя."),
+        ("Provide the opening and duct path for the hood according to the model and the installation axis.", "Подготовить проём и трассу воздуховода для вытяжки по модели и оси установки."),
+        ("Wall requirement / finished dimension", "Требование стены / финальный размер"),
+        ("CUT basis / purchase segment", "База CUT / покупной сегмент"),
+        ("Workshop works strictly by CUT dimensions.", "Мастерская работает строго по размерам CUT."),
+        ("Final cut is done on site.", "Финальная подрезка выполняется на месте."),
+    ]
+    if col in {"Napomena", "Napomena za servis", "Instrukcija", "Stavka", "Sta radis", "Šta radiš", "Polje", "Vrednost", "Tip obrade", "Izvodi", "Osnov izvođenja", "Obrada / napomena", "Grupa", "Tip / Šifra", "Note", "Instruction", "Item", "Field", "Value", "Processing type", "Operations", "Execution basis", "Processing / note", "Group", "Type / Code"}:
+        txt = _apply_ordered_replacements(txt, note_replacements)
+    return _apply_ordered_replacements(txt, common)
+
+
 def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> Any:
     txt = str(value or "")
     col = str(column or "")
@@ -3314,6 +3445,8 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
         txt = txt.replace("višina", "visina").replace("Višina", "Visina")
         if _lang == "es":
             return _translate_export_text_es(txt, col)
+        if _lang == "ru":
+            return _translate_export_text_ru(txt, col)
         if _lang == "pt-br":
             return _translate_export_text_ptbr(txt, col)
         return txt
@@ -3724,15 +3857,20 @@ def _format_material_role(material: Any, thickness: Any, role: str, lang: str = 
     role_map_sr = {"carcass": "Korpus", "front": "Front", "back": "Leđa"}
     role_map_en = {"carcass": "Carcass", "front": "Front", "back": "Back"}
     role_map_es = {"carcass": "Cuerpo", "front": "Frente", "back": "Fondo"}
+    role_map_ru = {"carcass": "Корпус", "front": "Фасад", "back": "Задник"}
     role_map_pt = {"carcass": "Corpo", "front": "Frente", "back": "Fundo"}
     if _lang == "es":
         mat = mat.replace("Iverica", "Aglomerado").replace("Lesonit", "HDF").replace("Radna ploča", "Encimera")
+    if _lang == "ru":
+        mat = mat.replace("Iverica", "ЛДСП").replace("Lesonit", "ХДФ").replace("Radna ploča", "Столешница")
     if _lang == "pt-br":
         mat = mat.replace("Iverica", "Aglomerado").replace("Radna ploča", "Bancada")
     if _lang == "en":
         role_label = role_map_en.get(role, role)
     elif _lang == "es":
         role_label = role_map_es.get(role, role)
+    elif _lang == "ru":
+        role_label = role_map_ru.get(role, role)
     elif _lang == "pt-br":
         role_label = role_map_pt.get(role, role)
     else:
@@ -4513,8 +4651,50 @@ def build_cutlist_pdf_bytes(
             "Tip / Šifra": "Tipo / código",
             "Kategorija": "Categoría",
         }
+        _header_map_ru = {
+            "RB": "№",
+            "PartCode": "Код",
+            "Korak": "Шаг",
+            "Šta radiš": "Что делать",
+            "Sta radis": "Что делать",
+            "Pojam": "Термин",
+            "Objašnjenje": "Пояснение",
+            "Zid": "Стена",
+            "Modul": "Модуль",
+            "Deo": "Деталь",
+            "Pozicija": "Позиция",
+            "SklopKorak": "Шаг",
+            "Kom": "Кол.",
+            "Kol.": "Кол.",
+            "Dužina [mm]": "Длина [мм]",
+            "Širina [mm]": "Ширина [мм]",
+            "Visina [mm]": "Высота [мм]",
+            "Deb.": "Толщ.",
+            "Deb. [mm]": "Толщ. [мм]",
+            "Materijal": "Материал",
+            "Smer goda": "Волокно",
+            "Orijentacija": "Ориентация",
+            "Kant": "Кромка",
+            "Napomena": "Примечание",
+            "Napomena za servis": "Примечание для мастерской",
+            "Tip obrade": "Тип обработки",
+            "Izvodi": "Выполняет",
+            "Osnov izvođenja": "Основание",
+            "Obrada / napomena": "Обработка / примечание",
+            "Stavka": "Позиция",
+            "Instrukcija": "Инструкция",
+            "Polje": "Поле",
+            "Vrednost": "Значение",
+            "Naziv": "Название",
+            "Tip / Šifra": "Тип / код",
+            "Kategorija": "Категория",
+        }
         header = [
-            Paragraph(_pdf_clean_text(_header_map_pt.get(c, c) if _lang == "pt-br" else (_header_map_es.get(c, c) if _lang == "es" else c)), _th)
+            Paragraph(_pdf_clean_text(
+                _header_map_pt.get(c, c) if _lang == "pt-br"
+                else (_header_map_es.get(c, c) if _lang == "es"
+                      else (_header_map_ru.get(c, c) if _lang == "ru" else c))
+            ), _th)
             for c in _available_cols
         ]
         rows = []
@@ -4552,7 +4732,7 @@ def build_cutlist_pdf_bytes(
             return None
 
     story: List[Any] = []
-    if _lang in {"es", "pt-br"}:
+    if _lang in {"es", "pt-br", "ru"}:
         project_title = _translate_export_text(project_title, _lang, "Polje")
 
     # ---- Zaglavlje dokumenta ----
@@ -4876,7 +5056,7 @@ def build_cutlist_pdf_bytes(
                 continue
 
             _mlbl = _normalize_sr_export_text(_m.get("label", "") or "")
-            if _lang in {"es", "pt-br"}:
+            if _lang in {"es", "pt-br", "ru"}:
                 _mlbl = _translate_export_text(_mlbl, _lang, "Modul")
             _mtid = str(_m.get("template_id", "") or "")
             _mz = str(_m.get("zone", "") or "").lower()
@@ -4890,6 +5070,8 @@ def build_cutlist_pdf_bytes(
                 _module_meta = f"Tipo: {_mtid}  |  Dimensões: {_mw} x {_mh} x {_md} mm" + (f"  |  Parede: {_wall}" if _wall else "")
             elif _lang == "es":
                 _module_meta = f"Tipo: {_mtid}  |  Medidas: {_mw} x {_mh} x {_md} mm" + (f"  |  Pared: {_wall}" if _wall else "")
+            elif _lang == "ru":
+                _module_meta = f"Тип: {_mtid}  |  Размеры: {_mw} x {_mh} x {_md} мм" + (f"  |  Стена: {_wall}" if _wall else "")
             else:
                 _module_meta = _t(
                     f"Tip: {_mtid}  |  Dimenzije: {_mw} x {_mh} x {_md} mm" + (f"  |  Zid: {_wall}" if _wall else ""),
@@ -5054,6 +5236,8 @@ def generate_cutlist_pdf(
         title = "Cut List PRO - M1 (single wall)"
     if str(lang or "sr").lower().strip() == "es" and title in {"Krojna lista PRO", "Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
         title = "Lista de Corte PRO" if title == "Krojna lista PRO" else "Lista de Corte PRO - M1 (una pared)"
+    if str(lang or "sr").lower().strip() == "ru" and title in {"Krojna lista PRO", "Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
+        title = "Карта раскроя PRO" if title == "Krojna lista PRO" else "Карта раскроя PRO - M1 (одна стена)"
     if str(lang or "sr").lower().strip() == "pt-br" and title in {"Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
         title = "Lista de Corte PRO - M1 (uma parede)"
     final_ds = get_final_cutlist_dataset(kitchen, lang=lang)
@@ -5091,6 +5275,8 @@ def generate_cutlist_excel(
         title = "Cut List PRO"
     if _lang == "es" and title == "Krojna lista PRO":
         title = "Lista de Corte PRO"
+    if _lang == "ru" and title == "Krojna lista PRO":
+        title = "Карта раскроя PRO"
     if _lang == "pt-br" and title == "Krojna lista PRO":
         title = "Lista de Corte PRO"
 
@@ -5381,10 +5567,10 @@ def generate_cutlist_excel(
         ("Deb.",         "Deb. [mm]",     8),
         ("Materijal",    _t("Materijal", "Material"),    16),
         ("Smer goda",    _t("Orijent.", "Grain"),     10),
-        ("L1",           ("Borda L1" if _lang == "pt-br" else ("Borde L1" if _lang == "es" else _t("Kant L1", "Edge L1"))),       7),
-        ("L2",           ("Borda L2" if _lang == "pt-br" else ("Borde L2" if _lang == "es" else _t("Kant L2", "Edge L2"))),       7),
-        ("K1",           ("Borda K1" if _lang == "pt-br" else ("Borde K1" if _lang == "es" else _t("Kant K1", "Edge K1"))),       7),
-        ("K2",           ("Borda K2" if _lang == "pt-br" else ("Borde K2" if _lang == "es" else _t("Kant K2", "Edge K2"))),       7),
+        ("L1",           ("Borda L1" if _lang == "pt-br" else ("Borde L1" if _lang == "es" else ("Кромка L1" if _lang == "ru" else _t("Kant L1", "Edge L1")))),       7),
+        ("L2",           ("Borda L2" if _lang == "pt-br" else ("Borde L2" if _lang == "es" else ("Кромка L2" if _lang == "ru" else _t("Kant L2", "Edge L2")))),       7),
+        ("K1",           ("Borda K1" if _lang == "pt-br" else ("Borde K1" if _lang == "es" else ("Кромка K1" if _lang == "ru" else _t("Kant K1", "Edge K1")))),       7),
+        ("K2",           ("Borda K2" if _lang == "pt-br" else ("Borde K2" if _lang == "es" else ("Кромка K2" if _lang == "ru" else _t("Kant K2", "Edge K2")))),       7),
     ]
     DET_COLS = [
         ("PartCode",     "PartCode",     12),
@@ -5396,10 +5582,10 @@ def generate_cutlist_excel(
         ("Deb.",         "Deb. [mm]",     8),
         ("Materijal",    _t("Materijal", "Material"),    16),
         ("Smer goda",    _t("Orijent.", "Grain"),     10),
-        ("L1",           ("Borda L1" if _lang == "pt-br" else ("Borde L1" if _lang == "es" else _t("Kant L1", "Edge L1"))),       7),
-        ("L2",           ("Borda L2" if _lang == "pt-br" else ("Borde L2" if _lang == "es" else _t("Kant L2", "Edge L2"))),       7),
-        ("K1",           ("Borda K1" if _lang == "pt-br" else ("Borde K1" if _lang == "es" else _t("Kant K1", "Edge K1"))),       7),
-        ("K2",           ("Borda K2" if _lang == "pt-br" else ("Borde K2" if _lang == "es" else _t("Kant K2", "Edge K2"))),       7),
+        ("L1",           ("Borda L1" if _lang == "pt-br" else ("Borde L1" if _lang == "es" else ("Кромка L1" if _lang == "ru" else _t("Kant L1", "Edge L1")))),       7),
+        ("L2",           ("Borda L2" if _lang == "pt-br" else ("Borde L2" if _lang == "es" else ("Кромка L2" if _lang == "ru" else _t("Kant L2", "Edge L2")))),       7),
+        ("K1",           ("Borda K1" if _lang == "pt-br" else ("Borde K1" if _lang == "es" else ("Кромка K1" if _lang == "ru" else _t("Kant K1", "Edge K1")))),       7),
+        ("K2",           ("Borda K2" if _lang == "pt-br" else ("Borde K2" if _lang == "es" else ("Кромка K2" if _lang == "ru" else _t("Kant K2", "Edge K2")))),       7),
     ]
     try:
         _sum2 = final_ds["summary"]

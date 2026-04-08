@@ -608,6 +608,116 @@ def _polish_instruction_line_es(line: str) -> str:
     return txt
 
 
+def _polish_instruction_line_ru(line: str) -> str:
+    txt = _translate_instruction_line(line, "en")
+    exact = {
+        "-- PANEL ELEMENT --": "-- ПАНЕЛЬ --",
+        "-- SINK BASE UNIT --": "-- НИЖНИЙ МОДУЛЬ ПОД МОЙКУ --",
+        "-- BASE UNIT PARTS LIST --": "-- СПИСОК ДЕТАЛЕЙ НИЖНЕГО МОДУЛЯ --",
+        "-- WALL UNIT PARTS LIST --": "-- СПИСОК ДЕТАЛЕЙ ВЕРХНЕГО МОДУЛЯ --",
+        "-- TOP FILLER PARTS LIST --": "-- СПИСОК ДЕТАЛЕЙ ВЕРХНЕЙ ДОБОРНОЙ ПАНЕЛИ --",
+        "-- FREESTANDING DISHWASHER --": "-- ОТДЕЛЬНОСТОЯЩАЯ ПОСУДОМОЕЧНАЯ МАШИНА --",
+        "-- FREESTANDING RANGE --": "-- ОТДЕЛЬНОСТОЯЩАЯ ПЛИТА --",
+        "-- FREESTANDING REFRIGERATOR --": "-- ОТДЕЛЬНОСТОЯЩИЙ ХОЛОДИЛЬНИК --",
+        "-- DISHWASHER OPENING PARTS LIST --": "-- СПИСОК ДЕТАЛЕЙ ПРОЁМА ПММ --",
+        "-- STEP 1 - VERIFY DIMENSIONS --": "-- ШАГ 1 - ПРОВЕРИТЬ РАЗМЕРЫ --",
+        "-- STEP 2 - POSITIONING --": "-- ШАГ 2 - ПОЗИЦИОНИРОВАНИЕ --",
+        "-- STEP 3 - FIXING --": "-- ШАГ 3 - КРЕПЛЕНИЕ --",
+        "-- STEP 4 - FINAL CHECK --": "-- ШАГ 4 - ФИНАЛЬНАЯ ПРОВЕРКА --",
+        "-- KORAK 5 - ZAVRSNA PROVERA --": "-- ШАГ 5 - ФИНАЛЬНАЯ ПРОВЕРКА --",
+        "-- STEP 1 - PREPARE THE OPENING --": "-- ШАГ 1 - ПОДГОТОВИТЬ ПРОЁМ --",
+        "-- STEP 2 - CONNECTIONS --": "-- ШАГ 2 - ПОДКЛЮЧЕНИЯ --",
+        "-- STEP 3 - INSTALL THE MACHINE --": "-- ШАГ 3 - УСТАНОВИТЬ МАШИНУ --",
+        "-- STEP 4 - DISHWASHER FRONT --": "-- ШАГ 4 - ФАСАД ПММ --",
+        "-- STEP 1 - CARCASS --": "-- ШАГ 1 - КОРПУС --",
+        "-- STEP 2 - BACK PANEL AND CUT-OUTS --": "-- ШАГ 2 - ЗАДНИК И ВЫРЕЗЫ --",
+        "-- STEP 3 - DOORS --": "-- ШАГ 3 - ДВЕРИ --",
+        "-- STEP 4 - WORKTOP AND SINK --": "-- ШАГ 4 - СТОЛЕШНИЦА И МОЙКА --",
+        "-- STEP 1 - SIDE PANELS --": "-- ШАГ 1 - БОКОВИНЫ --",
+        "-- STEP 2 - BOTTOM AND TOP PANEL --": "-- ШАГ 2 - НИЖНЯЯ И ВЕРХНЯЯ ПАНЕЛЬ --",
+        "-- STEP 3 - BACK PANEL --": "-- ШАГ 3 - ЗАДНИК --",
+        "-- STEP 4 - DRAWERS --": "-- ШАГ 4 - ЯЩИКИ --",
+        "-- STEP 4 - DOORS + DRAWER --": "-- ШАГ 4 - ДВЕРИ + ЯЩИК --",
+        "-- KORAK 4 - VRATA --": "-- ШАГ 4 - ДВЕРИ --",
+        "-- STEP 4 - COOKING UNIT --": "-- ШАГ 4 - МОДУЛЬ ДУХОВКИ И ПАНЕЛИ --",
+        "-- STEP 4 - HOB --": "-- ШАГ 4 - ВАРОЧНАЯ ПАНЕЛЬ --",
+        "-- STEP 4 - BUILT-IN OVEN --": "-- ШАГ 4 - ВСТРАИВАЕМАЯ ДУХОВКА --",
+        "-- STEP 5 - LEGS AND POSITIONING --": "-- ШАГ 5 - НОЖКИ И ПОЗИЦИОНИРОВАНИЕ --",
+        "-- STEP 3 - WALL INSTALLATION --": "-- ШАГ 3 - МОНТАЖ НА СТЕНУ --",
+        "-- KORAK 3 - MONTAŽA NA ZID --": "-- ШАГ 3 - МОНТАЖ НА СТЕНУ --",
+    }
+    if txt in exact:
+        return exact[txt]
+
+    replacements = [
+        ("Left side panel", "Левая боковина"), ("Right side panel", "Правая боковина"),
+        ("Back panel", "Задняя панель"), ("Top panel", "Верхняя панель"), ("Bottom panel", "Нижняя панель"),
+        ("Drawer front", "Фасад ящика"), ("Drawer fronts", "Фасады ящиков"), ("Drawer box", "Короб ящика"),
+        ("Doors below sink", "Двери под мойкой"), ("Doors below hob", "Двери под варочной панелью"),
+        ("Doors", "Двери"), ("Hinges", "Петли"), ("Drawer runners", "Направляющие ящика"),
+        ("Built-in oven", "Встраиваемая духовка"), ("Hob", "Варочная панель"), ("Worktop", "Столешница"),
+        ("Legs", "Ножки"), ("Carcass", "Корпус"), ("carcass", "корпус"), ("worktop", "столешница"),
+        ("sink", "мойка"), ("Sink", "Мойка"), ("oven", "духовка"), ("Oven", "Духовка"),
+        ("hob", "варочная панель"), ("fronts", "фасады"), ("front", "фасад"), ("doors", "двери"),
+        ("wall", "стена"), ("Wall", "Стена"), ("opening", "проём"), ("Opening", "Проём"),
+        ("manufacturer's template", "шаблон производителя"), ("manufacturer's instructions", "инструкции производителя"),
+        ("This appliance has no carcass or front in the cut list.", "У этой техники нет корпуса и фасада в карте раскроя."),
+        ("Connect water, drain and power according to the manufacturer's instructions.", "Подключите воду, слив и питание по инструкции производителя."),
+        ("Fit the doors and set 2-3 mm reveals so they open freely below the sink.", "Установите двери и выставьте зазоры 2-3 мм, чтобы они свободно открывались под мойкой."),
+        ("Mark the cut-out in the worktop using the sink template.", "Разметьте вырез в столешнице по шаблону мойки."),
+        ("Protect the cut edge of the opening from moisture before mounting the sink.", "Защитите вырезанную кромку от влаги перед установкой мойки."),
+        ("Run water and check whether the trap, tap and all connections leak.", "Откройте воду и проверьте, не протекают ли сифон, смеситель и соединения."),
+        ("Only when everything is dry and leak-free should you close the unit and continue to the next module.", "Закрывайте модуль и переходите к следующему только когда всё сухо и без протечек."),
+        ("Drill the confirmat holes and cut the groove for the back panel.", "Просверлите отверстия под конфирматы и паз для задней панели."),
+        ("Connect the bottom and top panel between the side panels.", "Соедините нижнюю и верхнюю панели между боковинами."),
+        ("Insert the back panel and verify the diagonals.", "Вставьте заднюю панель и проверьте диагонали."),
+        ("Fit the hinges, hang the doors and set 2 mm reveals.", "Установите петли, навесьте двери и выставьте зазоры 2 мм."),
+        ("Assemble the side panels, bottom and top panel.", "Соберите боковины, нижнюю и верхнюю панели."),
+        ("Assemble the side panels and bottom as a standard base cuerpo.", "Соберите боковины и нижнюю панель как стандартный нижний корпус."),
+        ("Do not fit a full top panel across the entire hueco so there is room for the fregadero and services.", "Не ставьте полную верхнюю панель на весь проём, чтобы осталось место для мойки и коммуникаций."),
+        ("Check squareness and insert the back panel.", "Проверьте прямой угол и вставьте заднюю панель."),
+        ("Install the doors or hardware according to the unit type.", "Установите двери или фурнитуру согласно типу модуля."),
+        ("Umetni dno izmedju bocnih stranica i spoji ga prema busenjima.", "Вставьте нижнюю панель между боковинами и соедините по отверстиям."),
+        ("Umetni dno i gornju plocu izmedju bocnih stranica i spoji ih prema busenjima.", "Вставьте нижнюю и верхнюю панели между боковинами и соедините по отверстиям."),
+        ("Zatim postavi gornju plocu i proveri da korpus ostane ravan.", "Затем установите верхнюю панель и проверьте, что корпус остаётся ровным."),
+        ("Pre sledeceg koraka proveri da korpus stoji ravno i da nigde nije uvijen.", "Перед следующим шагом проверьте, что корпус стоит ровно и не перекручен."),
+        ("Montiraj šarke, okači vrata i podesi male razmake tako da se vrata lako otvaraju i ne zapinju.", "Установите петли, навесьте двери и выставьте зазоры, чтобы двери открывались без заедания."),
+        ("Obeleži tačnu visinu na zidu, montiraj zidni nosač ili šinu i tek onda okači element.", "Отметьте точную высоту на стене, установите настенный крепёж или рейку и только потом навесьте модуль."),
+        ("Pre završnog stezanja proveri libelom da je element potpuno ravan levo-desno i napred-nazad.", "Перед окончательной затяжкой проверьте уровнем, что модуль ровный слева направо и спереди назад."),
+        ("Tek kada je element ravan i čvrsto vezan, nastavi na sledeći zidni element ili frente.", "Продолжайте к следующему навесному модулю или фасаду только когда модуль ровный и надёжно закреплён."),
+        ("Tek kada je element ravan i čvrsto vezan, nastavi na sledeći zidni element ili фасад.", "Продолжайте к следующему навесному модулю или фасаду только когда модуль ровный и надёжно закреплён."),
+        ("Rerna+ploča", "Духовка+панель"), ("Rerna+ploca", "Духовка+панель"), ("#3 - Rerna+ploča", "#3 - Духовка+панель"),
+        ("Type:", "Тип:"), ("Dimensions:", "Размеры:"), ("Wall:", "Стена:"),
+        ("Pustite vodu i proverite da li sifon, slavina i svi spojevi cure.", "Откройте воду и проверьте, не протекают ли сифон, смеситель и все соединения."),
+        ("Tek kada je sve suvo i bez curenja zatvorite element i nastavite na sledeći modul.", "Закрывайте модуль и переходите дальше только когда всё сухо и без протечек."),
+        ("Uzmite levu i desnu bočnu ploču i postavite ih uspravno tako da kantovane prednje ivice gledaju napred.", "Возьмите левую и правую боковины и поставьте вертикально так, чтобы кромленные передние края смотрели вперёд."),
+        ("Izbušite rupe za konfirmate i žleb za leđnu ploču.", "Просверлите отверстия под конфирматы и паз для задней панели."),
+        ("Umetnite dno između bočnih stranica i spojite ga prema bušenjima.", "Вставьте нижнюю панель между боковинами и соедините по отверстиям."),
+        ("Zatim postavite gornju ploču i proverite da korpus ostane ravan.", "Затем установите верхнюю панель и проверьте, что корпус остаётся ровным."),
+        ("Umetnite leđnu ploču na zadnju stranu elementa.", "Вставьте заднюю панель с задней стороны модуля."),
+        ("Umetni ledjnu plocu na zadnju stranu elementa.", "Вставьте заднюю панель с задней стороны модуля."),
+        ("Pre konačnog stezanja proverite dijagonale da element bude pod pravim uglom.", "Перед окончательной затяжкой проверьте диагонали, чтобы модуль был под прямым углом."),
+        ("Pre konacnog stezanja proveri dijagonale da element bude pod pravim uglom.", "Перед окончательной затяжкой проверьте диагонали, чтобы модуль был под прямым углом."),
+        ("Prvo proverite da li rerna slobodno ulazi u otvor korpusa i da li ima prostora za ventilaciju.", "Сначала проверьте, свободно ли духовка входит в проём корпуса и есть ли место для вентиляции."),
+        ("Prvo proveri da li rerna slobodno ulazi u otvor korpusa i da li ima prostora za ventilaciju.", "Сначала проверьте, свободно ли духовка входит в проём корпуса и есть ли место для вентиляции."),
+        ("Zatim isecite otvor u radnoj ploči prema šablonu ploče za kuvanje.", "Затем вырежьте проём в столешнице по шаблону варочной панели."),
+        ("Zatim isezi otvor u radnoj ploci prema šablonu ploce za kuvanje.", "Затем вырежьте проём в столешнице по шаблону варочной панели."),
+        ("Zatim isezi otvor u radnoj ploci prema sablonu ploce za kuvanje.", "Затем вырежьте проём в столешнице по шаблону варочной панели."),
+        ("Lažni front ili front fioke montirajte tek nakon probe zazora oko rerne i vrata rerne.", "Фальш-фасад или фасад ящика устанавливайте только после проверки зазоров вокруг духовки и её дверцы."),
+        ("Lazni front ili front fioke montiraj tek nakon probe zazora oko rerne i vrata rerne.", "Фальш-фасад или фасад ящика устанавливайте только после проверки зазоров вокруг духовки и её дверцы."),
+        ("Lazni фасад ili фасад fioke montiraj tek nakon probe zazora oko rerne i vrata rerne.", "Фальш-фасад или фасад ящика устанавливайте только после проверки зазоров вокруг духовки и её дверцы."),
+        ("Montirajte noge ili stopice, zatim nivelišite element na mestu ugradnje.", "Установите ножки, затем выровняйте модуль на месте монтажа."),
+        ("Montiraj noge ili stopice, zatim nivelisi element na mestu ugradnje.", "Установите ножки, затем выровняйте модуль на месте монтажа."),
+        ("Tek kada je korpus ravan i stabilan montirajte radnu ploču ili nastavite na sledeći element.", "Устанавливайте столешницу или переходите к следующему модулю только когда корпус ровный и устойчивый."),
+        ("Tek kada je korpus ravan i stabilan montiraj radnu plocu ili nastavi na sledeci element.", "Устанавливайте столешницу или переходите к следующему модулю только когда корпус ровный и устойчивый."),
+        ("Ugradna rerna", "Встраиваемая духовка"), ("Ploca za kuvanje", "Варочная панель"),
+        ("Ploča za kuvanje", "Варочная панель"), ("Fioka ispod rerne", "Ящик под духовкой"),
+    ]
+    for src, dst in replacements:
+        txt = txt.replace(src, dst)
+    return txt
+
+
 def _polish_instruction_line_ptbr(line: str) -> str:
     txt = _polish_instruction_line_en(_translate_instruction_line(line, "en"))
     exact = {
@@ -811,6 +921,8 @@ def _render_instruction_line(line: str, lang: str = "sr") -> str:
         return _polish_instruction_line_en(_translate_instruction_line(line, "en"))
     if _lang == "es":
         return _polish_instruction_line_es(line)
+    if _lang == "ru":
+        return _polish_instruction_line_ru(line)
     if _lang == "pt-br":
         return _polish_instruction_line_ptbr(line)
     return _polish_instruction_line_sr(line)
