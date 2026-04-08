@@ -4552,7 +4552,7 @@ def build_cutlist_pdf_bytes(
             return None
 
     story: List[Any] = []
-    if _lang == "pt-br":
+    if _lang in {"es", "pt-br"}:
         project_title = _translate_export_text(project_title, _lang, "Polje")
 
     # ---- Zaglavlje dokumenta ----
