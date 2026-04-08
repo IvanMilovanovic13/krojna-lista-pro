@@ -178,6 +178,7 @@ def render_toolbar() -> None:
         state.active_tab = "nalog"
         ui.notify(str(_access.get("reason", "") or _tr("toolbar.pro_redirect")), type='warning', timeout=5000)
         main_content.refresh()
+        ui.timer(0.05, lambda: ui.run_javascript('window.scrollTo({top: 0, behavior: "auto"})'), once=True)
         ui.timer(0.05, render_toolbar.refresh, once=True)
 
     def _toolbar_save() -> None:

@@ -33,6 +33,7 @@ def switch_tab(
             state.active_tab = "nalog"
             ui.notify(str(cutlist_access.get("reason", "") or "Krojna lista nije dostupna."), type="warning")
             safe_refresh(main_content_refresh, logger)
+            ui.timer(0.05, lambda: ui.run_javascript('window.scrollTo({top: 0, behavior: "auto"})'), once=True)
             ui.timer(0.05, lambda: safe_refresh(render_toolbar_refresh, logger), once=True)
             return
     if key in ("elementi", "krojna") and not getattr(state, "room_setup_done", False):
