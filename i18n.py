@@ -13,12 +13,9 @@ LANGUAGE_OPTIONS = {
     "hi": "हिन्दी",
 }
 
-# v1 launch exposes only reviewed languages. The remaining translations stay in
-# LANGUAGE_OPTIONS/_TRANSLATIONS for later polish and internal QA.
-VISIBLE_LANGUAGE_OPTIONS = {
-    "sr": LANGUAGE_OPTIONS["sr"],
-    "en": LANGUAGE_OPTIONS["en"],
-}
+# QA mode exposes every configured language so the remaining translation polish
+# can be tested directly in the app before the final v1 language decision.
+VISIBLE_LANGUAGE_OPTIONS = dict(LANGUAGE_OPTIONS)
 
 LANGUAGE_FALLBACKS = {
     "sr": ("sr", "en"),
