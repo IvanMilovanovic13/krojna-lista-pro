@@ -99,6 +99,9 @@ def render_auth_tab(
                 ui.label(tr_fn('nova.account_page_desc')).classes(
                     'text-sm text-gray-600'
                 )
+                if bool(getattr(state, 'account_upgrade_focus', False)):
+                    ui.label(tr_fn('nova.primary_action_upgrade_title')).classes('text-lg font-bold text-[#7a5d00] mt-2')
+                    ui.label(tr_fn('nova.primary_action_upgrade_desc')).classes('text-sm text-[#7a5d00]')
         else:
             with ui.card().classes('w-full p-6 bg-[#fff7d6] border-2 border-[#d4a017] shadow-sm'):
                 ui.label(tr_fn('nova.auth_title')).classes('text-xl font-bold mb-1')
@@ -142,6 +145,8 @@ def render_auth_tab(
 
         billing = get_current_billing_summary()
         if billing:
+            _tier = str(getattr(state, 'current_access_tier', '') or '').strip().lower()
+            _show_plan_cards = _tier in {'trial', 'local', 'local_beta', ''}
             with ui.card().classes('w-full p-6 bg-[#eef6ff] border border-[#c7ddff]'):
                 ui.label(tr_fn('nova.billing_title')).classes('text-lg font-bold mb-1')
                 billing_title, billing_desc, pro_features, show_checkout, show_portal = _billing_state_copy(billing)
@@ -172,6 +177,14 @@ def render_auth_tab(
                     else:
                         ui.notify(msg, type='info' if ok else 'negative', timeout=5000)
 
+                def _start_checkout_with_plan(plan_code: str) -> None:
+                    ok, msg = build_checkout_start_message(plan_code)
+                    if ok and str(msg or "").startswith(("http://", "https://")):
+                        ui.navigate.to(str(msg), new_tab=True)
+                        ui.notify(tr_fn('nova.billing_checkout_redirect'), type='positive', timeout=4000)
+                    else:
+                        ui.notify(msg, type='info' if ok else 'negative', timeout=5000)
+
                 def _open_portal() -> None:
                     ok, msg = build_customer_portal_message()
                     if ok and str(msg or "").startswith(("http://", "https://")):
@@ -188,6 +201,26 @@ def render_auth_tab(
                     ui.button(tr_fn('nova.billing_portal_btn'), on_click=_open_portal).classes(
                         'w-full bg-white text-[#111] border border-[#111] mt-2'
                     )
+
+            if _show_plan_cards:
+                with ui.row().classes('w-full gap-4 max-md:flex-col'):
+                    with ui.card().classes('flex-1 p-5 bg-white border border-gray-200'):
+                        ui.label(tr_fn('nova.plan_weekly_title')).classes('text-base font-bold text-gray-900')
+                        ui.label(tr_fn('nova.plan_weekly_desc')).classes('text-sm text-gray-600')
+                        ui.button(
+                            tr_fn('nova.plan_weekly_btn'),
+                            on_click=lambda: _start_checkout_with_plan('pro_weekly'),
+                        ).classes('w-full mt-4 bg-[#111] text-white')
+                    with ui.card().classes('flex-1 p-5 bg-white border border-gray-200'):
+                        ui.label(tr_fn('nova.plan_monthly_title')).classes('text-base font-bold text-gray-900')
+                        ui.label(tr_fn('nova.plan_monthly_desc')).classes('text-sm text-gray-600')
+                        ui.button(
+                            tr_fn('nova.plan_monthly_btn'),
+                            on_click=lambda: _start_checkout_with_plan('pro_monthly'),
+                        ).classes('w-full mt-4 bg-[#111] text-white')
+
+                if bool(getattr(state, 'account_upgrade_focus', False)):
+                    ui.timer(0.05, lambda: ui.run_javascript('window.scrollTo({top: 0, behavior: "auto"})'), once=True)
 
         if not is_authenticated:
             with ui.card().classes('w-full p-6 bg-white border border-gray-200'):
