@@ -2815,6 +2815,11 @@ def build_project_header(kitchen: Dict[str, Any], lang: str = "sr") -> pd.DataFr
             "In the workshop, do cutting and edging strictly by CUT dimensions. Verify openings and special machining against the notes.",
         )
     )
+    if _lang not in {"sr", "en"}:
+        room = str(_translate_export_text(room, _lang, "Vrednost") or room)
+        project_name = str(_translate_export_text(project_name, _lang, "Vrednost") or project_name)
+        wall_name = str(_translate_export_text(wall_name, _lang, "Wall") or wall_name)
+        workshop_note = str(_translate_export_text(workshop_note, _lang, "Napomena za servis") or workshop_note)
     today = datetime.now().strftime("%d.%m.%Y %H:%M")
 
     return pd.DataFrame([
