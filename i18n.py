@@ -8889,6 +8889,29 @@ _TRANSLATIONS.setdefault("pt-br", {}).update({
     "gate.portal_redirect": "O redirecionamento para o portal do cliente foi iniciado.",
 })
 
+# QA fix 2026-04-08 — transliteration remnants and missing SR keys
+_TRANSLATIONS["sr"].update({
+    "elements.door_type":    "Tip vrata",
+    "elements.drawer_count": "Broj fioka",
+})
+
+_TRANSLATIONS.setdefault("es", {}).update({
+    "elements.door_type":    "Tipo de puerta",
+    "elements.drawer_count": "Cantidad de cajones",
+    "elements.drawer_label": "Cajón {i}",
+})
+
+_TRANSLATIONS.setdefault("ru", {}).update({
+    "elements.drawer_count": "Количество ящиков",
+    "elements.drawer_label": "Ящик {i}",
+})
+
+_TRANSLATIONS.setdefault("zh-cn", {}).update({
+    "room.tool_door":        "门",
+    "elements.drawer_count": "抽屉数量",
+    "elements.drawer_label": "抽屉 {i}",
+})
+
 def get_language_options() -> dict[str, str]:
     return dict(VISIBLE_LANGUAGE_OPTIONS)
 
