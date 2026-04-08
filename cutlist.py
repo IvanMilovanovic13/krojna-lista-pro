@@ -3650,6 +3650,15 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
         }
         return mapping.get(txt.lower(), txt)
 
+    if col in {"Orijentacija", "Orientation"}:
+        mapping = {
+            "horizontalna": "horizontal",
+            "horizontalno": "horizontal",
+            "vertikalna": "vertical",
+            "vertikalno": "vertical",
+        }
+        return mapping.get(txt.lower(), txt)
+
     if col in {"Naziv", "Name"} and txt.startswith("UPOZORENJE"):
         return txt.replace("UPOZORENJE", "WARNING")
 
@@ -4074,6 +4083,7 @@ def _translate_export_df(df: pd.DataFrame | None, lang: str = "sr") -> pd.DataFr
         "Kategorija", "Category",
         "Naziv", "Name",
         "Materijal", "Material",
+        "Orijentacija", "Orientation",
         "Element",
         "Type / Code",
         "Napomena", "Napomena za servis", "Note",
@@ -4780,6 +4790,44 @@ def build_cutlist_pdf_bytes(
             "Tip / Šifra": "Tipo / código",
             "Kategorija": "Categoria",
         }
+        _header_map_en = {
+            "RB": "No.",
+            "PartCode": "Code",
+            "Korak": "Step",
+            "Šta radiš": "What you do",
+            "Sta radis": "What you do",
+            "Pojam": "Term",
+            "Objašnjenje": "Explanation",
+            "Zid": "Wall",
+            "Modul": "Module",
+            "Deo": "Part",
+            "Pozicija": "Position",
+            "SklopKorak": "Step",
+            "Kom": "Qty",
+            "Kol.": "Qty",
+            "Dužina [mm]": "Length [mm]",
+            "Širina [mm]": "Width [mm]",
+            "Visina [mm]": "Height [mm]",
+            "Deb.": "Thk.",
+            "Deb. [mm]": "Thk. [mm]",
+            "Materijal": "Material",
+            "Smer goda": "Grain",
+            "Orijentacija": "Orientation",
+            "Kant": "Edge",
+            "Napomena": "Note",
+            "Napomena za servis": "Workshop note",
+            "Tip obrade": "Processing type",
+            "Izvodi": "Operations",
+            "Osnov izvođenja": "Execution basis",
+            "Obrada / napomena": "Processing / note",
+            "Stavka": "Item",
+            "Instrukcija": "Instruction",
+            "Polje": "Field",
+            "Vrednost": "Value",
+            "Naziv": "Name",
+            "Tip / Šifra": "Type / Code",
+            "Kategorija": "Category",
+        }
         _header_map_es = {
             "RB": "RB",
             "PartCode": "PartCode",
@@ -4879,10 +4927,11 @@ def build_cutlist_pdf_bytes(
         header = [
             Paragraph(_pdf_clean_text(
                 _header_map_pt.get(c, c) if _lang == "pt-br"
-                else (_header_map_es.get(c, c) if _lang == "es"
+                else (_header_map_en.get(c, c) if _lang == "en"
+                      else (_header_map_es.get(c, c) if _lang == "es"
                       else (_header_map_ru.get(c, c) if _lang == "ru"
                             else (_header_map_zh.get(c, c) if _lang == "zh-cn"
-                                  else (_header_map_hi.get(c, c) if _lang == "hi" else c))))
+                                  else (_header_map_hi.get(c, c) if _lang == "hi" else c)))))
             ), _th)
             for c in _available_cols
         ]
