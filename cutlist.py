@@ -2831,6 +2831,304 @@ def build_project_header(kitchen: Dict[str, Any], lang: str = "sr") -> pd.DataFr
     ])
 
 
+def _apply_ordered_replacements(txt: str, replacements: list[tuple[str, str]]) -> str:
+    out = str(txt or "")
+    for src, dst in sorted(replacements, key=lambda item: len(item[0]), reverse=True):
+        out = out.replace(src, dst)
+    return out
+
+
+def _translate_export_text_ptbr(value: Any, column: str = "") -> str:
+    txt = str(value or "")
+    col = str(column or "")
+
+    if col in {"Zid", "Wall"}:
+        return txt.replace("Zid ", "Parede ").replace("Wall ", "Parede ")
+
+    if col in {"Pozicija", "Position"}:
+        mapping = {
+            "LEVA": "ESQUERDA",
+            "DESNA": "DIREITA",
+            "LEVO": "ESQUERDA",
+            "DESNO": "DIREITA",
+            "GORE": "ACIMA",
+            "DOLE": "ABAIXO",
+            "CENTAR": "CENTRO",
+            "SREDINA": "CENTRO",
+            "PREDNJA": "FRENTE",
+            "ZADNJA": "TRASEIRA",
+            "NAPRED": "FRENTE",
+            "POZADI": "TRASEIRA",
+            "LEFT": "ESQUERDA",
+            "RIGHT": "DIREITA",
+            "TOP": "ACIMA",
+            "BOTTOM": "ABAIXO",
+            "CENTER": "CENTRO",
+            "FRONT": "FRENTE",
+            "BACK": "TRASEIRA",
+        }
+        return mapping.get(txt.upper(), txt)
+
+    if col in {"Kategorija", "Category"}:
+        mapping = {
+            "okov": "ferragens",
+            "potrosni": "consumíveis",
+            "consumable": "consumíveis",
+            "hardware": "ferragens",
+            "warning": "alerta",
+        }
+        return mapping.get(txt.lower(), txt)
+
+    common: list[tuple[str, str]] = [
+        ("Krojna Lista PRO", "Lista de Corte PRO"),
+        ("Krojna lista PRO", "Lista de Corte PRO"),
+        ("Cut List PRO", "Lista de Corte PRO"),
+        ("Cut List", "Lista de Corte"),
+        ("Project", "Projeto"),
+        ("Customer", "Cliente"),
+        ("Room", "Ambiente"),
+        ("Kitchen", "Cozinha"),
+        ("Wall size", "Tamanho da parede"),
+        ("Version", "Versão"),
+        ("Generated", "Gerado"),
+        ("Measured by", "Medido por"),
+        ("Designed by", "Desenhado por"),
+        ("Workshop note", "Nota para a marcenaria"),
+        ("Wall A", "Parede A"),
+        ("Wall B", "Parede B"),
+        ("Wall C", "Parede C"),
+        ("Zid A", "Parede A"),
+        ("Zid B", "Parede B"),
+        ("Zid C", "Parede C"),
+        ("Radna ploča - Parede", "Bancada - Parede"),
+        ("Radna ploča - Zid", "Bancada - Parede"),
+        ("Sokla - Zid", "Rodapé - Parede"),
+        ("Sokla - Parede", "Rodapé - Parede"),
+        ("Donji (kuhinjska jedinica: rerna + ploča za kuvanje)", "Inferior (forno + cooktop)"),
+        ("Donji (kuhinjska jedinica: rerna + placa za kuvanje)", "Inferior (forno + cooktop)"),
+        ("Donji (kuhinjska jedinica: rerna + ploca za kuvanje)", "Inferior (forno + cooktop)"),
+        ("Rerna+ploča", "Forno+cooktop"),
+        ("Rerna+ploca", "Forno+cooktop"),
+        ("Rerna + ploča", "Forno + cooktop"),
+        ("Rerna + ploca", "Forno + cooktop"),
+        ("Donji (sudopera)", "Inferior (pia)"),
+        ("Donji (2 vrata)", "Inferior (2 portas)"),
+        ("Donji (1 vrata)", "Inferior (1 porta)"),
+        ("Donji (vrata + fioka)", "Inferior (portas + gaveta)"),
+        ("Donji (fioke)", "Inferior (gavetas)"),
+        ("Gornji (aspirator / napa)", "Superior (depurador / coifa)"),
+        ("Gornji (2 vrata)", "Superior (2 portas)"),
+        ("Gornji (1 vrata)", "Superior (1 porta)"),
+        ("Gornji", "Superior"),
+        ("Donji", "Inferior"),
+        ("Iverica Korpus", "Aglomerado corpo"),
+        ("Iverica Front", "Aglomerado frente"),
+        ("Iverica Leđa", "Aglomerado fundo"),
+        ("Iverica Leđa", "Aglomerado fundo"),
+        ("Iverica", "Aglomerado"),
+        ("Radna ploča Korpus", "Bancada"),
+        ("Radna ploča", "Bancada"),
+        ("Leđna ploča", "Painel traseiro"),
+        ("Parcijalna leđna ploča", "Painel traseiro parcial"),
+        ("Leva strana", "Lateral esquerda"),
+        ("Desna strana", "Lateral direita"),
+        ("Srednja vertikala", "Divisória vertical central"),
+        ("Polica (podesiva)", "Prateleira ajustável"),
+        ("Polica", "Prateleira"),
+        ("Plafon", "Tampo superior do corpo"),
+        ("Dno", "Painel inferior"),
+        ("Dno sanduka fioke", "Fundo da caixa da gaveta"),
+        ("Prednja strana sanduka fioke", "Frente da caixa da gaveta"),
+        ("Zadnja strana sanduka fioke", "Traseira da caixa da gaveta"),
+        ("Bočna stranica sanduka fioke", "Lateral da caixa da gaveta"),
+        ("Dno sanduka", "Fundo da caixa"),
+        ("Prednja strana sanduka", "Frente da caixa"),
+        ("Zadnja strana sanduka", "Traseira da caixa"),
+        ("Bočna ploča", "Lateral da gaveta"),
+        ("Front fioke (kuhinjska jedinica)", "Frente da gaveta (forno + cooktop)"),
+        ("Front fioke", "Frente da gaveta"),
+        ("Vrata (ispod sudopere)", "Portas sob a pia"),
+        ("Vrata (ispod ploče za kuvanje)", "Portas sob o cooktop"),
+        ("Vrata", "Portas"),
+        ("Nosač radne ploče", "Suporte da bancada"),
+        ("Sokla (lajsna)", "Rodapé (perfil)"),
+        ("Sokla", "Rodapé"),
+        ("Filer panel", "Painel de preenchimento"),
+        ("Završna bočna ploča", "Painel lateral de acabamento"),
+        ("Leđa / prolaz", "Fundo / passagem"),
+        ("Zona priključka", "Zona de conexão"),
+        ("Ventilacija kolone", "Ventilação da coluna"),
+        ("Šarka", "Dobradiça"),
+        ("Ručka / pull", "Puxador"),
+        ("Klizač za fioku", "Corrediça da gaveta"),
+        ("Nosač police (klin)", "Suporte de prateleira"),
+        ("Nosač fronta fioke", "Suporte da frente da gaveta"),
+        ("Set nosača / ugaonika", "Kit de suportes / cantoneiras"),
+        ("Stopica (nogica)", "Pé regulável"),
+        ("Konfirmat vijak", "Parafuso confirmat"),
+        ("Drvena tipla", "Cavilha de madeira"),
+        ("Sanitarni silikon", "Silicone sanitário"),
+        ("Sudopera", "Pia"),
+        ("Slavina", "Torneira"),
+        ("Sifon i odvodni set", "Sifão e kit de escoamento"),
+        ("Baterija za sudoperu", "Torneira da pia"),
+        ("Ugradna sudopera", "Pia de embutir"),
+        ("Klipsa za soklu", "Clipe para rodapé"),
+        ("Montažna ploča za šarku", "Placa de montagem da dobradiça"),
+        ("Spojnica susednih korpusa", "Conector entre corpos vizinhos"),
+        ("Vijak / ekser za leđa", "Parafuso / prego para fundo"),
+        ("Vijak / ugaonik za radnu ploču", "Parafuso / cantoneira para bancada"),
+        ("Vijak za klizač", "Parafuso da corrediça"),
+        ("Vijak za ručku", "Parafuso do puxador"),
+        ("Zaptivna lajsna / silikon uz zid", "Perfil de vedação / silicone junto à parede"),
+        ("Zidna lajsna ili sanitarni silikon", "Perfil de parede ou silicone sanitário"),
+        ("Nosač + šina za viseće elemente", "Suporte + trilho para módulos superiores"),
+        ("Tipl + vijak", "Bucha + parafuso"),
+        ("Wall plugs / anchors", "Buchas / ancoragens de parede"),
+        ("Po izboru korisnika", "À escolha do usuário"),
+        ("Podesiva h=100 mm", "Regulável h=100 mm"),
+        ("Sifon + preliv + spojnice", "Sifão + ladrão + conexões"),
+        ("Kupuje se kao gotov proizvod", "Comprado como produto pronto"),
+        ("Kupuje se posebno", "Comprado separadamente"),
+        ("Kupovni vodoinstalaterski set za sudoperu", "Kit hidráulico comprado para a pia"),
+        ("Po jedna klipsa po stopici za prihvat sokle", "Um clipe por pé para fixar o rodapé"),
+        ("Osnovno pričvršćenje leđa po korpusu; broj proveriti prema standardu radionice", "Fixação básica do fundo por corpo; conferir a quantidade conforme o padrão da marcenaria"),
+        ("Osnovni set za pričvršćenje radne ploče na nosače i korpuse", "Kit básico para fixar a bancada aos suportes e corpos"),
+        ("Osnovni set po elementu", "Kit básico por módulo"),
+        ("2 vrata × 2 šarke", "2 portas × 2 dobradiças"),
+        ("1 polica × 4 klina", "1 prateleira × 4 suportes"),
+        ("1 par klizača", "1 par de corrediças"),
+        ("otvor se reže u bancada prema gabarito", "o recorte é feito na bancada conforme o gabarito"),
+        ("prema izboru korisnika", "conforme a escolha do usuário"),
+        ("2 vijka M4 po ručki; dužinu vijka prilagoditi debljini fronta", "2 parafusos M4 por puxador; ajustar o comprimento à espessura da frente"),
+        ("Za zaptivanje ruba sudopere i spojeva uz radnu ploču", "Para vedar a borda da pia e as juntas junto à bancada"),
+        ("Standardno za spoj korpusa (bočne+dno+plafon)", "Padrão para unir o corpo (laterais+fundo+tampo superior)"),
+        ("Pomoćni spoj i poravnanje", "União auxiliar e alinhamento"),
+        ("Za front fioke ispod rerne", "Para a frente da gaveta sob o forno"),
+        ("Fioka ispod rerne", "Gaveta sob o forno"),
+        ("fioka ispod rerne", "gaveta sob o forno"),
+        ("rerna ima sopstveni panel", "o forno tem seu próprio painel"),
+        ("prednja ivica kantovana", "borda frontal com fita de borda"),
+        ("Gornji vez", "Travessa superior"),
+        ("pričvršćuje radnu ploču", "fixa a bancada"),
+        ("Segment zida", "Segmento da parede"),
+        ("raspon", "intervalo"),
+        ("utor 8mm", "canal de 8 mm"),
+        ("ostaviti otvor za dovod/odvod vode prema poziciji instalacija", "deixar abertura para entrada/saída de água conforme a posição das instalações"),
+        ("parcijalna leđa samo u donjoj servisnoj zoni, gornja zona iza rerne ostaje otvorena radi ventilacije i priključaka", "fundo parcial apenas na zona inferior de serviço; a zona superior atrás do forno fica aberta para ventilação e conexões"),
+        ("ostaviti otvor/prolaz za odvod nape prema modelu uređaja", "deixar abertura/passagem para o duto da coifa conforme o modelo do aparelho"),
+        ("Otvor za sudoperu", "Recorte para pia"),
+        ("Otvor za ploču", "Recorte para cooktop"),
+        ("Utor za leđa", "Canal do fundo"),
+        ("Ventilacija / otvor", "Ventilação / abertura"),
+        ("Posebna obrada", "Usinagem especial"),
+        ("Servis + lice mesta", "Marcenaria + obra"),
+        ("Kuća / lice mesta", "Casa / obra"),
+        ("Servis", "Marcenaria"),
+        ("Service pass-through", "Passagem de instalação"),
+        ("Po šablonu proizvođača", "Conforme o gabarito do fabricante"),
+        ("Po meri iz projekta", "Conforme as medidas do projeto"),
+        ("Po geometriji zida i šablonu", "Conforme a geometria da parede e o gabarito"),
+        ("Priprema i finalni rez", "Preparação e corte final"),
+        ("Zidna mera / finished dimension", "Medida da parede / dimensão final"),
+        ("CUT osnova / purchase segment", "Base CUT / segmento de compra"),
+        ("Servis radi isključivo po CUT merama", "A marcenaria trabalha estritamente pelas medidas CUT"),
+        ("Finalni rez na licu mesta", "Corte final na obra"),
+        ("Izrezi", "Recortes"),
+        ("sudopera", "pia"),
+        ("ploča za kuvanje", "cooktop"),
+        ("radnoj ploči", "bancada"),
+        ("radnu ploču", "bancada"),
+        ("radne ploče", "bancada"),
+        ("radna ploča", "bancada"),
+        ("šablonu", "gabarito"),
+        ("proizvođača", "fabricante"),
+    ]
+
+    note_replacements: list[tuple[str, str]] = [
+        ("In the workshop, do cutting and edging strictly by CUT dimensions. Verify openings and special machining against the notes.", "Na marcenaria, faça corte e aplicação de borda estritamente pelas medidas CUT. Confira aberturas e usinagens especiais pelas notas."),
+        ("In the workshop, cut strictly by CUT dimensions and verify edging in the separate table", "Na marcenaria, corte estritamente pelas medidas CUT e confira a aplicação de borda na tabela separada"),
+        ("Cut strictly by the CUT dimensions from the workshop packet.", "Corte estritamente pelas medidas CUT do pacote da marcenaria."),
+        ("Apply edging only to the edges marked in the edging table and verify the ABS type.", "Aplique fita de borda apenas nas bordas marcadas na tabela e confira o tipo de ABS."),
+        ("Make special openings, grooves and ventilation cuts only where they are explicitly specified.", "Faça aberturas especiais, canais e recortes de ventilação apenas onde estiverem indicados explicitamente."),
+        ("Cut the sink or hob opening according to the manufacturer's template, not by estimation.", "Faça o recorte da pia ou do cooktop conforme o gabarito do fabricante, não por estimativa."),
+        ("The 'Operations' column clearly shows whether the workshop performs the job or whether it must be confirmed on site.", "A coluna 'Operações' mostra claramente se a marcenaria executa o serviço ou se ele deve ser confirmado na obra."),
+        ("The 'Execution basis' column shows whether the work follows project dimensions or the appliance manufacturer's template.", "A coluna 'Base de execução' mostra se o trabalho segue as medidas do projeto ou o gabarito do fabricante do aparelho."),
+        ("If the service positions differ from the project, confirm all machining before cutting or on site.", "Se as posições das instalações forem diferentes do projeto, confirme todas as usinagens antes do corte ou na obra."),
+        ("Before delivery, verify the piece count, part labels and that all panels/fronts are included.", "Antes da entrega, confira a quantidade de peças, as etiquetas e se todos os painéis/frentes estão incluídos."),
+        ("Review the project before ordering", "Revise o projeto antes de encomendar"),
+        ("Confirm the wall, dimensions, version and that this is the latest revision", "Confirme a parede, as dimensões, a versão e se esta é a revisão mais recente"),
+        ("Take only cutting, edging and machining to the workshop", "Leve à marcenaria apenas corte, aplicação de borda e usinagem"),
+        ("The workshop should work only from the workshop packet tables", "A marcenaria deve trabalhar apenas pelas tabelas do pacote da marcenaria"),
+        ("Purchase ready-made appliances, hardware and tools separately", "Compre separadamente os eletrodomésticos prontos, ferragens e ferramentas"),
+        ("These items are not part of cutting and must be sourced separately", "Esses itens não fazem parte do corte e precisam ser comprados separadamente"),
+        ("Sort parts by unit on site", "Separe as peças por módulo na obra"),
+        ("Separate carcass parts first, then fronts, then hardware", "Separe primeiro as peças do corpo, depois as frentes e as ferragens"),
+        ("Assemble the carcasses first, then doors, drawers and appliances", "Monte primeiro os corpos, depois portas, gavetas e eletrodomésticos"),
+        ("Always secure tall and wall units to the wall", "Sempre fixe módulos altos e superiores na parede"),
+        ("Check that the material and thickness values are correct for carcass, fronts and backs", "Confira se material e espessuras estão corretos para corpo, frentes e fundos"),
+        ("Check that all CUT dimensions and quantities are listed", "Confira se todas as medidas CUT e quantidades estão listadas"),
+        ("Check edge banding on every edge before sending to the workshop", "Confira a aplicação de borda em cada borda antes de enviar à marcenaria"),
+        ("Check that fronts, backs, plinths and special panels are included", "Confira se frentes, fundos, rodapés e painéis especiais estão incluídos"),
+        ("Check that all ready-made purchased items are separated from cut parts", "Confira se todos os itens prontos comprados estão separados das peças de corte"),
+        ("Check all openings and special machining for services and ventilation", "Confira todas as aberturas e usinagens especiais para instalações e ventilação"),
+        ("Check that the shopping list includes hardware, consumables and tools", "Confira se a lista de compras inclui ferragens, consumíveis e ferramentas"),
+        ("Count all cut panels and compare them against the list", "Conte todos os painéis cortados e compare com a lista"),
+        ("Sort parts by unit before starting assembly", "Separe as peças por módulo antes de iniciar a montagem"),
+        ("Check that all hardware, appliances and tools have been purchased", "Confira se todas as ferragens, eletrodomésticos e ferramentas foram comprados"),
+        ("Assemble the carcasses first, then doors and drawers, and only then the appliances", "Monte primeiro os corpos, depois portas e gavetas, e só então os eletrodomésticos"),
+        ("Cut the sink opening in the worktop according to the sink manufacturer's template.", "Faça o recorte da pia na bancada conforme o gabarito do fabricante da pia."),
+        ("Cut the hob opening in the worktop according to the manufacturer's template.", "Faça o recorte do cooktop na bancada conforme o gabarito do fabricante."),
+        ("Provide the opening and duct path for the hood according to the model and the installation axis.", "Faça a abertura e a passagem do duto da coifa conforme o modelo e o eixo de instalação."),
+        ("Wall requirement / finished dimension", "Necessidade da parede / dimensão final"),
+        ("CUT basis / purchase segment", "Base CUT / segmento de compra"),
+        ("Workshop works strictly by CUT dimensions.", "A marcenaria trabalha estritamente pelas medidas CUT."),
+        ("Final cut is done on site.", "O corte final é feito na obra."),
+        ("According to project dimensions", "Conforme as medidas do projeto"),
+        ("According to the manufacturer's template", "Conforme o gabarito do fabricante"),
+        ("According to wall geometry and template", "Conforme a geometria da parede e o gabarito"),
+        ("Workshop + on site", "Marcenaria + obra"),
+        ("Workshop", "Marcenaria"),
+        ("On site", "Obra"),
+        ("Back panel groove", "Canal do fundo"),
+        ("Sink cut-out", "Recorte da pia"),
+        ("Hob cut-out", "Recorte do cooktop"),
+        ("Ventilation / opening", "Ventilação / abertura"),
+        ("Preparation and final cut", "Preparação e corte final"),
+        ("Worktop", "Bancada"),
+        ("WORKTOP SPECIFICATION", "ESPECIFICAÇÃO DA BANCADA"),
+        ("Cutting", "Corte"),
+        ("Edging", "Aplicação de borda"),
+        ("Machining", "Usinagem"),
+        ("Who performs it", "Quem executa"),
+        ("Execution basis", "Base de execução"),
+        ("Services", "Instalações"),
+        ("Final check", "Conferência final"),
+        ("Purchased ready-made", "Comprado pronto"),
+        ("Project consumables", "Consumíveis do projeto"),
+        ("Hardware and mechanisms by unit", "Ferragens e mecanismos por módulo"),
+        ("Consumables by unit", "Consumíveis por módulo"),
+        ("Wall installation", "Instalação na parede"),
+        ("Tools needed on site", "Ferramentas necessárias na obra"),
+        ("For wall installation", "Para instalação na parede"),
+        ("Cordless drill / driver", "Parafusadeira sem fio"),
+        ("Tape measure + spirit level", "Trena + nível"),
+        ("Clamps", "Sargentos"),
+        ("Needed for cabinet assembly and hardware installation", "Necessário para montar os módulos e instalar as ferragens"),
+        ("Needed to verify dimensions, plumb and levelling", "Necessário para conferir medidas, prumo e nivelamento"),
+        ("They help keep parts aligned during assembly", "Ajudam a manter as peças alinhadas durante a montagem"),
+        ("Choose according to the actual wall type on site", "Escolha conforme o tipo real da parede na obra"),
+        ("Ušinagem", "Usinagem"),
+        ("ušinagem", "usinagem"),
+        ("ušinagens", "usinagens"),
+    ]
+
+    if col in {"Napomena", "Napomena za servis", "Instrukcija", "Stavka", "Sta radis", "Šta radiš", "Polje", "Vrednost", "Tip obrade", "Izvodi", "Osnov izvođenja", "Obrada / napomena", "Grupa", "Tip / Šifra", "Note", "Instruction", "Item", "Field", "Value", "Processing type", "Operations", "Execution basis", "Processing / note", "Group", "Type / Code"}:
+        txt = _apply_ordered_replacements(txt, note_replacements)
+
+    return _apply_ordered_replacements(txt, common)
+
+
 def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> Any:
     txt = str(value or "")
     col = str(column or "")
@@ -2870,6 +3168,8 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
         for src, dst in replacements.items():
             txt = txt.replace(src, dst)
         txt = txt.replace("višina", "visina").replace("Višina", "Visina")
+        if _lang == "pt-br":
+            return _translate_export_text_ptbr(txt, col)
         return txt
 
     if col in {"Zid", "Wall"}:
@@ -3277,7 +3577,13 @@ def _format_material_role(material: Any, thickness: Any, role: str, lang: str = 
     thk = str(thickness or "").strip()
     role_map_sr = {"carcass": "Korpus", "front": "Front", "back": "Leđa"}
     role_map_en = {"carcass": "Carcass", "front": "Front", "back": "Back"}
-    role_label = (role_map_en if _lang == "en" else role_map_sr).get(role, role)
+    role_map_pt = {"carcass": "Corpo", "front": "Frente", "back": "Fundo"}
+    if _lang == "en":
+        role_label = role_map_en.get(role, role)
+    elif _lang == "pt-br":
+        role_label = role_map_pt.get(role, role)
+    else:
+        role_label = role_map_sr.get(role, role)
     if not mat:
         return f"{role_label} / {thk} mm" if thk else role_label
     if role == "back":
@@ -3291,9 +3597,9 @@ def _format_material_role(material: Any, thickness: Any, role: str, lang: str = 
 
 def _material_role_from_part_name(part_name: Any) -> str:
     part = str(part_name or "").lower()
-    if any(k in part for k in ("leđ", "ledj", "ledn", "back")):
+    if any(k in part for k in ("leđ", "ledj", "ledn", "back", "fundo", "traseir")):
         return "back"
-    if any(k in part for k in ("front", "vrata")):
+    if any(k in part for k in ("front", "vrata", "frente", "porta")):
         return "front"
     return "carcass"
 
@@ -3318,6 +3624,13 @@ def _translate_export_df(df: pd.DataFrame | None, lang: str = "sr") -> pd.DataFr
         "Sta radis",
         "Šta radiš",
         "Polje", "Field",
+        "Vrednost", "Value",
+        "Tip obrade", "Processing type",
+        "Izvodi", "Operations",
+        "Osnov izvođenja", "Execution basis",
+        "Obrada / napomena", "Processing / note",
+        "Grupa", "Group",
+        "Tip / Šifra", "Type / Code",
     ):
         if col in out.columns:
             out[col] = out[col].map(lambda v, _c=col: _translate_export_text(v, lang, _c))
@@ -3971,7 +4284,43 @@ def build_cutlist_pdf_bytes(
                              wordWrap="CJK")
         _td = ParagraphStyle("td_tbl", fontName=FONT_REGULAR, fontSize=_font_size, leading=_leading,
                              wordWrap="CJK")
-        header = [Paragraph(_pdf_clean_text(c), _th) for c in _available_cols]
+        _header_map_pt = {
+            "RB": "RB",
+            "PartCode": "PartCode",
+            "Zid": "Parede",
+            "Modul": "Módulo",
+            "Deo": "Peça",
+            "Pozicija": "Posição",
+            "SklopKorak": "Passo",
+            "Kom": "Qtd.",
+            "Kol.": "Qtd.",
+            "Dužina [mm]": "Comprimento [mm]",
+            "Širina [mm]": "Largura [mm]",
+            "Visina [mm]": "Altura [mm]",
+            "Deb.": "Esp.",
+            "Deb. [mm]": "Esp. [mm]",
+            "Materijal": "Material",
+            "Smer goda": "Veio",
+            "Orijentacija": "Orientação",
+            "Kant": "Borda",
+            "Napomena": "Nota",
+            "Napomena za servis": "Nota para a marcenaria",
+            "Tip obrade": "Tipo de usinagem",
+            "Izvodi": "Executa",
+            "Osnov izvođenja": "Base de execução",
+            "Obrada / napomena": "Usinagem / nota",
+            "Stavka": "Item",
+            "Instrukcija": "Instrução",
+            "Polje": "Campo",
+            "Vrednost": "Valor",
+            "Naziv": "Nome",
+            "Tip / Šifra": "Tipo / código",
+            "Kategorija": "Categoria",
+        }
+        header = [
+            Paragraph(_pdf_clean_text(_header_map_pt.get(c, c) if _lang == "pt-br" else c), _th)
+            for c in _available_cols
+        ]
         rows = []
         for row_vals in _table_df[_available_cols].fillna("").astype(object).values.tolist():
             rows.append([
@@ -4329,6 +4678,8 @@ def build_cutlist_pdf_bytes(
                 continue
 
             _mlbl = _normalize_sr_export_text(_m.get("label", "") or "")
+            if _lang == "pt-br":
+                _mlbl = _translate_export_text(_mlbl, _lang, "Modul")
             _mtid = str(_m.get("template_id", "") or "")
             _mz = str(_m.get("zone", "") or "").lower()
             _mw = int(_m.get("w_mm", 0) or 0)
@@ -4337,15 +4688,14 @@ def build_cutlist_pdf_bytes(
             _wall = str(_m.get("wall_key", "") or "")
 
             story.append(Paragraph(_pdf_clean_text(f"#{_mid} - {_mlbl}"), s_h2))
-            story.append(Paragraph(
-                _pdf_clean_text(
-                    _t(
-                        f"Tip: {_mtid}  |  Dimenzije: {_mw} x {_mh} x {_md} mm" + (f"  |  Zid: {_wall}" if _wall else ""),
-                        f"Type: {_mtid}  |  Dimensions: {_mw} x {_mh} x {_md} mm" + (f"  |  Wall: {_wall}" if _wall else ""),
-                    )
-                ),
-                s_norm,
-            ))
+            if _lang == "pt-br":
+                _module_meta = f"Tipo: {_mtid}  |  Dimensões: {_mw} x {_mh} x {_md} mm" + (f"  |  Parede: {_wall}" if _wall else "")
+            else:
+                _module_meta = _t(
+                    f"Tip: {_mtid}  |  Dimenzije: {_mw} x {_mh} x {_md} mm" + (f"  |  Zid: {_wall}" if _wall else ""),
+                    f"Type: {_mtid}  |  Dimensions: {_mw} x {_mh} x {_md} mm" + (f"  |  Wall: {_wall}" if _wall else ""),
+                )
+            story.append(Paragraph(_pdf_clean_text(_module_meta), s_norm))
             story.append(Spacer(1, 1 * mm))
 
             try:
@@ -4502,6 +4852,8 @@ def generate_cutlist_pdf(
     """Returns PDF bytes."""
     if str(lang or "sr").lower().strip() == "en" and title in {"Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
         title = "Cut List PRO - M1 (single wall)"
+    if str(lang or "sr").lower().strip() == "pt-br" and title in {"Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
+        title = "Lista de Corte PRO - M1 (uma parede)"
     final_ds = get_final_cutlist_dataset(kitchen, lang=lang)
     sections = final_ds["sections"]
     return build_cutlist_pdf_bytes(kitchen, sections, project_title=title, lang=lang)
@@ -4535,6 +4887,8 @@ def generate_cutlist_excel(
         return _pdf_t(sr, en, _lang)
     if _lang == "en" and title == "Krojna lista PRO":
         title = "Cut List PRO"
+    if _lang == "pt-br" and title == "Krojna lista PRO":
+        title = "Lista de Corte PRO"
 
     final_ds = get_final_cutlist_dataset(kitchen, lang=_lang)
     sections = final_ds["sections"]
@@ -4766,7 +5120,7 @@ def generate_cutlist_excel(
         cols = ["Zid", "Modul", "Kol.", "Tip obrade", "Izvodi", "Osnov izvođenja", "Obrada / napomena"]
         if proc_df is None or proc_df.empty or "Deo" not in proc_df.columns:
             return pd.DataFrame(columns=cols)
-        mask = proc_df["Deo"].astype(str).str.lower().isin(["radna ploča", "radna ploca", "worktop"])
+        mask = proc_df["Deo"].astype(str).str.lower().isin(["radna ploča", "radna ploca", "worktop", "bancada"])
         out = proc_df.loc[mask, [c for c in cols if c in proc_df.columns]].copy()
         for col in cols:
             if col not in out.columns:
