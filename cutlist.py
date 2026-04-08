@@ -3581,6 +3581,8 @@ def _format_material_role(material: Any, thickness: Any, role: str, lang: str = 
     role_map_sr = {"carcass": "Korpus", "front": "Front", "back": "Leđa"}
     role_map_en = {"carcass": "Carcass", "front": "Front", "back": "Back"}
     role_map_pt = {"carcass": "Corpo", "front": "Frente", "back": "Fundo"}
+    if _lang == "pt-br":
+        mat = mat.replace("Iverica", "Aglomerado").replace("Radna ploča", "Bancada")
     if _lang == "en":
         role_label = role_map_en.get(role, role)
     elif _lang == "pt-br":
@@ -5187,10 +5189,10 @@ def generate_cutlist_excel(
         ("Deb.",         "Deb. [mm]",     8),
         ("Materijal",    _t("Materijal", "Material"),    16),
         ("Smer goda",    _t("Orijent.", "Grain"),     10),
-        ("L1",           _t("Kant L1", "Edge L1"),       7),
-        ("L2",           _t("Kant L2", "Edge L2"),       7),
-        ("K1",           _t("Kant K1", "Edge K1"),       7),
-        ("K2",           _t("Kant K2", "Edge K2"),       7),
+        ("L1",           ("Borda L1" if _lang == "pt-br" else _t("Kant L1", "Edge L1")),       7),
+        ("L2",           ("Borda L2" if _lang == "pt-br" else _t("Kant L2", "Edge L2")),       7),
+        ("K1",           ("Borda K1" if _lang == "pt-br" else _t("Kant K1", "Edge K1")),       7),
+        ("K2",           ("Borda K2" if _lang == "pt-br" else _t("Kant K2", "Edge K2")),       7),
     ]
     DET_COLS = [
         ("PartCode",     "PartCode",     12),
@@ -5202,10 +5204,10 @@ def generate_cutlist_excel(
         ("Deb.",         "Deb. [mm]",     8),
         ("Materijal",    _t("Materijal", "Material"),    16),
         ("Smer goda",    _t("Orijent.", "Grain"),     10),
-        ("L1",           _t("Kant L1", "Edge L1"),       7),
-        ("L2",           _t("Kant L2", "Edge L2"),       7),
-        ("K1",           _t("Kant K1", "Edge K1"),       7),
-        ("K2",           _t("Kant K2", "Edge K2"),       7),
+        ("L1",           ("Borda L1" if _lang == "pt-br" else _t("Kant L1", "Edge L1")),       7),
+        ("L2",           ("Borda L2" if _lang == "pt-br" else _t("Kant L2", "Edge L2")),       7),
+        ("K1",           ("Borda K1" if _lang == "pt-br" else _t("Kant K1", "Edge K1")),       7),
+        ("K2",           ("Borda K2" if _lang == "pt-br" else _t("Kant K2", "Edge K2")),       7),
     ]
     try:
         _sum2 = final_ds["summary"]
