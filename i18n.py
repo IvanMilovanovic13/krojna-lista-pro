@@ -8968,6 +8968,83 @@ _TRANSLATIONS.setdefault("hi", {}).update({
     "wizard.auth_gate_local_link": "बिना अकाउंट के लोकल जारी रखें",
 })
 
+_TRANSLATIONS["sr"].update({
+    "cutlist.locked_title": "Krojna lista je zaključana",
+    "cutlist.locked_desc": "Krojna lista i export (PDF/Excel) su dostupni uz PRO pristup.",
+    "cutlist.locked_features_title": "Sa PRO pristupom dobijaš",
+    "cutlist.locked_feature_1": "tačnu krojnu listu",
+    "cutlist.locked_feature_2": "PDF sa merama",
+    "cutlist.locked_feature_3": "Excel tabelu",
+    "cutlist.locked_feature_4": "listu okova",
+    "cutlist.locked_feature_5": "uputstvo za montažu",
+})
+
+_TRANSLATIONS["en"].update({
+    "cutlist.locked_title": "Cut list is locked",
+    "cutlist.locked_desc": "Cut list and export (PDF/Excel) are available with PRO access.",
+    "cutlist.locked_features_title": "With PRO access you get",
+    "cutlist.locked_feature_1": "an accurate cut list",
+    "cutlist.locked_feature_2": "a PDF with dimensions",
+    "cutlist.locked_feature_3": "an Excel table",
+    "cutlist.locked_feature_4": "a hardware list",
+    "cutlist.locked_feature_5": "assembly instructions",
+})
+
+_TRANSLATIONS.setdefault("es", {}).update({
+    "cutlist.locked_title": "La lista de corte está bloqueada",
+    "cutlist.locked_desc": "La lista de corte y la exportación (PDF/Excel) están disponibles con acceso PRO.",
+    "cutlist.locked_features_title": "Con acceso PRO obtienes",
+    "cutlist.locked_feature_1": "una lista de corte precisa",
+    "cutlist.locked_feature_2": "un PDF con medidas",
+    "cutlist.locked_feature_3": "una tabla Excel",
+    "cutlist.locked_feature_4": "una lista de herrajes",
+    "cutlist.locked_feature_5": "instrucciones de montaje",
+})
+
+_TRANSLATIONS.setdefault("pt-br", {}).update({
+    "cutlist.locked_title": "A lista de corte está bloqueada",
+    "cutlist.locked_desc": "A lista de corte e a exportação (PDF/Excel) estão disponíveis com acesso PRO.",
+    "cutlist.locked_features_title": "Com o acesso PRO você recebe",
+    "cutlist.locked_feature_1": "uma lista de corte precisa",
+    "cutlist.locked_feature_2": "um PDF com medidas",
+    "cutlist.locked_feature_3": "uma planilha Excel",
+    "cutlist.locked_feature_4": "uma lista de ferragens",
+    "cutlist.locked_feature_5": "instruções de montagem",
+})
+
+_TRANSLATIONS.setdefault("ru", {}).update({
+    "cutlist.locked_title": "Карта раскроя заблокирована",
+    "cutlist.locked_desc": "Карта раскроя и экспорт (PDF/Excel) доступны с PRO-доступом.",
+    "cutlist.locked_features_title": "С PRO-доступом вы получаете",
+    "cutlist.locked_feature_1": "точную карту раскроя",
+    "cutlist.locked_feature_2": "PDF с размерами",
+    "cutlist.locked_feature_3": "таблицу Excel",
+    "cutlist.locked_feature_4": "список фурнитуры",
+    "cutlist.locked_feature_5": "инструкции по сборке",
+})
+
+_TRANSLATIONS.setdefault("zh-cn", {}).update({
+    "cutlist.locked_title": "裁切清单已锁定",
+    "cutlist.locked_desc": "裁切清单和导出（PDF/Excel）仅在 PRO 权限下可用。",
+    "cutlist.locked_features_title": "PRO 权限包含",
+    "cutlist.locked_feature_1": "准确的裁切清单",
+    "cutlist.locked_feature_2": "带尺寸的 PDF",
+    "cutlist.locked_feature_3": "Excel 表格",
+    "cutlist.locked_feature_4": "五金清单",
+    "cutlist.locked_feature_5": "安装说明",
+})
+
+_TRANSLATIONS.setdefault("hi", {}).update({
+    "cutlist.locked_title": "कट लिस्ट लॉक है",
+    "cutlist.locked_desc": "कट लिस्ट और एक्सपोर्ट (PDF/Excel) PRO एक्सेस के साथ उपलब्ध हैं।",
+    "cutlist.locked_features_title": "PRO एक्सेस के साथ आपको मिलता है",
+    "cutlist.locked_feature_1": "सटीक कट लिस्ट",
+    "cutlist.locked_feature_2": "माप वाला PDF",
+    "cutlist.locked_feature_3": "Excel तालिका",
+    "cutlist.locked_feature_4": "हार्डवेयर सूची",
+    "cutlist.locked_feature_5": "असेंबली निर्देश",
+})
+
 def get_language_options() -> dict[str, str]:
     return dict(VISIBLE_LANGUAGE_OPTIONS)
 

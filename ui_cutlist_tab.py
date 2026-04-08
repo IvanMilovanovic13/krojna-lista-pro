@@ -167,16 +167,36 @@ def render_cutlist_tab(
         get_user_by_email,
         list_export_jobs_for_user,
     )
-    from state_logic import get_cutlist_access_state
+    from state_logic import build_checkout_start_message
     _lang = str(getattr(state, 'language', 'sr') or 'sr').lower().strip()
-    _access = get_cutlist_access_state()
-    if str(_access.get('allowed', '')).lower() != 'true':
+
+    def _start_paid_checkout(plan_code: str = 'pro_monthly') -> None:
+        ok, msg = build_checkout_start_message(plan_code)
+        if ok and str(msg or '').startswith(('http://', 'https://')):
+            ui.navigate.to(str(msg), new_tab=True)
+            ui.notify(tr_fn('gate.checkout_redirect'), type='positive', timeout=4000)
+        else:
+            ui.notify(msg or tr_fn('gate.checkout_btn'), type='info' if ok else 'negative', timeout=5000)
+
+    _access_tier = str(getattr(state, 'current_access_tier', '') or '').strip().lower()
+    _has_cutlist_access = _access_tier in ('pro', 'admin')
+    if not _has_cutlist_access:
         with ui.column().classes('w-full max-w-2xl mx-auto py-10 gap-4'):
             with ui.card().classes('w-full p-8 border border-amber-200 bg-white'):
                 ui.label(tr_fn('cutlist.locked_title')).classes('text-2xl font-bold text-gray-900')
-                ui.label(str(_access.get('reason', '') or tr_fn('cutlist.locked_desc'))).classes(
+                ui.label(tr_fn('cutlist.locked_desc')).classes(
                     'text-sm text-gray-700'
                 )
+                ui.button(tr_fn('gate.checkout_btn'), on_click=lambda: _start_paid_checkout('pro_monthly')).classes(
+                    'mt-4 bg-[#111] text-white'
+                )
+                ui.label(tr_fn('cutlist.locked_features_title')).classes('text-xs font-semibold uppercase tracking-[0.18em] text-gray-400 mt-4')
+                with ui.column().classes('gap-1'):
+                    ui.label(tr_fn('cutlist.locked_feature_1')).classes('text-sm text-gray-600')
+                    ui.label(tr_fn('cutlist.locked_feature_2')).classes('text-sm text-gray-600')
+                    ui.label(tr_fn('cutlist.locked_feature_3')).classes('text-sm text-gray-600')
+                    ui.label(tr_fn('cutlist.locked_feature_4')).classes('text-sm text-gray-600')
+                    ui.label(tr_fn('cutlist.locked_feature_5')).classes('text-sm text-gray-600')
         return
 
     def _active_user():
