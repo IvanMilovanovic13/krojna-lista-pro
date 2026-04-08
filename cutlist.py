@@ -3472,6 +3472,11 @@ def _translate_export_text_zhcn(value: Any, column: str = "") -> str:
         ("Hob cut-out", "灶具开孔"), ("Ventilation / opening", "通风 / 开口"),
         ("Preparation and final cut", "准备与最终切割"), ("Workshop + on site", "车间 + 现场"),
         ("Workshop", "车间"), ("On site", "现场"),
+        ("According to wall geometry and template", "按墙面尺寸与模板"),
+        ("Wall requirement / finished dimension", "墙面要求 / 成品尺寸"),
+        ("CUT basis / purchase segment", "CUT 基准 / 采购长度"),
+        ("Workshop works strictly by CUT dimensions.", "车间严格按 CUT 尺寸执行。"),
+        ("Final cut is done on site.", "最终切割在现场完成。"),
     ]
     if col in {"Napomena", "Napomena za servis", "Instrukcija", "Stavka", "Sta radis", "Šta radiš", "Polje", "Vrednost", "Tip obrade", "Izvodi", "Osnov izvođenja", "Obrada / napomena", "Grupa", "Tip / Šifra", "Note", "Instruction", "Item", "Field", "Value", "Processing type", "Operations", "Execution basis", "Processing / note", "Group", "Type / Code"}:
         txt = _apply_ordered_replacements(txt, note_replacements)
@@ -3541,6 +3546,11 @@ def _translate_export_text_hi(value: Any, column: str = "") -> str:
         ("Hob cut-out", "हॉब कट-आउट"), ("Ventilation / opening", "वेंटिलेशन / ओपनिंग"),
         ("Preparation and final cut", "तैयारी और अंतिम कट"), ("Workshop + on site", "वर्कशॉप + साइट"),
         ("Workshop", "वर्कशॉप"), ("On site", "साइट पर"),
+        ("According to wall geometry and template", "दीवार की ज्योमेट्री और टेम्पलेट के अनुसार"),
+        ("Wall requirement / finished dimension", "दीवार की आवश्यकता / फिनिश माप"),
+        ("CUT basis / purchase segment", "CUT आधार / खरीद लंबाई"),
+        ("Workshop works strictly by CUT dimensions.", "वर्कशॉप केवल CUT माप के अनुसार काम करती है।"),
+        ("Final cut is done on site.", "अंतिम कट साइट पर किया जाता है।"),
     ]
     if col in {"Napomena", "Napomena za servis", "Instrukcija", "Stavka", "Sta radis", "Šta radiš", "Polje", "Vrednost", "Tip obrade", "Izvodi", "Osnov izvođenja", "Obrada / napomena", "Grupa", "Tip / Šifra", "Note", "Instruction", "Item", "Field", "Value", "Processing type", "Operations", "Execution basis", "Processing / note", "Group", "Type / Code"}:
         txt = _apply_ordered_replacements(txt, note_replacements)
@@ -4911,7 +4921,7 @@ def build_cutlist_pdf_bytes(
             return None
 
     story: List[Any] = []
-    if _lang in {"es", "pt-br", "ru"}:
+    if _lang in {"es", "pt-br", "ru", "zh-cn", "hi"}:
         project_title = _translate_export_text(project_title, _lang, "Polje")
 
     # ---- Zaglavlje dokumenta ----
@@ -5251,6 +5261,10 @@ def build_cutlist_pdf_bytes(
                 _module_meta = f"Tipo: {_mtid}  |  Medidas: {_mw} x {_mh} x {_md} mm" + (f"  |  Pared: {_wall}" if _wall else "")
             elif _lang == "ru":
                 _module_meta = f"Тип: {_mtid}  |  Размеры: {_mw} x {_mh} x {_md} мм" + (f"  |  Стена: {_wall}" if _wall else "")
+            elif _lang == "zh-cn":
+                _module_meta = f"类型: {_mtid}  |  尺寸: {_mw} x {_mh} x {_md} mm" + (f"  |  墙面: {_wall}" if _wall else "")
+            elif _lang == "hi":
+                _module_meta = f"प्रकार: {_mtid}  |  माप: {_mw} x {_mh} x {_md} mm" + (f"  |  दीवार: {_wall}" if _wall else "")
             else:
                 _module_meta = _t(
                     f"Tip: {_mtid}  |  Dimenzije: {_mw} x {_mh} x {_md} mm" + (f"  |  Zid: {_wall}" if _wall else ""),
