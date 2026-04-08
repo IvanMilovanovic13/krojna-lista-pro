@@ -915,6 +915,135 @@ def _polish_instruction_line_ptbr(line: str) -> str:
     return txt
 
 
+def _polish_instruction_line_zhcn(line: str) -> str:
+    txt = _translate_instruction_line(line, "en")
+    exact = {
+        "-- STEP 1 - VERIFY DIMENSIONS --": "-- 步骤 1 - 检查尺寸 --",
+        "-- STEP 2 - POSITIONING --": "-- 步骤 2 - 定位 --",
+        "-- STEP 3 - FIXING --": "-- 步骤 3 - 固定 --",
+        "-- STEP 4 - FINAL CHECK --": "-- 步骤 4 - 最终检查 --",
+        "-- STEP 1 - PREPARE THE OPENING --": "-- 步骤 1 - 准备开口 --",
+        "-- STEP 2 - CONNECTIONS --": "-- 步骤 2 - 连接 --",
+        "-- STEP 3 - INSTALL THE MACHINE --": "-- 步骤 3 - 安装设备 --",
+        "-- STEP 4 - DISHWASHER FRONT --": "-- 步骤 4 - 洗碗机门板 --",
+        "-- STEP 1 - CARCASS --": "-- 步骤 1 - 柜体 --",
+        "-- STEP 2 - BACK PANEL AND CUT-OUTS --": "-- 步骤 2 - 背板和开孔 --",
+        "-- STEP 3 - DOORS --": "-- 步骤 3 - 门板 --",
+        "-- STEP 4 - WORKTOP AND SINK --": "-- 步骤 4 - 台面和水槽 --",
+        "-- STEP 1 - SIDE PANELS --": "-- 步骤 1 - 侧板 --",
+        "-- STEP 2 - BOTTOM AND TOP PANEL --": "-- 步骤 2 - 底板和顶板 --",
+        "-- STEP 3 - BACK PANEL --": "-- 步骤 3 - 背板 --",
+        "-- STEP 4 - DRAWERS --": "-- 步骤 4 - 抽屉 --",
+        "-- STEP 4 - DOORS + DRAWER --": "-- 步骤 4 - 门板 + 抽屉 --",
+        "-- KORAK 4 - VRATA --": "-- 步骤 4 - 门板 --",
+        "-- STEP 2 - DOORS / MECHANISM --": "-- 步骤 2 - 门板 / 机构 --",
+        "-- KORAK 3 - MONTAŽA NA ZID --": "-- 步骤 3 - 墙面安装 --",
+        "-- STEP 5 - LEGS AND POSITIONING --": "-- 步骤 5 - 柜脚和定位 --",
+        "-- KORAK 5 - ZAVRSNA PROVERA --": "-- 步骤 5 - 最终检查 --",
+        "-- STEP 3 - WALL INSTALLATION --": "-- 步骤 3 - 墙面安装 --",
+    }
+    if txt in exact:
+        return exact[txt]
+    replacements = [
+        ("Left side panel", "左侧板"), ("Right side panel", "右侧板"), ("Back panel", "背板"),
+        ("Top panel", "顶板"), ("Bottom panel", "底板"), ("Drawer front", "抽屉门板"),
+        ("Drawer fronts", "抽屉门板"), ("Drawer box", "抽屉箱体"), ("Doors", "门板"),
+        ("Hinges", "铰链"), ("Drawer runners", "抽屉滑轨"), ("Built-in oven", "嵌入式烤箱"),
+        ("Hob", "灶具"), ("Worktop", "台面"), ("Legs", "柜脚"), ("Carcass", "柜体"),
+        ("sink", "水槽"), ("Sink", "水槽"), ("oven", "烤箱"), ("Oven", "烤箱"),
+        ("wall", "墙面"), ("Wall", "墙面"), ("opening", "开口"), ("Opening", "开口"),
+        ("manufacturer's template", "厂家模板"), ("manufacturer's instructions", "厂家说明"),
+        ("Connect water, drain and power according to the manufacturer's instructions.", "按照厂家说明连接给水、排水和电源。"),
+        ("Mark the cut-out in the worktop using the sink template.", "按水槽模板在台面上标记开孔。"),
+        ("Protect the cut edge of the opening from moisture before mounting the sink.", "安装水槽前先对开孔切边做防潮处理。"),
+        ("Insert the back panel and verify the diagonals.", "装入背板并检查对角线。"),
+        ("Fit the hinges, hang the doors and set 2 mm reveals.", "安装铰链，挂上门板，并调到 2 mm 缝隙。"),
+        ("Assemble the side panels, bottom and top panel.", "组装侧板、底板和顶板。"),
+        ("Install the doors or hardware according to the unit type.", "按模块类型安装门板或五金。"),
+        ("Umetni dno izmedju bocnih stranica i spoji ga prema busenjima.", "把底板装在两块侧板之间，并按预钻孔连接。"),
+        ("Zatim postavi gornju plocu i proveri da korpus ostane ravan.", "然后装上顶板，并检查柜体是否保持方正。"),
+        ("Umetni ledjnu plocu na zadnju stranu elementa.", "把背板装到模块后侧。"),
+        ("Pre konacnog stezanja proveri dijagonale da element bude pod pravim uglom.", "最终拧紧前检查对角线，确保模块方正。"),
+        ("KORAK 4 - VRATA", "步骤 4 - 门板"),
+        ("KORAK 3 - MONTAŽA NA ZID", "步骤 3 - 墙面安装"),
+        ("STEP 2 - DOORS / MECHANISM", "步骤 2 - 门板 / 机构"),
+        ("STEP 5 - LEGS AND POSITIONING", "步骤 5 - 柜脚和定位"),
+        ("KORAK 5 - ZAVRSNA PROVERA", "步骤 5 - 最终检查"),
+        ("Montiraj šarke, okači vrata i podesi male razmake tako da se vrata lako otvaraju i ne zapinju.", "安装铰链，挂上门板，并调整缝隙使门板开合顺畅。"),
+        ("Obeleži tačnu visinu na zidu, montiraj zidni nosač ili šinu i tek onda okači element.", "先在墙上标出准确高度，安装挂件或挂轨，然后再挂上模块。"),
+        ("Pre završnog stezanja proveri libelom da je element potpuno ravan levo-desno i napred-nazad.", "最终拧紧前用水平尺检查模块左右和前后都保持水平。"),
+        ("Tek kada je element ravan i čvrsto vezan, nastavi na sledeći zidni element ili front.", "只有模块调平并固定牢靠后，才继续下一个吊柜或门板。"),
+    ]
+    for src, dst in replacements:
+        txt = txt.replace(src, dst)
+    return txt
+
+
+def _polish_instruction_line_hi(line: str) -> str:
+    txt = _translate_instruction_line(line, "en")
+    exact = {
+        "-- STEP 1 - VERIFY DIMENSIONS --": "-- चरण 1 - माप जांचें --",
+        "-- STEP 2 - POSITIONING --": "-- चरण 2 - स्थिति तय करें --",
+        "-- STEP 3 - FIXING --": "-- चरण 3 - फिक्सिंग --",
+        "-- STEP 4 - FINAL CHECK --": "-- चरण 4 - अंतिम जांच --",
+        "-- STEP 1 - PREPARE THE OPENING --": "-- चरण 1 - ओपनिंग तैयार करें --",
+        "-- STEP 2 - CONNECTIONS --": "-- चरण 2 - कनेक्शन --",
+        "-- STEP 3 - INSTALL THE MACHINE --": "-- चरण 3 - मशीन लगाएँ --",
+        "-- STEP 4 - DISHWASHER FRONT --": "-- चरण 4 - डिशवॉशर फ्रंट --",
+        "-- STEP 1 - CARCASS --": "-- चरण 1 - कार्कस --",
+        "-- STEP 2 - BACK PANEL AND CUT-OUTS --": "-- चरण 2 - बैक पैनल और कट-आउट --",
+        "-- STEP 3 - DOORS --": "-- चरण 3 - दरवाज़े --",
+        "-- STEP 4 - WORKTOP AND SINK --": "-- चरण 4 - वर्कटॉप और सिंक --",
+        "-- STEP 1 - SIDE PANELS --": "-- चरण 1 - साइड पैनल --",
+        "-- STEP 2 - BOTTOM AND TOP PANEL --": "-- चरण 2 - बॉटम और टॉप पैनल --",
+        "-- STEP 3 - BACK PANEL --": "-- चरण 3 - बैक पैनल --",
+        "-- STEP 4 - DRAWERS --": "-- चरण 4 - दराज़ --",
+        "-- STEP 4 - DOORS + DRAWER --": "-- चरण 4 - दरवाज़े + दराज़ --",
+        "-- KORAK 4 - VRATA --": "-- चरण 4 - दरवाज़े --",
+        "-- STEP 2 - DOORS / MECHANISM --": "-- चरण 2 - दरवाज़े / मैकेनिज़्म --",
+        "-- KORAK 3 - MONTAŽA NA ZID --": "-- चरण 3 - दीवार पर इंस्टॉलेशन --",
+        "-- STEP 5 - LEGS AND POSITIONING --": "-- चरण 5 - पैर और पोजिशनिंग --",
+        "-- KORAK 5 - ZAVRSNA PROVERA --": "-- चरण 5 - अंतिम जांच --",
+        "-- STEP 3 - WALL INSTALLATION --": "-- चरण 3 - दीवार पर इंस्टॉलेशन --",
+    }
+    if txt in exact:
+        return exact[txt]
+    replacements = [
+        ("Left side panel", "बायां साइड पैनल"), ("Right side panel", "दायां साइड पैनल"),
+        ("Back panel", "बैक पैनल"), ("Top panel", "टॉप पैनल"), ("Bottom panel", "बॉटम पैनल"),
+        ("Drawer front", "दराज़ फ्रंट"), ("Drawer fronts", "दराज़ फ्रंट"), ("Drawer box", "दराज़ बॉक्स"),
+        ("Doors", "दरवाज़े"), ("Hinges", "हिंग"), ("Drawer runners", "दराज़ स्लाइड"),
+        ("Built-in oven", "बिल्ट-इन ओवन"), ("Hob", "हॉब"), ("Worktop", "वर्कटॉप"),
+        ("Legs", "पैर"), ("Carcass", "कार्कस"), ("sink", "सिंक"), ("Sink", "सिंक"),
+        ("oven", "ओवन"), ("Oven", "ओवन"), ("wall", "दीवार"), ("Wall", "दीवार"),
+        ("opening", "ओपनिंग"), ("Opening", "ओपनिंग"), ("manufacturer's template", "निर्माता का टेम्पलेट"),
+        ("manufacturer's instructions", "निर्माता के निर्देश"),
+        ("Connect water, drain and power according to the manufacturer's instructions.", "निर्माता के निर्देश के अनुसार पानी, ड्रेन और पावर जोड़ें।"),
+        ("Mark the cut-out in the worktop using the sink template.", "सिंक टेम्पलेट के अनुसार वर्कटॉप पर कट-आउट मार्क करें।"),
+        ("Protect the cut edge of the opening from moisture before mounting the sink.", "सिंक लगाने से पहले कट किनारे को नमी से बचाएँ।"),
+        ("Insert the back panel and verify the diagonals.", "बैक पैनल लगाएँ और डायगोनल जांचें।"),
+        ("Fit the hinges, hang the doors and set 2 mm reveals.", "हिंग लगाएँ, दरवाज़े टाँगें और 2 mm गैप सेट करें।"),
+        ("Assemble the side panels, bottom and top panel.", "साइड पैनल, बॉटम और टॉप पैनल जोड़ें।"),
+        ("Install the doors or hardware according to the unit type.", "मॉड्यूल प्रकार के अनुसार दरवाज़े या हार्डवेयर लगाएँ।"),
+        ("Umetni dno izmedju bocnih stranica i spoji ga prema busenjima.", "बॉटम पैनल को दोनों साइड पैनलों के बीच लगाएँ और ड्रिल होल के अनुसार जोड़ें।"),
+        ("Zatim postavi gornju plocu i proveri da korpus ostane ravan.", "फिर टॉप पैनल लगाएँ और जांचें कि कार्कस सीधा रहे।"),
+        ("Umetni ledjnu plocu na zadnju stranu elementa.", "मॉड्यूल के पीछे बैक पैनल लगाएँ।"),
+        ("Pre konacnog stezanja proveri dijagonale da element bude pod pravim uglom.", "अंतिम कसाव से पहले डायगोनल जांचें ताकि मॉड्यूल स्क्वेयर रहे।"),
+        ("KORAK 4 - VRATA", "चरण 4 - दरवाज़े"),
+        ("KORAK 3 - MONTAŽA NA ZID", "चरण 3 - दीवार पर इंस्टॉलेशन"),
+        ("STEP 2 - DOORS / MECHANISM", "चरण 2 - दरवाज़े / मैकेनिज़्म"),
+        ("STEP 5 - LEGS AND POSITIONING", "चरण 5 - पैर और पोजिशनिंग"),
+        ("KORAK 5 - ZAVRSNA PROVERA", "चरण 5 - अंतिम जांच"),
+        ("Montiraj šarke, okači vrata i podesi male razmake tako da se vrata lako otvaraju i ne zapinju.", "हिंग लगाएँ, दरवाज़े टाँगें और गैप ऐसा सेट करें कि वे आसानी से खुलें और अटकें नहीं।"),
+        ("Obeleži tačnu visinu na zidu, montiraj zidni nosač ili šinu i tek onda okači element.", "दीवार पर सही ऊँचाई मार्क करें, वॉल ब्रैकेट या रेल लगाएँ, फिर मॉड्यूल टाँगें।"),
+        ("Pre završnog stezanja proveri libelom da je element potpuno ravan levo-desno i napred-nazad.", "अंतिम कसाव से पहले लेवल से जांचें कि मॉड्यूल दाएं-बाएं और आगे-पीछे पूरी तरह सीधा है।"),
+        ("Tek kada je element ravan i čvrsto vezan, nastavi na sledeći zidni element ili front.", "जब मॉड्यूल सीधा और मजबूती से फिक्स हो जाए तभी अगले दीवार मॉड्यूल या फ्रंट पर जाएँ।"),
+    ]
+    for src, dst in replacements:
+        txt = txt.replace(src, dst)
+    return txt
+
+
 def _render_instruction_line(line: str, lang: str = "sr") -> str:
     _lang = str(lang or "sr").lower().strip()
     if _lang == "en":
@@ -925,6 +1054,10 @@ def _render_instruction_line(line: str, lang: str = "sr") -> str:
         return _polish_instruction_line_ru(line)
     if _lang == "pt-br":
         return _polish_instruction_line_ptbr(line)
+    if _lang == "zh-cn":
+        return _polish_instruction_line_zhcn(line)
+    if _lang == "hi":
+        return _polish_instruction_line_hi(line)
     return _polish_instruction_line_sr(line)
 
 

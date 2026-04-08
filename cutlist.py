@@ -3404,6 +3404,144 @@ def _translate_export_text_ru(value: Any, column: str = "") -> str:
     return _apply_ordered_replacements(txt, common)
 
 
+def _translate_export_text_zhcn(value: Any, column: str = "") -> str:
+    txt = str(value or "")
+    col = str(column or "")
+
+    if col in {"Zid", "Wall"}:
+        return txt.replace("Zid ", "墙 ").replace("Wall ", "墙 ")
+
+    if col in {"Pozicija", "Position"}:
+        mapping = {
+            "LEVA": "左", "LEVO": "左", "LEFT": "左",
+            "DESNA": "右", "DESNO": "右", "RIGHT": "右",
+            "GORE": "上", "TOP": "上",
+            "DOLE": "下", "BOTTOM": "下",
+            "CENTAR": "中", "SREDINA": "中", "CENTER": "中",
+            "PREDNJA": "前", "NAPRED": "前", "FRONT": "前",
+            "ZADNJA": "后", "POZADI": "后", "BACK": "后",
+        }
+        return mapping.get(txt.upper(), txt)
+
+    common: list[tuple[str, str]] = [
+        ("Krojna Lista PRO", "裁切清单 PRO"), ("Krojna lista PRO", "裁切清单 PRO"),
+        ("Krojna lista", "裁切清单"), ("Cut List PRO", "裁切清单 PRO"), ("Cut List", "裁切清单"),
+        ("Project", "项目"), ("Customer", "客户"), ("Room", "房间"), ("Kitchen", "厨房"),
+        ("Wall size", "墙面尺寸"), ("Version", "版本"), ("Generated", "生成时间"),
+        ("Measured by", "测量人"), ("Designed by", "设计人"), ("Workshop note", "车间备注"),
+        ("Wall A", "墙 A"), ("Wall B", "墙 B"), ("Wall C", "墙 C"),
+        ("Zid A", "墙 A"), ("Zid B", "墙 B"), ("Zid C", "墙 C"),
+        ("Donji", "下柜"), ("Gornji", "吊柜"),
+        ("Iverica Korpus", "刨花板 柜体"), ("Iverica Front", "刨花板 门板"), ("Iverica Leđa", "HDF 背板"),
+        ("Iverica", "刨花板"), ("Lesonit Leđa", "HDF 背板"), ("Leđa", "背板"),
+        ("Radna ploča Korpus", "台面"), ("Radna ploča", "台面"),
+        ("Leđna ploča", "背板"), ("Parcijalna leđna ploča", "局部背板"),
+        ("Back panel / opening", "背板 / 开口"), ("Leđa / prolaz", "背板 / 开口"),
+        ("Leva strana", "左侧板"), ("Desna strana", "右侧板"),
+        ("Srednja vertikala", "中立板"), ("Polica (podesiva)", "可调层板"),
+        ("Polica", "层板"), ("Plafon", "顶板"), ("Dno", "底板"),
+        ("Dno sanduka fioke", "抽屉底板"), ("Prednja strana sanduka fioke", "抽屉前板"),
+        ("Zadnja strana sanduka fioke", "抽屉后板"), ("Bočna stranica sanduka fioke", "抽屉侧板"),
+        ("Front fioke", "抽屉门板"), ("Vrata", "门板"), ("Sokla", "踢脚板"),
+        ("Filer panel", "补板"), ("Završna bočna ploča", "收口侧板"),
+        ("Šarka", "铰链"), ("Ručka / pull", "拉手"), ("Klizač za fioku", "抽屉滑轨"),
+        ("Konfirmat vijak", "确认钉"), ("Drvena tipla", "木榫"),
+        ("Sanitarni silikon", "防霉硅胶"), ("Sudopera", "水槽"), ("Slavina", "龙头"),
+        ("Ugradna sudopera", "嵌入式水槽"), ("Wall plugs / anchors", "膨胀塞 / 锚栓"),
+        ("Purchased separately", "需单独购买"), ("Tools needed on site", "现场所需工具"),
+        ("Wall installation", "墙面安装"), ("Po šablonu proizvođača", "按厂家模板"),
+        ("Po meri iz projekta", "按项目尺寸"), ("Po geometriji zida i šablonu", "按墙面尺寸与模板"),
+        ("Priprema i finalni rez", "准备与最终切割"), ("Otvor za sudoperu", "水槽开孔"),
+        ("Otvor za ploču", "灶具开孔"), ("Utor za leđa", "背板槽"),
+        ("Ventilacija / otvor", "通风 / 开口"), ("Posebna obrada", "特殊加工"),
+        ("Servis", "车间"), ("Kuća / lice mesta", "现场"),
+    ]
+    note_replacements: list[tuple[str, str]] = [
+        ("In the workshop, do cutting and edging strictly by CUT dimensions. Verify openings and special machining against the notes.", "车间必须严格按 CUT 尺寸切割和封边，并按备注核对开孔和特殊加工。"),
+        ("In the workshop, cut strictly by CUT dimensions and verify edging in the separate table", "车间必须严格按 CUT 尺寸切割，并在单独表格中核对封边"),
+        ("Take only cutting, edging and machining to the workshop", "带到车间的只有切割、封边和加工部分"),
+        ("The workshop should work only from the workshop packet tables", "车间只能按车间资料包中的表格执行"),
+        ("Purchase ready-made appliances, hardware and tools separately", "成品电器、五金和工具需单独购买"),
+        ("These items are not part of cutting and must be sourced separately", "这些项目不属于板材切割，需单独采购"),
+        ("Back panel groove", "背板槽"), ("Sink cut-out", "水槽开孔"),
+        ("Hob cut-out", "灶具开孔"), ("Ventilation / opening", "通风 / 开口"),
+        ("Preparation and final cut", "准备与最终切割"), ("Workshop + on site", "车间 + 现场"),
+        ("Workshop", "车间"), ("On site", "现场"),
+    ]
+    if col in {"Napomena", "Napomena za servis", "Instrukcija", "Stavka", "Sta radis", "Šta radiš", "Polje", "Vrednost", "Tip obrade", "Izvodi", "Osnov izvođenja", "Obrada / napomena", "Grupa", "Tip / Šifra", "Note", "Instruction", "Item", "Field", "Value", "Processing type", "Operations", "Execution basis", "Processing / note", "Group", "Type / Code"}:
+        txt = _apply_ordered_replacements(txt, note_replacements)
+    return _apply_ordered_replacements(txt, common)
+
+
+def _translate_export_text_hi(value: Any, column: str = "") -> str:
+    txt = str(value or "")
+    col = str(column or "")
+
+    if col in {"Zid", "Wall"}:
+        return txt.replace("Zid ", "दीवार ").replace("Wall ", "दीवार ")
+
+    if col in {"Pozicija", "Position"}:
+        mapping = {
+            "LEVA": "बायां", "LEVO": "बायां", "LEFT": "बायां",
+            "DESNA": "दायां", "DESNO": "दायां", "RIGHT": "दायां",
+            "GORE": "ऊपर", "TOP": "ऊपर",
+            "DOLE": "नीचे", "BOTTOM": "नीचे",
+            "CENTAR": "मध्य", "SREDINA": "मध्य", "CENTER": "मध्य",
+            "PREDNJA": "सामने", "NAPRED": "सामने", "FRONT": "सामने",
+            "ZADNJA": "पीछे", "POZADI": "पीछे", "BACK": "पीछे",
+        }
+        return mapping.get(txt.upper(), txt)
+
+    common: list[tuple[str, str]] = [
+        ("Krojna Lista PRO", "कट लिस्ट PRO"), ("Krojna lista PRO", "कट लिस्ट PRO"),
+        ("Krojna lista", "कट लिस्ट"), ("Cut List PRO", "कट लिस्ट PRO"), ("Cut List", "कट लिस्ट"),
+        ("Project", "प्रोजेक्ट"), ("Customer", "ग्राहक"), ("Room", "कमरा"), ("Kitchen", "रसोई"),
+        ("Wall size", "दीवार माप"), ("Version", "संस्करण"), ("Generated", "जनरेट किया गया"),
+        ("Measured by", "माप लिया"), ("Designed by", "डिज़ाइन किया"), ("Workshop note", "वर्कशॉप नोट"),
+        ("Wall A", "दीवार A"), ("Wall B", "दीवार B"), ("Wall C", "दीवार C"),
+        ("Zid A", "दीवार A"), ("Zid B", "दीवार B"), ("Zid C", "दीवार C"),
+        ("Donji", "निचला मॉड्यूल"), ("Gornji", "ऊपरी मॉड्यूल"),
+        ("Iverica Korpus", "पार्टिकल बोर्ड कार्कस"), ("Iverica Front", "पार्टिकल बोर्ड फ्रंट"), ("Iverica Leđa", "HDF बैक"),
+        ("Iverica", "पार्टिकल बोर्ड"), ("Lesonit Leđa", "HDF बैक"), ("Leđa", "बैक"),
+        ("Radna ploča Korpus", "वर्कटॉप"), ("Radna ploča", "वर्कटॉप"),
+        ("Leđna ploča", "बैक पैनल"), ("Parcijalna leđna ploča", "आंशिक बैक पैनल"),
+        ("Back panel / opening", "बैक पैनल / ओपनिंग"), ("Leđa / prolaz", "बैक पैनल / ओपनिंग"),
+        ("Leva strana", "बायां साइड"), ("Desna strana", "दायां साइड"),
+        ("Srednja vertikala", "मध्य वर्टिकल"), ("Polica (podesiva)", "एडजस्टेबल शेल्फ"),
+        ("Polica", "शेल्फ"), ("Plafon", "टॉप पैनल"), ("Dno", "बॉटम पैनल"),
+        ("Dno sanduka fioke", "दराज़ का बॉटम"), ("Prednja strana sanduka fioke", "दराज़ का फ्रंट"),
+        ("Zadnja strana sanduka fioke", "दराज़ का बैक"), ("Bočna stranica sanduka fioke", "दराज़ का साइड"),
+        ("Front fioke", "दराज़ फ्रंट"), ("Vrata", "दरवाज़े"), ("Sokla", "सोकल"),
+        ("Filer panel", "फिलर पैनल"), ("Završna bočna ploča", "एंड साइड पैनल"),
+        ("Šarka", "हिंग"), ("Ručka / pull", "हैंडल"), ("Klizač za fioku", "दराज़ स्लाइड"),
+        ("Konfirmat vijak", "कन्फर्मेट स्क्रू"), ("Drvena tipla", "लकड़ी डॉवेल"),
+        ("Sanitarni silikon", "सैनिटरी सिलिकॉन"), ("Sudopera", "सिंक"), ("Slavina", "नल"),
+        ("Ugradna sudopera", "बिल्ट-इन सिंक"), ("Wall plugs / anchors", "वॉल प्लग / एंकर"),
+        ("Purchased separately", "अलग से खरीदें"), ("Tools needed on site", "साइट पर ज़रूरी औज़ार"),
+        ("Wall installation", "दीवार इंस्टॉलेशन"), ("Po šablonu proizvođača", "निर्माता के टेम्पलेट के अनुसार"),
+        ("Po meri iz projekta", "प्रोजेक्ट माप के अनुसार"), ("Po geometriji zida i šablonu", "दीवार माप और टेम्पलेट के अनुसार"),
+        ("Priprema i finalni rez", "तैयारी और अंतिम कट"), ("Otvor za sudoperu", "सिंक कट-आउट"),
+        ("Otvor za ploču", "हॉब कट-आउट"), ("Utor za leđa", "बैक पैनल ग्रूव"),
+        ("Ventilacija / otvor", "वेंटिलेशन / ओपनिंग"), ("Posebna obrada", "स्पेशल प्रोसेसिंग"),
+        ("Servis", "वर्कशॉप"), ("Kuća / lice mesta", "साइट पर"),
+    ]
+    note_replacements: list[tuple[str, str]] = [
+        ("In the workshop, do cutting and edging strictly by CUT dimensions. Verify openings and special machining against the notes.", "वर्कशॉप में CUT माप के अनुसार ही कटिंग और एजिंग करें, और नोट के अनुसार ओपनिंग तथा स्पेशल प्रोसेसिंग जांचें।"),
+        ("In the workshop, cut strictly by CUT dimensions and verify edging in the separate table", "वर्कशॉप में केवल CUT माप के अनुसार कटिंग करें और अलग तालिका से एजिंग जांचें"),
+        ("Take only cutting, edging and machining to the workshop", "वर्कशॉप में केवल कटिंग, एजिंग और प्रोसेसिंग वाला भाग ले जाएँ"),
+        ("The workshop should work only from the workshop packet tables", "वर्कशॉप केवल वर्कशॉप पैकेट की तालिकाओं से काम करे"),
+        ("Purchase ready-made appliances, hardware and tools separately", "तैयार उपकरण, हार्डवेयर और औज़ार अलग से खरीदें"),
+        ("These items are not part of cutting and must be sourced separately", "ये आइटम कटिंग का हिस्सा नहीं हैं और अलग से लेने होंगे"),
+        ("Back panel groove", "बैक पैनल ग्रूव"), ("Sink cut-out", "सिंक कट-आउट"),
+        ("Hob cut-out", "हॉब कट-आउट"), ("Ventilation / opening", "वेंटिलेशन / ओपनिंग"),
+        ("Preparation and final cut", "तैयारी और अंतिम कट"), ("Workshop + on site", "वर्कशॉप + साइट"),
+        ("Workshop", "वर्कशॉप"), ("On site", "साइट पर"),
+    ]
+    if col in {"Napomena", "Napomena za servis", "Instrukcija", "Stavka", "Sta radis", "Šta radiš", "Polje", "Vrednost", "Tip obrade", "Izvodi", "Osnov izvođenja", "Obrada / napomena", "Grupa", "Tip / Šifra", "Note", "Instruction", "Item", "Field", "Value", "Processing type", "Operations", "Execution basis", "Processing / note", "Group", "Type / Code"}:
+        txt = _apply_ordered_replacements(txt, note_replacements)
+    return _apply_ordered_replacements(txt, common)
+
+
 def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> Any:
     txt = str(value or "")
     col = str(column or "")
@@ -3449,6 +3587,10 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
             return _translate_export_text_ru(txt, col)
         if _lang == "pt-br":
             return _translate_export_text_ptbr(txt, col)
+        if _lang == "zh-cn":
+            return _translate_export_text_zhcn(txt, col)
+        if _lang == "hi":
+            return _translate_export_text_hi(txt, col)
         return txt
 
     if col in {"Zid", "Wall"}:
@@ -3859,12 +4001,18 @@ def _format_material_role(material: Any, thickness: Any, role: str, lang: str = 
     role_map_es = {"carcass": "Cuerpo", "front": "Frente", "back": "Fondo"}
     role_map_ru = {"carcass": "Корпус", "front": "Фасад", "back": "Задник"}
     role_map_pt = {"carcass": "Corpo", "front": "Frente", "back": "Fundo"}
+    role_map_zh = {"carcass": "柜体", "front": "门板", "back": "背板"}
+    role_map_hi = {"carcass": "कार्कस", "front": "फ्रंट", "back": "बैक"}
     if _lang == "es":
         mat = mat.replace("Iverica", "Aglomerado").replace("Lesonit", "HDF").replace("Radna ploča", "Encimera")
     if _lang == "ru":
         mat = mat.replace("Iverica", "ЛДСП").replace("Lesonit", "ХДФ").replace("Radna ploča", "Столешница")
     if _lang == "pt-br":
         mat = mat.replace("Iverica", "Aglomerado").replace("Radna ploča", "Bancada")
+    if _lang == "zh-cn":
+        mat = mat.replace("Iverica", "刨花板").replace("Lesonit", "HDF").replace("Radna ploča", "台面")
+    if _lang == "hi":
+        mat = mat.replace("Iverica", "पार्टिकल बोर्ड").replace("Lesonit", "HDF").replace("Radna ploča", "वर्कटॉप")
     if _lang == "en":
         role_label = role_map_en.get(role, role)
     elif _lang == "es":
@@ -3873,6 +4021,10 @@ def _format_material_role(material: Any, thickness: Any, role: str, lang: str = 
         role_label = role_map_ru.get(role, role)
     elif _lang == "pt-br":
         role_label = role_map_pt.get(role, role)
+    elif _lang == "zh-cn":
+        role_label = role_map_zh.get(role, role)
+    elif _lang == "hi":
+        role_label = role_map_hi.get(role, role)
     else:
         role_label = role_map_sr.get(role, role)
     if not mat:
@@ -4689,11 +4841,33 @@ def build_cutlist_pdf_bytes(
             "Tip / Šifra": "Тип / код",
             "Kategorija": "Категория",
         }
+        _header_map_zh = {
+            "RB": "序号", "PartCode": "代码", "Korak": "步骤", "Šta radiš": "操作内容", "Sta radis": "操作内容",
+            "Pojam": "术语", "Objašnjenje": "说明", "Zid": "墙", "Modul": "模块", "Deo": "部件",
+            "Pozicija": "位置", "SklopKorak": "步骤", "Kom": "数量", "Kol.": "数量", "Dužina [mm]": "长度 [mm]",
+            "Širina [mm]": "宽度 [mm]", "Visina [mm]": "高度 [mm]", "Deb.": "厚度", "Deb. [mm]": "厚度 [mm]",
+            "Materijal": "材料", "Smer goda": "纹理", "Orijentacija": "方向", "Kant": "封边", "Napomena": "备注",
+            "Napomena za servis": "车间备注", "Tip obrade": "加工类型", "Izvodi": "执行", "Osnov izvođenja": "执行依据",
+            "Obrada / napomena": "加工 / 备注", "Stavka": "项目", "Instrukcija": "说明", "Polje": "字段", "Vrednost": "值",
+            "Naziv": "名称", "Tip / Šifra": "类型 / 编码", "Kategorija": "类别",
+        }
+        _header_map_hi = {
+            "RB": "क्रम", "PartCode": "कोड", "Korak": "चरण", "Šta radiš": "क्या करना है", "Sta radis": "क्या करना है",
+            "Pojam": "टर्म", "Objašnjenje": "समझ", "Zid": "दीवार", "Modul": "मॉड्यूल", "Deo": "भाग",
+            "Pozicija": "स्थिति", "SklopKorak": "चरण", "Kom": "मात्रा", "Kol.": "मात्रा", "Dužina [mm]": "लंबाई [mm]",
+            "Širina [mm]": "चौड़ाई [mm]", "Visina [mm]": "ऊंचाई [mm]", "Deb.": "मोटाई", "Deb. [mm]": "मोटाई [mm]",
+            "Materijal": "सामग्री", "Smer goda": "ग्रेन", "Orijentacija": "ओरिएंटेशन", "Kant": "एज", "Napomena": "नोट",
+            "Napomena za servis": "वर्कशॉप नोट", "Tip obrade": "प्रोसेसिंग प्रकार", "Izvodi": "ऑपरेशन", "Osnov izvođenja": "आधार",
+            "Obrada / napomena": "प्रोसेसिंग / नोट", "Stavka": "आइटम", "Instrukcija": "निर्देश", "Polje": "फ़ील्ड", "Vrednost": "मान",
+            "Naziv": "नाम", "Tip / Šifra": "प्रकार / कोड", "Kategorija": "श्रेणी",
+        }
         header = [
             Paragraph(_pdf_clean_text(
                 _header_map_pt.get(c, c) if _lang == "pt-br"
                 else (_header_map_es.get(c, c) if _lang == "es"
-                      else (_header_map_ru.get(c, c) if _lang == "ru" else c))
+                      else (_header_map_ru.get(c, c) if _lang == "ru"
+                            else (_header_map_zh.get(c, c) if _lang == "zh-cn"
+                                  else (_header_map_hi.get(c, c) if _lang == "hi" else c))))
             ), _th)
             for c in _available_cols
         ]
@@ -5240,6 +5414,10 @@ def generate_cutlist_pdf(
         title = "Карта раскроя PRO" if title == "Krojna lista PRO" else "Карта раскроя PRO - M1 (одна стена)"
     if str(lang or "sr").lower().strip() == "pt-br" and title in {"Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
         title = "Lista de Corte PRO - M1 (uma parede)"
+    if str(lang or "sr").lower().strip() == "zh-cn" and title in {"Krojna lista PRO", "Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
+        title = "裁切清单 PRO" if title == "Krojna lista PRO" else "裁切清单 PRO - M1 (单面墙)"
+    if str(lang or "sr").lower().strip() == "hi" and title in {"Krojna lista PRO", "Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
+        title = "कट लिस्ट PRO" if title == "Krojna lista PRO" else "कट लिस्ट PRO - M1 (एक दीवार)"
     final_ds = get_final_cutlist_dataset(kitchen, lang=lang)
     sections = final_ds["sections"]
     return build_cutlist_pdf_bytes(kitchen, sections, project_title=title, lang=lang)
@@ -5279,6 +5457,10 @@ def generate_cutlist_excel(
         title = "Карта раскроя PRO"
     if _lang == "pt-br" and title == "Krojna lista PRO":
         title = "Lista de Corte PRO"
+    if _lang == "zh-cn" and title == "Krojna lista PRO":
+        title = "裁切清单 PRO"
+    if _lang == "hi" and title == "Krojna lista PRO":
+        title = "कट लिस्ट PRO"
 
     final_ds = get_final_cutlist_dataset(kitchen, lang=_lang)
     sections = final_ds["sections"]
@@ -5567,10 +5749,10 @@ def generate_cutlist_excel(
         ("Deb.",         "Deb. [mm]",     8),
         ("Materijal",    _t("Materijal", "Material"),    16),
         ("Smer goda",    _t("Orijent.", "Grain"),     10),
-        ("L1",           ("Borda L1" if _lang == "pt-br" else ("Borde L1" if _lang == "es" else ("Кромка L1" if _lang == "ru" else _t("Kant L1", "Edge L1")))),       7),
-        ("L2",           ("Borda L2" if _lang == "pt-br" else ("Borde L2" if _lang == "es" else ("Кромка L2" if _lang == "ru" else _t("Kant L2", "Edge L2")))),       7),
-        ("K1",           ("Borda K1" if _lang == "pt-br" else ("Borde K1" if _lang == "es" else ("Кромка K1" if _lang == "ru" else _t("Kant K1", "Edge K1")))),       7),
-        ("K2",           ("Borda K2" if _lang == "pt-br" else ("Borde K2" if _lang == "es" else ("Кромка K2" if _lang == "ru" else _t("Kant K2", "Edge K2")))),       7),
+        ("L1",           ("Borda L1" if _lang == "pt-br" else ("Borde L1" if _lang == "es" else ("Кромка L1" if _lang == "ru" else ("封边 L1" if _lang == "zh-cn" else ("एज L1" if _lang == "hi" else _t("Kant L1", "Edge L1")))))),       7),
+        ("L2",           ("Borda L2" if _lang == "pt-br" else ("Borde L2" if _lang == "es" else ("Кромка L2" if _lang == "ru" else ("封边 L2" if _lang == "zh-cn" else ("एज L2" if _lang == "hi" else _t("Kant L2", "Edge L2")))))),       7),
+        ("K1",           ("Borda K1" if _lang == "pt-br" else ("Borde K1" if _lang == "es" else ("Кромка K1" if _lang == "ru" else ("封边 K1" if _lang == "zh-cn" else ("एज K1" if _lang == "hi" else _t("Kant K1", "Edge K1")))))),       7),
+        ("K2",           ("Borda K2" if _lang == "pt-br" else ("Borde K2" if _lang == "es" else ("Кромка K2" if _lang == "ru" else ("封边 K2" if _lang == "zh-cn" else ("एज K2" if _lang == "hi" else _t("Kant K2", "Edge K2")))))),       7),
     ]
     DET_COLS = [
         ("PartCode",     "PartCode",     12),
@@ -5582,10 +5764,10 @@ def generate_cutlist_excel(
         ("Deb.",         "Deb. [mm]",     8),
         ("Materijal",    _t("Materijal", "Material"),    16),
         ("Smer goda",    _t("Orijent.", "Grain"),     10),
-        ("L1",           ("Borda L1" if _lang == "pt-br" else ("Borde L1" if _lang == "es" else ("Кромка L1" if _lang == "ru" else _t("Kant L1", "Edge L1")))),       7),
-        ("L2",           ("Borda L2" if _lang == "pt-br" else ("Borde L2" if _lang == "es" else ("Кромка L2" if _lang == "ru" else _t("Kant L2", "Edge L2")))),       7),
-        ("K1",           ("Borda K1" if _lang == "pt-br" else ("Borde K1" if _lang == "es" else ("Кромка K1" if _lang == "ru" else _t("Kant K1", "Edge K1")))),       7),
-        ("K2",           ("Borda K2" if _lang == "pt-br" else ("Borde K2" if _lang == "es" else ("Кромка K2" if _lang == "ru" else _t("Kant K2", "Edge K2")))),       7),
+        ("L1",           ("Borda L1" if _lang == "pt-br" else ("Borde L1" if _lang == "es" else ("Кромка L1" if _lang == "ru" else ("封边 L1" if _lang == "zh-cn" else ("एज L1" if _lang == "hi" else _t("Kant L1", "Edge L1")))))),       7),
+        ("L2",           ("Borda L2" if _lang == "pt-br" else ("Borde L2" if _lang == "es" else ("Кромка L2" if _lang == "ru" else ("封边 L2" if _lang == "zh-cn" else ("एज L2" if _lang == "hi" else _t("Kant L2", "Edge L2")))))),       7),
+        ("K1",           ("Borda K1" if _lang == "pt-br" else ("Borde K1" if _lang == "es" else ("Кромка K1" if _lang == "ru" else ("封边 K1" if _lang == "zh-cn" else ("एज K1" if _lang == "hi" else _t("Kant K1", "Edge K1")))))),       7),
+        ("K2",           ("Borda K2" if _lang == "pt-br" else ("Borde K2" if _lang == "es" else ("Кромка K2" if _lang == "ru" else ("封边 K2" if _lang == "zh-cn" else ("एज K2" if _lang == "hi" else _t("Kant K2", "Edge K2")))))),       7),
     ]
     try:
         _sum2 = final_ds["summary"]
