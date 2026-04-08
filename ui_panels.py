@@ -156,15 +156,14 @@ def render_toolbar() -> None:
         ("wizard",    _tr("tab.wizard"),    "home"),
         ("podesavanja", _tr("tab.settings"), "settings"),
         ("elementi",  _tr("tab.elements"),  "grid_view"),
+        ("krojna", _tr("tab.cutlist"), "table_rows"),
         ("pomoc",     _tr("tab.help"),      "help"),
     ]
-    if str(get_cutlist_access_state().get("allowed", "")).lower() == "true":
-        tabs.insert(3, ("krojna", _tr("tab.cutlist"), "table_rows"))
     _tier = str(getattr(state, "current_access_tier", "") or "").strip().lower()
     if _tier == "admin":
         tabs.insert(5, ("ops", _tr("tab.ops"), "admin_panel_settings"))
 
-    _toolbar_save, _toolbar_load = make_toolbar_actions(
+    _raw_toolbar_save, _raw_toolbar_load = make_toolbar_actions(
         ui=ui,
         state=state,
         logger=_LOG,
@@ -173,6 +172,25 @@ def render_toolbar() -> None:
         load_project_json=load_project_json,
         main_content_refresh=main_content.refresh,
     )
+
+    def _redirect_locked_toolbar_action() -> None:
+        _access = get_cutlist_access_state()
+        state.active_tab = "nalog"
+        ui.notify(str(_access.get("reason", "") or _tr("toolbar.pro_redirect")), type='warning', timeout=5000)
+        main_content.refresh()
+        ui.timer(0.05, render_toolbar.refresh, once=True)
+
+    def _toolbar_save() -> None:
+        if str(get_cutlist_access_state().get("allowed", "")).lower() != "true":
+            _redirect_locked_toolbar_action()
+            return
+        _raw_toolbar_save()
+
+    def _toolbar_load() -> None:
+        if str(get_cutlist_access_state().get("allowed", "")).lower() != "true":
+            _redirect_locked_toolbar_action()
+            return
+        _raw_toolbar_load()
 
     def _toolbar_reset() -> None:
         with ui.dialog() as _dlg:

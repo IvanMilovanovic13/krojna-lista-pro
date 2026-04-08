@@ -2161,18 +2161,24 @@ def get_cutlist_access_state() -> Dict[str, str]:
 
     if "demo" in source:
         return {"allowed": "true", "reason": "", "mode": "demo"}
-    if tier in {"admin", "paid", "local_beta"}:
+    if tier in {"admin", "paid", "pro"}:
         return {"allowed": "true", "reason": "", "mode": tier or "paid"}
     if tier == "trial":
         return {
             "allowed": "false",
-            "reason": "Free pristup dozvoljava dizajn i cuvanje projekta. Krojna lista i export su dostupni tek posle placanja.",
+            "reason": "Free pristup dozvoljava dizajn. Krojna lista, cuvanje, ucitavanje i export su dostupni tek posle placanja.",
+            "mode": "free",
+        }
+    if tier in {"local", "local_beta", ""}:
+        return {
+            "allowed": "false",
+            "reason": "Ova opcija je dostupna tek posle aktivacije PRO pristupa.",
             "mode": "free",
         }
     if status in {"inactive", "canceled", "past_due"}:
         return {
             "allowed": "false",
-            "reason": "PRO pristup nije aktivan. Aktiviraj plan da otvoris krojnu listu i exporte.",
+            "reason": "PRO pristup nije aktivan. Aktiviraj plan da otvoris krojnu listu, cuvanje, ucitavanje i exporte.",
             "mode": "blocked",
         }
     return {

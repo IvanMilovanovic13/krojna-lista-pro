@@ -9045,6 +9045,34 @@ _TRANSLATIONS.setdefault("hi", {}).update({
     "cutlist.locked_feature_5": "असेंबली निर्देश",
 })
 
+_TRANSLATIONS["sr"].update({
+    "toolbar.pro_redirect": "Otvori Nalog i aktiviraj PRO da koristiš ovu opciju.",
+})
+
+_TRANSLATIONS["en"].update({
+    "toolbar.pro_redirect": "Open Account and activate PRO to use this option.",
+})
+
+_TRANSLATIONS.setdefault("es", {}).update({
+    "toolbar.pro_redirect": "Abre Cuenta y activa PRO para usar esta opción.",
+})
+
+_TRANSLATIONS.setdefault("pt-br", {}).update({
+    "toolbar.pro_redirect": "Abra Conta e ative o PRO para usar esta opção.",
+})
+
+_TRANSLATIONS.setdefault("ru", {}).update({
+    "toolbar.pro_redirect": "Откройте Аккаунт и активируйте PRO, чтобы использовать эту опцию.",
+})
+
+_TRANSLATIONS.setdefault("zh-cn", {}).update({
+    "toolbar.pro_redirect": "打开账号并激活 PRO 后才能使用此功能。",
+})
+
+_TRANSLATIONS.setdefault("hi", {}).update({
+    "toolbar.pro_redirect": "इस विकल्प का उपयोग करने के लिए अकाउंट खोलें और PRO सक्रिय करें।",
+})
+
 def get_language_options() -> dict[str, str]:
     return dict(VISIBLE_LANGUAGE_OPTIONS)
 
