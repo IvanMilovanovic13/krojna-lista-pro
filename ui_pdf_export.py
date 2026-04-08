@@ -8,6 +8,450 @@ from pathlib import Path
 import math
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from i18n import normalize_language_code, tr
+
+
+_PDF_PHRASES: dict[str, dict[str, str]] = {
+    "es": {
+        "Cut List": "Lista de corte",
+        "Summary - all cut parts": "Resumen - todas las piezas de corte",
+        "Project data": "Datos del proyecto",
+        "Field": "Campo",
+        "Value": "Valor",
+        "What you take to the workshop - cutting": "Qué llevas al taller - corte",
+        "What you take to the workshop - edging": "Qué llevas al taller - canteado",
+        "What you take to the workshop - processing": "Qué llevas al taller - mecanizado",
+        "Workshop instructions": "Instrucciones para el taller",
+        "Material": "Material",
+        "Thk.": "Esp.",
+        "Length [mm]": "Longitud [mm]",
+        "Width [mm]": "Ancho [mm]",
+        "Edge": "Canto",
+        "Qty": "Cant.",
+        "Wall": "Pared",
+        "Module": "Módulo",
+        "Part": "Pieza",
+        "Note": "Nota",
+        "Processing type": "Tipo de mecanizado",
+        "Operations": "Operaciones",
+        "Execution basis": "Base de ejecución",
+        "Processing / note": "Mecanizado / nota",
+        "Carcass (sides, bottom, top)": "Carcasa (laterales, base, tapa)",
+        "Back panels": "Paneles traseros",
+        "Fronts": "Frentes",
+        "Worktop and supports": "Encimera y soportes",
+        "Plinth / toe kick": "Zócalo",
+        "By unit - details and assembly": "Por módulo - detalles y montaje",
+        "Label": "Etiqueta",
+        "Where it goes": "Dónde va",
+        "Step": "Paso",
+        "Note for beginners": "Nota para principiantes",
+        "Important part notes": "Notas importantes sobre las piezas",
+        "Check before assembly": "Revisar antes del montaje",
+        "Assembly parts map": "Mapa de piezas para montaje",
+        "Cut parts": "Piezas de corte",
+        "Required tools and hardware": "Herramientas y herrajes necesarios",
+        "Assembly instructions": "Instrucciones de montaje",
+        "What you buy separately": "Qué compras por separado",
+        "Ready-made products - not included in cutting": "Productos terminados - no entran en el corte",
+        "Workflow order": "Orden de trabajo",
+        "What you do": "Qué haces",
+        "Checklist before workshop": "Checklist antes del taller",
+        "Checklist before home assembly": "Checklist antes del montaje en casa",
+        "Status": "Estado",
+        "Drill-driver or screwdriver": "Atornillador o destornillador",
+        "Tape measure": "Cinta métrica",
+        "Spirit level": "Nivel",
+        "Wall brackets / hanging hardware": "Soportes de pared / herrajes de colgado",
+        "Door hinges": "Bisagras para puertas",
+        "Drawer runners": "Guías de cajón",
+        "Lift-up mechanism": "Mecanismo elevable",
+        "Glass-door hinges": "Bisagras para puertas de vidrio",
+        "Dishwasher front mounting kit": "Kit de montaje del frente de lavavajillas",
+        "Wall plugs / screws according to wall type": "Tacos / tornillos según el tipo de pared",
+        "Check that the number of parts matches the table.": "Comprueba que el número de piezas coincide con la tabla.",
+        "Separate carcass parts, fronts, backs and hardware before assembly.": "Separa carcasa, frentes, traseras y herrajes antes del montaje.",
+        "Check the edged sides so the front of the unit is oriented correctly.": "Comprueba los cantos para orientar correctamente el frente del módulo.",
+        "Before drilling, check the wall type and choose suitable plugs and screws.": "Antes de taladrar, revisa el tipo de pared y elige tacos y tornillos adecuados.",
+        "Before assembly, verify the service positions and appliance opening.": "Antes del montaje, verifica las posiciones de instalaciones y el hueco del aparato.",
+        "A tall unit must always be planned for wall fixing.": "Un módulo alto siempre debe planificarse con fijación a pared.",
+    },
+    "pt-br": {
+        "Cut List": "Lista de corte",
+        "Summary - all cut parts": "Resumo - todas as peças de corte",
+        "Project data": "Dados do projeto",
+        "Field": "Campo",
+        "Value": "Valor",
+        "What you take to the workshop - cutting": "O que levar à marcenaria - corte",
+        "What you take to the workshop - edging": "O que levar à marcenaria - orla",
+        "What you take to the workshop - processing": "O que levar à marcenaria - usinagem",
+        "Workshop instructions": "Instruções para a marcenaria",
+        "Material": "Material",
+        "Thk.": "Esp.",
+        "Length [mm]": "Comprimento [mm]",
+        "Width [mm]": "Largura [mm]",
+        "Edge": "Orla",
+        "Qty": "Qtd.",
+        "Wall": "Parede",
+        "Module": "Módulo",
+        "Part": "Peça",
+        "Note": "Nota",
+        "Processing type": "Tipo de usinagem",
+        "Operations": "Operações",
+        "Execution basis": "Base de execução",
+        "Processing / note": "Usinagem / nota",
+        "Carcass (sides, bottom, top)": "Carcaça (laterais, fundo, topo)",
+        "Back panels": "Painéis traseiros",
+        "Fronts": "Frentes",
+        "Worktop and supports": "Tampo e suportes",
+        "Plinth / toe kick": "Soco",
+        "By unit - details and assembly": "Por módulo - detalhes e montagem",
+        "Label": "Etiqueta",
+        "Where it goes": "Onde vai",
+        "Step": "Passo",
+        "Note for beginners": "Nota para iniciantes",
+        "Important part notes": "Notas importantes das peças",
+        "Check before assembly": "Verificar antes da montagem",
+        "Assembly parts map": "Mapa de peças para montagem",
+        "Cut parts": "Peças de corte",
+        "Required tools and hardware": "Ferramentas e ferragens necessárias",
+        "Assembly instructions": "Instruções de montagem",
+        "What you buy separately": "O que comprar separadamente",
+        "Ready-made products - not included in cutting": "Produtos prontos - não entram no corte",
+        "Workflow order": "Ordem de trabalho",
+        "What you do": "O que fazer",
+        "Checklist before workshop": "Checklist antes da marcenaria",
+        "Checklist before home assembly": "Checklist antes da montagem em casa",
+        "Status": "Status",
+        "Drill-driver or screwdriver": "Parafusadeira ou chave de fenda",
+        "Tape measure": "Trena",
+        "Spirit level": "Nível",
+        "Wall brackets / hanging hardware": "Suportes de parede / ferragens de fixação",
+        "Door hinges": "Dobradiças para portas",
+        "Drawer runners": "Corrediças de gaveta",
+        "Lift-up mechanism": "Mecanismo basculante",
+        "Glass-door hinges": "Dobradiças para portas de vidro",
+        "Dishwasher front mounting kit": "Kit de montagem da frente da lava-louças",
+        "Wall plugs / screws according to wall type": "Buchas / parafusos conforme o tipo de parede",
+        "Check that the number of parts matches the table.": "Verifique se o número de peças corresponde à tabela.",
+        "Separate carcass parts, fronts, backs and hardware before assembly.": "Separe carcaça, frentes, fundos e ferragens antes da montagem.",
+        "Check the edged sides so the front of the unit is oriented correctly.": "Verifique as bordas para orientar corretamente a frente do módulo.",
+        "Before drilling, check the wall type and choose suitable plugs and screws.": "Antes de furar, verifique o tipo de parede e escolha buchas e parafusos adequados.",
+        "Before assembly, verify the service positions and appliance opening.": "Antes da montagem, verifique as posições das instalações e o vão do aparelho.",
+        "A tall unit must always be planned for wall fixing.": "Um módulo alto deve sempre ser planejado com fixação na parede.",
+    },
+    "ru": {
+        "Cut List": "Карта раскроя",
+        "Summary - all cut parts": "Сводка - все детали раскроя",
+        "Project data": "Данные проекта",
+        "Field": "Поле",
+        "Value": "Значение",
+        "What you take to the workshop - cutting": "Что передать в мастерскую - распил",
+        "What you take to the workshop - edging": "Что передать в мастерскую - кромкование",
+        "What you take to the workshop - processing": "Что передать в мастерскую - обработка",
+        "Workshop instructions": "Инструкции для мастерской",
+        "Material": "Материал",
+        "Thk.": "Толщ.",
+        "Length [mm]": "Длина [мм]",
+        "Width [mm]": "Ширина [мм]",
+        "Edge": "Кромка",
+        "Qty": "Кол.",
+        "Wall": "Стена",
+        "Module": "Модуль",
+        "Part": "Деталь",
+        "Note": "Примечание",
+        "Processing type": "Тип обработки",
+        "Operations": "Операции",
+        "Execution basis": "Основание выполнения",
+        "Processing / note": "Обработка / примечание",
+        "Carcass (sides, bottom, top)": "Корпус (боковины, дно, верх)",
+        "Back panels": "Задние панели",
+        "Fronts": "Фасады",
+        "Worktop and supports": "Столешница и опоры",
+        "Plinth / toe kick": "Цоколь",
+        "By unit - details and assembly": "По модулям - детали и сборка",
+        "Label": "Метка",
+        "Where it goes": "Куда ставится",
+        "Step": "Шаг",
+        "Note for beginners": "Примечание для новичка",
+        "Important part notes": "Важные примечания по деталям",
+        "Check before assembly": "Проверить перед сборкой",
+        "Assembly parts map": "Карта деталей для сборки",
+        "Cut parts": "Детали раскроя",
+        "Required tools and hardware": "Необходимые инструменты и фурнитура",
+        "Assembly instructions": "Инструкция по сборке",
+        "What you buy separately": "Что покупается отдельно",
+        "Ready-made products - not included in cutting": "Готовые изделия - не входят в распил",
+        "Workflow order": "Порядок работ",
+        "What you do": "Что делать",
+        "Checklist before workshop": "Чеклист перед мастерской",
+        "Checklist before home assembly": "Чеклист перед домашней сборкой",
+        "Status": "Статус",
+        "Drill-driver or screwdriver": "Шуруповерт или отвертка",
+        "Tape measure": "Рулетка",
+        "Spirit level": "Уровень",
+        "Wall brackets / hanging hardware": "Настенные крепления / подвесная фурнитура",
+        "Door hinges": "Петли для дверей",
+        "Drawer runners": "Направляющие для ящиков",
+        "Lift-up mechanism": "Подъемный механизм",
+        "Glass-door hinges": "Петли для стеклянных дверей",
+        "Dishwasher front mounting kit": "Монтажный комплект фасада ПММ",
+        "Wall plugs / screws according to wall type": "Дюбели / шурупы по типу стены",
+        "Check that the number of parts matches the table.": "Проверьте, что количество деталей соответствует таблице.",
+        "Separate carcass parts, fronts, backs and hardware before assembly.": "Перед сборкой отделите детали корпуса, фасады, задние панели и фурнитуру.",
+        "Check the edged sides so the front of the unit is oriented correctly.": "Проверьте кромкованные стороны, чтобы правильно ориентировать перед модуля.",
+        "Before drilling, check the wall type and choose suitable plugs and screws.": "Перед сверлением проверьте тип стены и выберите подходящие дюбели и шурупы.",
+        "Before assembly, verify the service positions and appliance opening.": "Перед сборкой проверьте позиции коммуникаций и проем для прибора.",
+        "A tall unit must always be planned for wall fixing.": "Высокий модуль обязательно должен крепиться к стене.",
+    },
+    "zh-cn": {
+        "Cut List": "切割清单",
+        "Summary - all cut parts": "汇总 - 所有切割件",
+        "Project data": "项目数据",
+        "Field": "字段",
+        "Value": "值",
+        "What you take to the workshop - cutting": "交给车间 - 切割",
+        "What you take to the workshop - edging": "交给车间 - 封边",
+        "What you take to the workshop - processing": "交给车间 - 加工",
+        "Workshop instructions": "车间说明",
+        "Material": "材料",
+        "Thk.": "厚度",
+        "Length [mm]": "长度 [mm]",
+        "Width [mm]": "宽度 [mm]",
+        "Edge": "封边",
+        "Qty": "数量",
+        "Wall": "墙",
+        "Module": "模块",
+        "Part": "部件",
+        "Note": "备注",
+        "Processing type": "加工类型",
+        "Operations": "操作",
+        "Execution basis": "执行依据",
+        "Processing / note": "加工 / 备注",
+        "Carcass (sides, bottom, top)": "柜体（侧板、底板、顶板）",
+        "Back panels": "背板",
+        "Fronts": "门板",
+        "Worktop and supports": "台面和支撑",
+        "Plinth / toe kick": "踢脚板",
+        "By unit - details and assembly": "按模块 - 细节和组装",
+        "Label": "标记",
+        "Where it goes": "安装位置",
+        "Step": "步骤",
+        "Note for beginners": "新手提示",
+        "Important part notes": "重要部件说明",
+        "Check before assembly": "组装前检查",
+        "Assembly parts map": "组装部件图",
+        "Cut parts": "切割件",
+        "Required tools and hardware": "所需工具和五金",
+        "Assembly instructions": "组装说明",
+        "What you buy separately": "需另行购买",
+        "Ready-made products - not included in cutting": "成品 - 不包含在切割中",
+        "Workflow order": "工作顺序",
+        "What you do": "操作内容",
+        "Checklist before workshop": "车间前检查表",
+        "Checklist before home assembly": "家庭组装前检查表",
+        "Status": "状态",
+        "Drill-driver or screwdriver": "电动螺丝刀或螺丝刀",
+        "Tape measure": "卷尺",
+        "Spirit level": "水平仪",
+        "Wall brackets / hanging hardware": "墙面支架 / 吊挂五金",
+        "Door hinges": "门铰链",
+        "Drawer runners": "抽屉滑轨",
+        "Lift-up mechanism": "上翻机构",
+        "Glass-door hinges": "玻璃门铰链",
+        "Dishwasher front mounting kit": "洗碗机门板安装套件",
+        "Wall plugs / screws according to wall type": "按墙体类型选择膨胀塞 / 螺丝",
+        "Check that the number of parts matches the table.": "检查部件数量是否与表格一致。",
+        "Separate carcass parts, fronts, backs and hardware before assembly.": "组装前分开柜体件、门板、背板和五金。",
+        "Check the edged sides so the front of the unit is oriented correctly.": "检查封边侧，确保模块正面方向正确。",
+        "Before drilling, check the wall type and choose suitable plugs and screws.": "钻孔前检查墙体类型，并选择合适的膨胀塞和螺丝。",
+        "Before assembly, verify the service positions and appliance opening.": "组装前确认管线位置和电器开口。",
+        "A tall unit must always be planned for wall fixing.": "高柜必须规划墙面固定。",
+    },
+    "hi": {
+        "Cut List": "कट सूची",
+        "Summary - all cut parts": "सारांश - सभी कटिंग भाग",
+        "Project data": "प्रोजेक्ट डेटा",
+        "Field": "फ़ील्ड",
+        "Value": "मान",
+        "What you take to the workshop - cutting": "कार्यशाला में ले जाने वाली चीज़ें - कटिंग",
+        "What you take to the workshop - edging": "कार्यशाला में ले जाने वाली चीज़ें - एज बैंडिंग",
+        "What you take to the workshop - processing": "कार्यशाला में ले जाने वाली चीज़ें - प्रोसेसिंग",
+        "Workshop instructions": "कार्यशाला निर्देश",
+        "Material": "सामग्री",
+        "Thk.": "मोटाई",
+        "Length [mm]": "लंबाई [mm]",
+        "Width [mm]": "चौड़ाई [mm]",
+        "Edge": "एज",
+        "Qty": "मात्रा",
+        "Wall": "दीवार",
+        "Module": "मॉड्यूल",
+        "Part": "भाग",
+        "Note": "नोट",
+        "Processing type": "प्रोसेसिंग प्रकार",
+        "Operations": "ऑपरेशन",
+        "Execution basis": "निष्पादन आधार",
+        "Processing / note": "प्रोसेसिंग / नोट",
+        "Carcass (sides, bottom, top)": "ढांचा (साइड, नीचे, ऊपर)",
+        "Back panels": "पीछे के पैनल",
+        "Fronts": "फ्रंट",
+        "Worktop and supports": "वर्कटॉप और सपोर्ट",
+        "Plinth / toe kick": "सोकल",
+        "By unit - details and assembly": "मॉड्यूल अनुसार - विवरण और असेंबली",
+        "Label": "लेबल",
+        "Where it goes": "कहाँ लगेगा",
+        "Step": "चरण",
+        "Note for beginners": "शुरुआती उपयोगकर्ता के लिए नोट",
+        "Important part notes": "भागों के महत्वपूर्ण नोट",
+        "Check before assembly": "असेंबली से पहले जाँचें",
+        "Assembly parts map": "असेंबली भागों का नक्शा",
+        "Cut parts": "कटिंग भाग",
+        "Required tools and hardware": "ज़रूरी औज़ार और हार्डवेयर",
+        "Assembly instructions": "असेंबली निर्देश",
+        "What you buy separately": "अलग से क्या खरीदना है",
+        "Ready-made products - not included in cutting": "तैयार उत्पाद - कटिंग में शामिल नहीं",
+        "Workflow order": "काम का क्रम",
+        "What you do": "क्या करना है",
+        "Checklist before workshop": "कार्यशाला से पहले चेकलिस्ट",
+        "Checklist before home assembly": "घर पर असेंबली से पहले चेकलिस्ट",
+        "Status": "स्थिति",
+        "Drill-driver or screwdriver": "ड्रिल-driver या screwdriver",
+        "Tape measure": "माप टेप",
+        "Spirit level": "लेवल",
+        "Wall brackets / hanging hardware": "दीवार ब्रैकेट / हैंगिंग हार्डवेयर",
+        "Door hinges": "दरवाज़े के हिंग",
+        "Drawer runners": "दराज़ स्लाइड",
+        "Lift-up mechanism": "लिफ्ट-up मैकेनिज़्म",
+        "Glass-door hinges": "काँच के दरवाज़े के हिंग",
+        "Dishwasher front mounting kit": "डिशवॉशर फ्रंट mounting kit",
+        "Wall plugs / screws according to wall type": "दीवार के प्रकार के अनुसार plug / screw",
+        "Check that the number of parts matches the table.": "जाँचें कि भागों की संख्या तालिका से मेल खाती है।",
+        "Separate carcass parts, fronts, backs and hardware before assembly.": "असेंबली से पहले ढांचा, फ्रंट, पीछे के पैनल और हार्डवेयर अलग रखें।",
+        "Check the edged sides so the front of the unit is oriented correctly.": "एज लगी तरफ़ों की जाँच करें ताकि मॉड्यूल का फ्रंट सही दिशा में रहे।",
+        "Before drilling, check the wall type and choose suitable plugs and screws.": "ड्रिलिंग से पहले दीवार का प्रकार जाँचें और सही plug/screw चुनें।",
+        "Before assembly, verify the service positions and appliance opening.": "असेंबली से पहले service positions और appliance opening की जाँच करें।",
+        "A tall unit must always be planned for wall fixing.": "लंबे मॉड्यूल को हमेशा दीवार से fix करने की योजना रखें।",
+    },
+}
+
+_PDF_PHRASES["es"].update({
+    "Cut length": "Longitud de corte",
+    "Cut width": "Ancho de corte",
+    "Cut-outs": "Recortes",
+    "Depth": "Profundidad",
+    "Field cut": "Corte en obra",
+    "Group": "Grupo",
+    "Image labels match the parts table: C = carcass, B = back, F = front, D = drawer.": "Las etiquetas de la imagen coinciden con la tabla: C = carcasa, B = trasera, F = frente, D = cajón.",
+    "Instruction": "Instrucción",
+    "Item": "Ítem",
+    "Joint": "Unión",
+    "Length": "Longitud",
+    "Name": "Nombre",
+    "Purchase": "Compra",
+    "Required": "Necesario",
+    "The labels in the 2D view use the same short label as the table and assembly steps.": "Las etiquetas de la vista 2D usan la misma marca corta que la tabla y los pasos de montaje.",
+    "The part label is the same in the image, table and text. Sort the parts by label first, then start assembly.": "La etiqueta de la pieza es la misma en la imagen, la tabla y el texto. Ordena primero las piezas por etiqueta y luego inicia el montaje.",
+    "Type / Code": "Tipo / código",
+    "Wall L": "Long. pared",
+    "Width": "Ancho",
+})
+
+_PDF_PHRASES["pt-br"].update({
+    "Cut length": "Comprimento de corte",
+    "Cut width": "Largura de corte",
+    "Cut-outs": "Recortes",
+    "Depth": "Profundidade",
+    "Field cut": "Corte em obra",
+    "Group": "Grupo",
+    "Image labels match the parts table: C = carcass, B = back, F = front, D = drawer.": "As etiquetas da imagem correspondem à tabela: C = carcaça, B = fundo, F = frente, D = gaveta.",
+    "Instruction": "Instrução",
+    "Item": "Item",
+    "Joint": "Emenda",
+    "Length": "Comprimento",
+    "Name": "Nome",
+    "Purchase": "Compra",
+    "Required": "Necessário",
+    "The labels in the 2D view use the same short label as the table and assembly steps.": "As etiquetas na vista 2D usam a mesma marca curta da tabela e dos passos de montagem.",
+    "The part label is the same in the image, table and text. Sort the parts by label first, then start assembly.": "A etiqueta da peça é a mesma na imagem, na tabela e no texto. Separe primeiro as peças por etiqueta e depois inicie a montagem.",
+    "Type / Code": "Tipo / código",
+    "Wall L": "Comp. parede",
+    "Width": "Largura",
+})
+
+_PDF_PHRASES["ru"].update({
+    "Cut length": "Длина реза",
+    "Cut width": "Ширина реза",
+    "Cut-outs": "Вырезы",
+    "Depth": "Глубина",
+    "Field cut": "Подрезка на месте",
+    "Group": "Группа",
+    "Image labels match the parts table: C = carcass, B = back, F = front, D = drawer.": "Метки на изображении соответствуют таблице: C = корпус, B = задняя панель, F = фасад, D = ящик.",
+    "Instruction": "Инструкция",
+    "Item": "Позиция",
+    "Joint": "Стык",
+    "Length": "Длина",
+    "Name": "Название",
+    "Purchase": "Закупка",
+    "Required": "Требуется",
+    "The labels in the 2D view use the same short label as the table and assembly steps.": "Метки на 2D-виде используют ту же короткую маркировку, что таблица и шаги сборки.",
+    "The part label is the same in the image, table and text. Sort the parts by label first, then start assembly.": "Метка детали одинакова на изображении, в таблице и в тексте. Сначала разложите детали по меткам, затем начинайте сборку.",
+    "Type / Code": "Тип / код",
+    "Wall L": "Длина стены",
+    "Width": "Ширина",
+})
+
+_PDF_PHRASES["zh-cn"].update({
+    "Cut length": "切割长度",
+    "Cut width": "切割宽度",
+    "Cut-outs": "开孔",
+    "Depth": "深度",
+    "Field cut": "现场切割",
+    "Group": "组",
+    "Image labels match the parts table: C = carcass, B = back, F = front, D = drawer.": "图片标签与部件表一致：C = 柜体，B = 背板，F = 门板，D = 抽屉。",
+    "Instruction": "说明",
+    "Item": "项目",
+    "Joint": "接缝",
+    "Length": "长度",
+    "Name": "名称",
+    "Purchase": "采购",
+    "Required": "需要",
+    "The labels in the 2D view use the same short label as the table and assembly steps.": "2D 视图中的标签使用与表格和组装步骤相同的短标签。",
+    "The part label is the same in the image, table and text. Sort the parts by label first, then start assembly.": "图片、表格和文本中的部件标签一致。先按标签整理部件，再开始组装。",
+    "Type / Code": "类型 / 编码",
+    "Wall L": "墙长",
+    "Width": "宽度",
+})
+
+_PDF_PHRASES["hi"].update({
+    "Cut length": "कट लंबाई",
+    "Cut width": "कट चौड़ाई",
+    "Cut-outs": "कट-आउट",
+    "Depth": "गहराई",
+    "Field cut": "साइट पर कट",
+    "Group": "समूह",
+    "Image labels match the parts table: C = carcass, B = back, F = front, D = drawer.": "चित्र के लेबल भागों की तालिका से मेल खाते हैं: C = ढांचा, B = पीछे, F = फ्रंट, D = दराज़।",
+    "Instruction": "निर्देश",
+    "Item": "आइटम",
+    "Joint": "जोड़",
+    "Length": "लंबाई",
+    "Name": "नाम",
+    "Purchase": "खरीद",
+    "Required": "आवश्यक",
+    "The labels in the 2D view use the same short label as the table and assembly steps.": "2D दृश्य में लेबल वही छोटे लेबल इस्तेमाल करते हैं जो तालिका और असेंबली चरणों में हैं।",
+    "The part label is the same in the image, table and text. Sort the parts by label first, then start assembly.": "भाग का लेबल चित्र, तालिका और टेक्स्ट में समान है। पहले भागों को लेबल के अनुसार अलग करें, फिर असेंबली शुरू करें।",
+    "Type / Code": "प्रकार / कोड",
+    "Wall L": "दीवार लंबाई",
+    "Width": "चौड़ाई",
+})
+
+
+def _pdf_t(sr: str, en: str, lang: str) -> str:
+    lang_key = normalize_language_code(lang)
+    if lang_key == "sr":
+        return sr
+    if lang_key == "en":
+        return en
+    return _PDF_PHRASES.get(lang_key, {}).get(en, en)
 
 
 def _friendly_part_name(value, lang: str = "sr") -> str:
@@ -108,6 +552,7 @@ def _friendly_part_name(value, lang: str = "sr") -> str:
 
 def _friendly_position_name(value, lang: str = "sr") -> str:
     txt = str(value or "").strip()
+    lang_key = normalize_language_code(lang)
     mapping = {
         "LEVO": "Levo",
         "DESNO": "Desno",
@@ -117,8 +562,8 @@ def _friendly_position_name(value, lang: str = "sr") -> str:
         "NAPRED": "Napred",
         "POZADI": "Pozadi",
     }
-    if str(lang or "sr").lower().strip() == "en":
-        mapping_en = {
+    localized = {
+        "en": {
             "LEVO": "Left",
             "DESNO": "Right",
             "GORE": "Top",
@@ -126,8 +571,55 @@ def _friendly_position_name(value, lang: str = "sr") -> str:
             "CENTAR": "Center",
             "NAPRED": "Front",
             "POZADI": "Back",
-        }
-        return mapping_en.get(txt.upper(), txt)
+        },
+        "es": {
+            "LEVO": "Izquierda",
+            "DESNO": "Derecha",
+            "GORE": "Arriba",
+            "DOLE": "Abajo",
+            "CENTAR": "Centro",
+            "NAPRED": "Frente",
+            "POZADI": "Atrás",
+        },
+        "pt-br": {
+            "LEVO": "Esquerda",
+            "DESNO": "Direita",
+            "GORE": "Acima",
+            "DOLE": "Abaixo",
+            "CENTAR": "Centro",
+            "NAPRED": "Frente",
+            "POZADI": "Atrás",
+        },
+        "ru": {
+            "LEVO": "Слева",
+            "DESNO": "Справа",
+            "GORE": "Сверху",
+            "DOLE": "Снизу",
+            "CENTAR": "Центр",
+            "NAPRED": "Спереди",
+            "POZADI": "Сзади",
+        },
+        "zh-cn": {
+            "LEVO": "左",
+            "DESNO": "右",
+            "GORE": "上",
+            "DOLE": "下",
+            "CENTAR": "中间",
+            "NAPRED": "前",
+            "POZADI": "后",
+        },
+        "hi": {
+            "LEVO": "बाएँ",
+            "DESNO": "दाएँ",
+            "GORE": "ऊपर",
+            "DOLE": "नीचे",
+            "CENTAR": "केंद्र",
+            "NAPRED": "आगे",
+            "POZADI": "पीछे",
+        },
+    }.get(lang_key)
+    if localized:
+        return localized.get(txt.upper(), txt)
     mapping.update({
         "Left": "Levo",
         "Right": "Desno",
@@ -223,13 +715,139 @@ def _friendly_part_name(value, lang: str = "sr") -> str:
         "Ledja / prolaz": "Back panel / opening",
     }
     mapping_sr.update({str(v): str(k) for k, v in mapping_en.items()})
-    mapping = mapping_en if str(lang or "sr").lower().strip() == "en" else mapping_sr
-    return mapping.get(txt, txt)
+    lang_key = normalize_language_code(lang)
+    if lang_key == "en":
+        return mapping_en.get(txt, txt)
+    if lang_key == "sr":
+        return mapping_sr.get(txt, txt)
+
+    english_label = mapping_en.get(txt)
+    if not english_label:
+        if txt in set(mapping_en.values()):
+            english_label = txt
+        else:
+            sr_label = mapping_sr.get(txt, txt)
+            english_label = {
+                "Leva stranica korpusa": "Left carcass side",
+                "Desna stranica korpusa": "Right carcass side",
+                "Donja ploča korpusa": "Bottom carcass panel",
+                "Gornja ploča korpusa": "Top carcass panel",
+                "Front vrata": "Door front",
+                "Front fioke": "Drawer front",
+                "Front fioke ispod rerne": "Drawer front below oven",
+                "Front vrata ispod sudopere": "Door front below sink",
+                "Front za rernu": "Oven front",
+                "Prednja strana sanduka fioke": "Drawer box front",
+                "Zadnja strana sanduka fioke": "Drawer box back",
+                "Dno sanduka fioke": "Drawer box bottom",
+                "Bočna stranica sanduka fioke": "Drawer box side",
+                "Leđna ploča": "Back panel",
+                "Leđna ploča / prolaz": "Back panel / opening",
+            }.get(sr_label, sr_label)
+    translated = {
+        "es": {
+            "Left carcass side": "Lateral izquierdo de carcasa",
+            "Right carcass side": "Lateral derecho de carcasa",
+            "Bottom carcass panel": "Panel inferior de carcasa",
+            "Top carcass panel": "Panel superior de carcasa",
+            "Door front": "Frente de puerta",
+            "Drawer front": "Frente de cajón",
+            "Drawer front below oven": "Frente de cajón bajo horno",
+            "Door front below sink": "Frente de puerta bajo fregadero",
+            "Oven front": "Frente de horno",
+            "Drawer box front": "Frente de caja de cajón",
+            "Drawer box back": "Trasera de caja de cajón",
+            "Drawer box bottom": "Fondo de caja de cajón",
+            "Drawer box side": "Lateral de caja de cajón",
+            "Back panel": "Panel trasero",
+            "Back panel / opening": "Panel trasero / paso",
+        },
+        "pt-br": {
+            "Left carcass side": "Lateral esquerda da carcaça",
+            "Right carcass side": "Lateral direita da carcaça",
+            "Bottom carcass panel": "Painel inferior da carcaça",
+            "Top carcass panel": "Painel superior da carcaça",
+            "Door front": "Frente de porta",
+            "Drawer front": "Frente de gaveta",
+            "Drawer front below oven": "Frente de gaveta sob o forno",
+            "Door front below sink": "Frente de porta sob a pia",
+            "Oven front": "Frente do forno",
+            "Drawer box front": "Frente da caixa da gaveta",
+            "Drawer box back": "Traseira da caixa da gaveta",
+            "Drawer box bottom": "Fundo da caixa da gaveta",
+            "Drawer box side": "Lateral da caixa da gaveta",
+            "Back panel": "Painel traseiro",
+            "Back panel / opening": "Painel traseiro / passagem",
+        },
+        "ru": {
+            "Left carcass side": "Левая боковина корпуса",
+            "Right carcass side": "Правая боковина корпуса",
+            "Bottom carcass panel": "Нижняя панель корпуса",
+            "Top carcass panel": "Верхняя панель корпуса",
+            "Door front": "Дверной фасад",
+            "Drawer front": "Фасад ящика",
+            "Drawer front below oven": "Фасад ящика под духовкой",
+            "Door front below sink": "Фасад двери под мойкой",
+            "Oven front": "Фасад духовки",
+            "Drawer box front": "Передняя стенка ящика",
+            "Drawer box back": "Задняя стенка ящика",
+            "Drawer box bottom": "Дно ящика",
+            "Drawer box side": "Боковина ящика",
+            "Back panel": "Задняя панель",
+            "Back panel / opening": "Задняя панель / проход",
+        },
+        "zh-cn": {
+            "Left carcass side": "左侧柜体板",
+            "Right carcass side": "右侧柜体板",
+            "Bottom carcass panel": "柜体底板",
+            "Top carcass panel": "柜体顶板",
+            "Door front": "门板",
+            "Drawer front": "抽屉面板",
+            "Drawer front below oven": "烤箱下抽屉面板",
+            "Door front below sink": "水槽下门板",
+            "Oven front": "烤箱面板",
+            "Drawer box front": "抽屉盒前板",
+            "Drawer box back": "抽屉盒后板",
+            "Drawer box bottom": "抽屉盒底板",
+            "Drawer box side": "抽屉盒侧板",
+            "Back panel": "背板",
+            "Back panel / opening": "背板 / 开口",
+        },
+        "hi": {
+            "Left carcass side": "बायाँ ढांचा साइड",
+            "Right carcass side": "दायाँ ढांचा साइड",
+            "Bottom carcass panel": "ढांचा नीचे का पैनल",
+            "Top carcass panel": "ढांचा ऊपर का पैनल",
+            "Door front": "दरवाज़ा फ्रंट",
+            "Drawer front": "दराज़ फ्रंट",
+            "Drawer front below oven": "ओवन के नीचे दराज़ फ्रंट",
+            "Door front below sink": "सिंक के नीचे दरवाज़ा फ्रंट",
+            "Oven front": "ओवन फ्रंट",
+            "Drawer box front": "दराज़ बॉक्स फ्रंट",
+            "Drawer box back": "दराज़ बॉक्स बैक",
+            "Drawer box bottom": "दराज़ बॉक्स नीचे",
+            "Drawer box side": "दराज़ बॉक्स साइड",
+            "Back panel": "पीछे का पैनल",
+            "Back panel / opening": "पीछे का पैनल / ओपनिंग",
+        },
+    }
+    return translated.get(lang_key, {}).get(english_label, english_label)
 
 
 def _kant_legend(lang: str = "sr") -> str:
-    if str(lang or "sr").lower().strip() == "en":
+    lang_key = normalize_language_code(lang)
+    if lang_key == "en":
         return "Edge legend: T = top edge, B = bottom edge, L = left edge, R = right edge, F = front edge."
+    if lang_key == "es":
+        return "Leyenda de canto: T = canto superior, B = canto inferior, L = canto izquierdo, R = canto derecho, F = canto frontal."
+    if lang_key == "pt-br":
+        return "Legenda de orla: T = borda superior, B = borda inferior, L = borda esquerda, R = borda direita, F = borda frontal."
+    if lang_key == "ru":
+        return "Легенда кромки: T = верхняя кромка, B = нижняя кромка, L = левая кромка, R = правая кромка, F = передняя кромка."
+    if lang_key == "zh-cn":
+        return "封边图例：T = 上边，B = 下边，L = 左边，R = 右边，F = 前边。"
+    if lang_key == "hi":
+        return "एज लेजेंड: T = ऊपर की एज, B = नीचे की एज, L = बाईं एज, R = दाईं एज, F = सामने की एज।"
     return "Legenda kanta: T = gornja ivica, B = donja ivica, L = leva ivica, R = desna ivica, F = prednja ivica."
 
 
@@ -237,7 +855,8 @@ def _format_material_role_pdf(material: str, role: str, lang: str = "sr") -> str
     mat = str(material or "").strip()
     if not mat:
         return ""
-    if str(lang or "sr").lower().strip() == "en":
+    lang_key = normalize_language_code(lang)
+    if lang_key == "en":
         role_map = {
             "carcass": "Carcass",
             "front": "Front",
@@ -245,6 +864,51 @@ def _format_material_role_pdf(material: str, role: str, lang: str = "sr") -> str
             "drawer_box": "Drawer box",
             "worktop": "Worktop",
             "plinth": "Plinth",
+        }
+    elif lang_key == "es":
+        role_map = {
+            "carcass": "Carcasa",
+            "front": "Frente",
+            "back": "Trasera",
+            "drawer_box": "Caja de cajón",
+            "worktop": "Encimera",
+            "plinth": "Zócalo",
+        }
+    elif lang_key == "pt-br":
+        role_map = {
+            "carcass": "Carcaça",
+            "front": "Frente",
+            "back": "Traseiro",
+            "drawer_box": "Caixa da gaveta",
+            "worktop": "Tampo",
+            "plinth": "Soco",
+        }
+    elif lang_key == "ru":
+        role_map = {
+            "carcass": "Корпус",
+            "front": "Фасад",
+            "back": "Задняя панель",
+            "drawer_box": "Короб ящика",
+            "worktop": "Столешница",
+            "plinth": "Цоколь",
+        }
+    elif lang_key == "zh-cn":
+        role_map = {
+            "carcass": "柜体",
+            "front": "门板",
+            "back": "背板",
+            "drawer_box": "抽屉盒",
+            "worktop": "台面",
+            "plinth": "踢脚板",
+        }
+    elif lang_key == "hi":
+        role_map = {
+            "carcass": "ढांचा",
+            "front": "फ्रंट",
+            "back": "पीछे का पैनल",
+            "drawer_box": "दराज़ बॉक्स",
+            "worktop": "वर्कटॉप",
+            "plinth": "सोकल",
         }
     else:
         role_map = {
@@ -273,58 +937,42 @@ def _summary_material_label(section_key: str, material: str, lang: str = "sr") -
 
 
 def _part_role_note(part_name: str, material: str, thickness: str, lang: str = "sr") -> str:
+    lang_key = normalize_language_code(lang)
     part = str(part_name or "").lower()
     mat = str(material or "").upper()
     thk = str(thickness or "").strip()
     if "leđ" in part or "ledj" in part or "back panel" in part:
         if mat.startswith("MDF"):
-            return "Tanja zadnja ploča elementa." if lang == "sr" else "Thin back panel of the unit."
+            return {
+                "sr": "Tanja zadnja ploča elementa.",
+                "en": "Thin back panel of the unit.",
+                "es": "Panel trasero fino del módulo.",
+                "pt-br": "Painel traseiro fino do módulo.",
+                "ru": "Тонкая задняя панель модуля.",
+                "zh-cn": "模块的薄背板。",
+                "hi": "मॉड्यूल का पतला पीछे का पैनल।",
+            }.get(lang_key, "Thin back panel of the unit.")
         if mat.startswith("HDF") or "LESONIT" in mat:
-            return "Zadnja ploča elementa." if lang == "sr" else "Back panel of the unit."
+            return {
+                "sr": "Zadnja ploča elementa.",
+                "en": "Back panel of the unit.",
+                "es": "Panel trasero del módulo.",
+                "pt-br": "Painel traseiro do módulo.",
+                "ru": "Задняя панель модуля.",
+                "zh-cn": "模块背板。",
+                "hi": "मॉड्यूल का पीछे का पैनल।",
+            }.get(lang_key, "Back panel of the unit.")
     if "front" in part or "vrata" in part:
         if mat.startswith("MDF"):
-            return f"MDF front {thk} mm." if lang == "sr" else f"MDF front {thk} mm."
-    return ""
-
-
-def _format_material_role_pdf(material: str, role: str, lang: str = "sr") -> str:
-    mat = str(material or "").strip()
-    if not mat:
-        return ""
-    if str(lang or "sr").lower().strip() == "en":
-        role_map = {
-            "carcass": "Carcass",
-            "front": "Front",
-            "back": "Back",
-            "drawer_box": "Drawer box",
-            "worktop": "Worktop",
-            "plinth": "Plinth",
-        }
-    else:
-        role_map = {
-            "carcass": "Korpus",
-            "front": "Front",
-            "back": "Le\u0111a",
-            "drawer_box": "Sanduk fioke",
-            "worktop": "Radna plo\u010da",
-            "plinth": "Sokla",
-        }
-    role_label = role_map.get(str(role or "").strip().lower(), "")
-    return f"{mat} {role_label}".strip() if role_label else mat
-
-
-def _part_role_note(part_name: str, material: str, thickness: str, lang: str = "sr") -> str:
-    part = _normalize_label_text(part_name).lower()
-    mat = str(material or "").upper()
-    thk = str(thickness or "").strip()
-    if "le\u0111" in part or "ledj" in part or "back panel" in part:
-        if mat.startswith("MDF"):
-            return "Tanja zadnja plo\u010da elementa." if lang == "sr" else "Thin back panel of the unit."
-        if mat.startswith("HDF") or "LESONIT" in mat:
-            return "Zadnja plo\u010da elementa." if lang == "sr" else "Back panel of the unit."
-    if "front" in part or "vrata" in part:
-        if mat.startswith("MDF"):
-            return f"MDF front {thk} mm." if lang == "sr" else f"MDF front {thk} mm."
+            return {
+                "sr": f"MDF front {thk} mm.",
+                "en": f"MDF front {thk} mm.",
+                "es": f"Frente MDF {thk} mm.",
+                "pt-br": f"Frente MDF {thk} mm.",
+                "ru": f"Фасад MDF {thk} мм.",
+                "zh-cn": f"MDF 门板 {thk} mm。",
+                "hi": f"MDF फ्रंट {thk} mm.",
+            }.get(lang_key, f"MDF front {thk} mm.")
     return ""
 
 
@@ -332,7 +980,7 @@ def _module_tool_hardware_lines(tid: str, zone: str, lang: str = "sr") -> list[s
     _lang = str(lang or "sr").lower().strip()
     FONT_REGULAR, FONT_BOLD = _register_pdf_fonts()
     def _t(sr: str, en: str) -> str:
-        return en if _lang == "en" else sr
+        return _pdf_t(sr, en, _lang)
     tid_u = str(tid or "").upper()
     lines = [
         _t("Aku-odvijač ili šrafciger", "Drill-driver or screwdriver"),
@@ -359,7 +1007,7 @@ def _module_tool_hardware_lines(tid: str, zone: str, lang: str = "sr") -> list[s
 def _module_preassembly_lines(tid: str, zone: str, lang: str = "sr") -> list[str]:
     _lang = str(lang or "sr").lower().strip()
     def _t(sr: str, en: str) -> str:
-        return en if _lang == "en" else sr
+        return _pdf_t(sr, en, _lang)
     tid_u = str(tid or "").upper()
     lines = [
         _t("Proveri da li broj delova odgovara tabeli.", "Check that the number of parts matches the table."),
@@ -431,7 +1079,7 @@ def build_pdf_bytes(
     _lang = str(lang or "sr").lower().strip()
 
     def _t(sr: str, en: str) -> str:
-        return en if _lang == "en" else sr
+        return _pdf_t(sr, en, _lang)
 
     # ── Helpers ────────────────────────────────────────────────────────────────
     import struct as _struct

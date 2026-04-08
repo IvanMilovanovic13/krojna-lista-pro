@@ -45,6 +45,7 @@ from ui_pdf_export import (
     _module_preassembly_lines,
     _module_tool_hardware_lines,
     _part_role_note,
+    _pdf_t,
     _short_part_code,
 )
 
@@ -2797,7 +2798,7 @@ def build_project_header(kitchen: Dict[str, Any], lang: str = "sr") -> pd.DataFr
     """Project header for workshop / end-user packet."""
     _lang = str(lang or "sr").lower().strip()
     def _t(sr: str, en: str) -> str:
-        return en if _lang == "en" else sr
+        return _pdf_t(sr, en, _lang)
     wall = kitchen.get("wall", {}) or {}
     meta = kitchen.get("project", {}) or {}
     room = str(meta.get("room", "") or kitchen.get("room_name", "") or _t("Kuhinja", "Kitchen"))
@@ -3455,7 +3456,7 @@ def build_service_packet(
     """Workshop-oriented packet: cuts, edging, processing, shopping, checklist."""
     _lang = str(lang or "sr").lower().strip()
     def _t(sr: str, en: str) -> str:
-        return en if _lang == "en" else sr
+        return _pdf_t(sr, en, _lang)
     sections = sections or generate_cutlist(kitchen)
     packet: Dict[str, pd.DataFrame] = {}
     _profile_key = (kitchen.get("manufacturing", {}) or {}).get("profile", "EU_SRB")
@@ -3789,7 +3790,7 @@ def build_cutlist_pdf_bytes(
     _register_fonts()
     _lang = str(lang or "sr").lower().strip()
     def _t(sr: str, en: str) -> str:
-        return en if _lang == "en" else sr
+        return _pdf_t(sr, en, _lang)
 
     def _pdf_clean_text(value: Any) -> str:
         txt = str(value or "")
@@ -4531,7 +4532,7 @@ def generate_cutlist_excel(
 
     _lang = str(lang or "sr").lower().strip()
     def _t(sr: str, en: str) -> str:
-        return en if _lang == "en" else sr
+        return _pdf_t(sr, en, _lang)
     if _lang == "en" and title == "Krojna lista PRO":
         title = "Cut List PRO"
 
@@ -4929,7 +4930,7 @@ def generate_cutlist_csv(kitchen: Dict[str, Any], lang: str = "sr") -> bytes:
 
     _lang = str(lang or "sr").lower().strip()
     def _t(sr: str, en: str) -> str:
-        return en if _lang == "en" else sr
+        return _pdf_t(sr, en, _lang)
     final_ds = get_final_cutlist_dataset(kitchen, lang=_lang)
     summary = final_ds.get("summary", {}) or {}
     df = summary.get("summary_detaljna", pd.DataFrame())
@@ -5153,7 +5154,7 @@ def generate_appliance_list(kitchen: Dict[str, Any], lang: str = "sr") -> pd.Dat
     modules = kitchen.get("modules", []) or []
     _lang = str(lang or "sr").lower().strip()
     def _t(sr: str, en: str) -> str:
-        return en if _lang == "en" else sr
+        return _pdf_t(sr, en, _lang)
     appliance_map = {
         "Frizider sa zamrzivačem": "Fridge with freezer",
         "Frizider": "Fridge",
@@ -5195,7 +5196,7 @@ def generate_wardrobe_sections_csv(kitchen: Dict[str, Any], lang: str = "sr") ->
     from io import StringIO
     _lang = str(lang or "sr").lower().strip()
     def _t(sr: str, en: str) -> str:
-        return en if _lang == "en" else sr
+        return _pdf_t(sr, en, _lang)
 
     mats = kitchen.get("materials", {}) or {}
     carcass_mat = str(mats.get("carcass_material", _t("Iverica", "Chipboard")))
