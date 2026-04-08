@@ -2882,6 +2882,7 @@ def _translate_export_text_ptbr(value: Any, column: str = "") -> str:
     common: list[tuple[str, str]] = [
         ("Krojna Lista PRO", "Lista de Corte PRO"),
         ("Krojna lista PRO", "Lista de Corte PRO"),
+        ("Krojna lista", "Lista de Corte"),
         ("Cut List PRO", "Lista de Corte PRO"),
         ("Cut List", "Lista de Corte"),
         ("Project", "Projeto"),
@@ -2930,6 +2931,8 @@ def _translate_export_text_ptbr(value: Any, column: str = "") -> str:
         ("Radna ploča", "Bancada"),
         ("Leđna ploča", "Painel traseiro"),
         ("Parcijalna leđna ploča", "Painel traseiro parcial"),
+        ("Back panel / opening", "Painel traseiro / passagem"),
+        ("Leđa / prolaz", "Painel traseiro / passagem"),
         ("Leva strana", "Lateral esquerda"),
         ("Desna strana", "Lateral direita"),
         ("Srednja vertikala", "Divisória vertical central"),
@@ -4287,6 +4290,9 @@ def build_cutlist_pdf_bytes(
         _header_map_pt = {
             "RB": "RB",
             "PartCode": "PartCode",
+            "Korak": "Passo",
+            "Šta radiš": "O que fazer",
+            "Sta radis": "O que fazer",
             "Zid": "Parede",
             "Modul": "Módulo",
             "Deo": "Peça",
@@ -4356,6 +4362,8 @@ def build_cutlist_pdf_bytes(
             return None
 
     story: List[Any] = []
+    if _lang == "pt-br":
+        project_title = _translate_export_text(project_title, _lang, "Polje")
 
     # ---- Zaglavlje dokumenta ----
     story.append(Paragraph(_pdf_clean_text(project_title), s_title))
