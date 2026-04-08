@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from auth_models import ensure_local_session
 from i18n import SYM_CHEVRON
 
 
@@ -65,6 +66,11 @@ def _render_wizard(
     if state.wizard_step == 3:
         state.wizard_step = 4
 
+    _auth_mode = str(getattr(state, 'current_auth_mode', '') or '').strip().lower()
+    if state.wizard_step == 1 and not _auth_mode:
+        _render_wizard_auth_gate(ui, state, tr_fn, main_content_refresh, switch_tab)
+        return
+
     if state.wizard_step == 1:
         _render_wizard_step1(ui, state, tr_fn, main_content_refresh, switch_tab)
     elif state.wizard_step == 2:
@@ -83,6 +89,44 @@ def _render_wizard(
             ROOM_OPENING_TYPES=room_opening_types,
             ROOM_FIXTURE_TYPES=room_fixture_types,
         )
+
+
+def _render_wizard_auth_gate(
+    ui: Any,
+    state: Any,
+    tr_fn: Callable[[str], str],
+    main_content_refresh: Callable[[], None],
+    switch_tab: Callable[[str], None],
+) -> None:
+    def _continue_local() -> None:
+        session = ensure_local_session()
+        state.current_user_id = int(session.user.user_id)
+        state.current_user_email = str(session.user.email)
+        state.current_user_display = str(session.user.display_name)
+        state.current_auth_mode = "local"
+        state.current_access_tier = str(session.user.access_tier or "local_beta")
+        state.current_subscription_status = str(session.user.subscription_status or "local_active")
+        state.current_gate_reason = str(session.gate_reason or "")
+        state.current_can_access_app = bool(session.can_access_app)
+        main_content_refresh()
+
+    with ui.column().classes('w-full h-full overflow-auto bg-gray-50 items-center justify-center p-8 gap-5'):
+        with ui.card().classes('w-full max-w-2xl p-8 bg-white border border-gray-200'):
+            ui.label(tr_fn('wizard.auth_gate_title')).classes('text-3xl font-bold text-gray-900')
+            ui.label(tr_fn('wizard.auth_gate_desc')).classes('text-base text-gray-600')
+            with ui.column().classes('w-full gap-3 mt-4'):
+                ui.button(
+                    tr_fn('wizard.auth_gate_create_btn'),
+                    on_click=lambda: switch_tab('nalog'),
+                ).classes('w-full bg-[#111] text-white')
+                ui.button(
+                    tr_fn('wizard.auth_gate_login_btn'),
+                    on_click=lambda: switch_tab('nalog'),
+                ).classes('w-full bg-white text-[#111] border border-[#111]')
+            ui.link(
+                tr_fn('wizard.auth_gate_local_link'),
+                _continue_local,
+            ).classes('text-sm text-gray-500 mt-4')
 
 
 def _render_wizard_step1(

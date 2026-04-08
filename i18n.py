@@ -8912,6 +8912,62 @@ _TRANSLATIONS.setdefault("zh-cn", {}).update({
     "elements.drawer_label": "抽屉 {i}",
 })
 
+_TRANSLATIONS["sr"].update({
+    "wizard.auth_gate_title": "Dobrodošli u Krojnu listu PRO",
+    "wizard.auth_gate_desc": "Da bi napravio kuhinju i sačuvao projekat, napravi besplatan nalog.",
+    "wizard.auth_gate_create_btn": "Napravi nalog",
+    "wizard.auth_gate_login_btn": "Već imam nalog - Prijavi se",
+    "wizard.auth_gate_local_link": "Nastavi lokalno bez naloga",
+})
+
+_TRANSLATIONS["en"].update({
+    "wizard.auth_gate_title": "Welcome to Cut List PRO",
+    "wizard.auth_gate_desc": "To design your kitchen and save the project, create a free account.",
+    "wizard.auth_gate_create_btn": "Create account",
+    "wizard.auth_gate_login_btn": "I already have an account - Sign in",
+    "wizard.auth_gate_local_link": "Continue locally without an account",
+})
+
+_TRANSLATIONS.setdefault("es", {}).update({
+    "wizard.auth_gate_title": "Bienvenido a Lista de Corte PRO",
+    "wizard.auth_gate_desc": "Para diseñar tu cocina y guardar el proyecto, crea una cuenta gratuita.",
+    "wizard.auth_gate_create_btn": "Crear cuenta",
+    "wizard.auth_gate_login_btn": "Ya tengo una cuenta - Iniciar sesión",
+    "wizard.auth_gate_local_link": "Continuar localmente sin cuenta",
+})
+
+_TRANSLATIONS.setdefault("pt-br", {}).update({
+    "wizard.auth_gate_title": "Bem-vindo ao Lista de Corte PRO",
+    "wizard.auth_gate_desc": "Para criar sua cozinha e salvar o projeto, crie uma conta gratuita.",
+    "wizard.auth_gate_create_btn": "Criar conta",
+    "wizard.auth_gate_login_btn": "Já tenho conta - Entrar",
+    "wizard.auth_gate_local_link": "Continuar localmente sem conta",
+})
+
+_TRANSLATIONS.setdefault("ru", {}).update({
+    "wizard.auth_gate_title": "Добро пожаловать в Карта раскроя PRO",
+    "wizard.auth_gate_desc": "Чтобы спроектировать кухню и сохранить проект, создайте бесплатный аккаунт.",
+    "wizard.auth_gate_create_btn": "Создать аккаунт",
+    "wizard.auth_gate_login_btn": "У меня уже есть аккаунт - Войти",
+    "wizard.auth_gate_local_link": "Продолжить локально без аккаунта",
+})
+
+_TRANSLATIONS.setdefault("zh-cn", {}).update({
+    "wizard.auth_gate_title": "欢迎使用裁切清单 PRO",
+    "wizard.auth_gate_desc": "要设计厨房并保存项目，请先创建一个免费账号。",
+    "wizard.auth_gate_create_btn": "创建账号",
+    "wizard.auth_gate_login_btn": "我已有账号 - 登录",
+    "wizard.auth_gate_local_link": "不使用账号，本地继续",
+})
+
+_TRANSLATIONS.setdefault("hi", {}).update({
+    "wizard.auth_gate_title": "कट लिस्ट PRO में आपका स्वागत है",
+    "wizard.auth_gate_desc": "रसोई बनाना और प्रोजेक्ट सेव करना शुरू करने के लिए एक मुफ्त अकाउंट बनाएं।",
+    "wizard.auth_gate_create_btn": "अकाउंट बनाएं",
+    "wizard.auth_gate_login_btn": "मेरे पास पहले से अकाउंट है - लॉग इन करें",
+    "wizard.auth_gate_local_link": "बिना अकाउंट के लोकल जारी रखें",
+})
+
 def get_language_options() -> dict[str, str]:
     return dict(VISIBLE_LANGUAGE_OPTIONS)
 
