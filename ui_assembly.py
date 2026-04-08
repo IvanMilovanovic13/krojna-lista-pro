@@ -217,6 +217,7 @@ def _translate_instruction_line(line: str, lang: str = "sr") -> str:
     txt = re.sub(r"^\s*Obezbedi ravnu nisu sirine", "  Provide a level opening, width", txt)
     txt = re.sub(r"^\s*Obezbedi ravnu poziciju sirine", "  Provide a level opening, width", txt)
     txt = re.sub(r"^\s*Obezbedi poziciju sirine", "  Provide an opening, width", txt)
+    txt = txt.replace("KORAK ", "STEP ")
     txt = txt.replace("ledjima", "the back panel")
     return txt
 
