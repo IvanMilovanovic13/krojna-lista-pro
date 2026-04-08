@@ -276,6 +276,7 @@ def render_nova_tab(
             billing_title, billing_desc, show_checkout, show_portal = _dashboard_billing_copy(billing)
             primary_title, primary_desc, primary_btn, primary_mode = _dashboard_primary_action_copy(billing)
             _show_plan_cards = _current_tier in {'trial', 'local', 'local_beta', ''}
+            _upgrade_focus = bool(getattr(state, 'account_upgrade_focus', False))
 
             with ui.card().classes('w-full p-6 bg-[#f7f5ef] border border-gray-200'):
                 ui.label('krojna lista PRO').classes('text-3xl font-bold text-gray-900')
@@ -331,6 +332,11 @@ def render_nova_tab(
                     ui.label(tr_fn('nova.paid_success_title')).classes('text-base font-bold text-[#166534]')
                     ui.label(tr_fn('nova.billing_state_paid_desc')).classes('text-sm text-[#166534]')
 
+            if _upgrade_focus:
+                with ui.card().classes('w-full p-5 bg-[#fff7d6] border-2 border-[#d4a017]'):
+                    ui.label(tr_fn('nova.primary_action_upgrade_title')).classes('text-lg font-bold text-gray-900')
+                    ui.label(tr_fn('nova.primary_action_upgrade_desc')).classes('text-sm text-gray-700')
+
             if _show_plan_cards:
                 with ui.row().classes('w-full gap-4 max-md:flex-col'):
                     with ui.card().classes('flex-1 p-5 bg-white border border-gray-200'):
@@ -347,6 +353,9 @@ def render_nova_tab(
                             tr_fn('nova.plan_monthly_btn'),
                             on_click=lambda: _start_paid_checkout('pro_monthly'),
                         ).classes('w-full mt-4 bg-[#111] text-white')
+
+                if _upgrade_focus:
+                    ui.timer(0.05, lambda: ui.run_javascript('window.scrollTo({top: 0, behavior: "auto"})'), once=True)
 
             if billing_title or billing_desc:
                 with ui.card().classes('w-full p-5 bg-[#f8fafc] border border-gray-200'):

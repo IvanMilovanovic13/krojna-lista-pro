@@ -252,6 +252,7 @@ class AppState:
     current_subscription_status: str = ""
     current_gate_reason: str = ""
     current_can_access_app: bool = True
+    account_upgrade_focus: bool = False
     current_project_id: int = 0
     current_project_name: str = ""
     current_project_source: str = ""
@@ -367,6 +368,7 @@ def reset_state() -> None:
     state.current_subscription_status = ""
     state.current_gate_reason = ""
     state.current_can_access_app = True
+    state.account_upgrade_focus = False
     state.current_project_id = 0
     state.current_project_name = ""
     state.current_project_source = ""

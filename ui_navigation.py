@@ -31,6 +31,7 @@ def switch_tab(
         cutlist_access = get_cutlist_access_state()
         if str(cutlist_access.get("allowed", "")).lower() != "true":
             state.active_tab = "nalog"
+            state.account_upgrade_focus = True
             ui.notify(str(cutlist_access.get("reason", "") or "Krojna lista nije dostupna."), type="warning")
             safe_refresh(main_content_refresh, logger)
             ui.timer(0.05, lambda: ui.run_javascript('window.scrollTo({top: 0, behavior: "auto"})'), once=True)
