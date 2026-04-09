@@ -2157,9 +2157,12 @@ def get_current_billing_summary() -> Dict[str, Any] | None:
 
 
 def get_cutlist_access_state() -> Dict[str, str]:
+    from i18n import tr
+
     source = str(getattr(state, "current_project_source", "") or "").strip().lower()
     tier = str(getattr(state, "current_access_tier", "") or "").strip().lower()
     status = str(getattr(state, "current_subscription_status", "") or "").strip().lower()
+    lang = str(getattr(state, "language", "sr") or "sr")
 
     if "demo" in source:
         return {"allowed": "true", "reason": "", "mode": "demo"}
@@ -2168,24 +2171,24 @@ def get_cutlist_access_state() -> Dict[str, str]:
     if tier == "trial":
         return {
             "allowed": "false",
-            "reason": "Free pristup dozvoljava dizajn. Krojna lista, cuvanje, ucitavanje i export su dostupni tek posle placanja.",
+            "reason": tr("access.cutlist_reason_free", lang),
             "mode": "free",
         }
     if tier in {"local", "local_beta", ""}:
         return {
             "allowed": "false",
-            "reason": "Ova opcija je dostupna tek posle aktivacije PRO pristupa.",
+            "reason": tr("access.cutlist_reason_local", lang),
             "mode": "free",
         }
     if status in {"inactive", "canceled", "past_due"}:
         return {
             "allowed": "false",
-            "reason": "PRO pristup nije aktivan. Aktiviraj plan da otvoris krojnu listu, cuvanje, ucitavanje i exporte.",
+            "reason": tr("access.cutlist_reason_inactive", lang),
             "mode": "blocked",
         }
     return {
         "allowed": "false",
-        "reason": "Krojna lista je trenutno zakljucana za ovaj nalog.",
+        "reason": tr("access.cutlist_reason_locked", lang),
         "mode": "blocked",
     }
 

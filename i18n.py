@@ -9025,6 +9025,55 @@ _TRANSLATIONS.setdefault("hi", {}).update({
 })
 
 _TRANSLATIONS["sr"].update({
+    "access.cutlist_reason_free": "Free pristup dozvoljava dizajn. Krojna lista, čuvanje, učitavanje i export su dostupni tek posle plaćanja.",
+    "access.cutlist_reason_local": "Ova opcija je dostupna tek posle aktivacije PRO pristupa.",
+    "access.cutlist_reason_inactive": "PRO pristup nije aktivan. Aktiviraj plan da otvoriš krojnu listu, čuvanje, učitavanje i exporte.",
+    "access.cutlist_reason_locked": "Krojna lista je trenutno zaključana za ovaj nalog.",
+})
+
+_TRANSLATIONS["en"].update({
+    "access.cutlist_reason_free": "Free access allows design only. Cut list, save, load and export become available after payment.",
+    "access.cutlist_reason_local": "This option becomes available after you activate PRO access.",
+    "access.cutlist_reason_inactive": "PRO access is not active. Activate a plan to open the cut list, save, load and exports.",
+    "access.cutlist_reason_locked": "Cut list is currently locked for this account.",
+})
+
+_TRANSLATIONS.setdefault("es", {}).update({
+    "access.cutlist_reason_free": "El acceso Free permite solo el diseño. La lista de corte, guardar, cargar y exportar estarán disponibles después del pago.",
+    "access.cutlist_reason_local": "Esta opción estará disponible después de activar el acceso PRO.",
+    "access.cutlist_reason_inactive": "El acceso PRO no está activo. Activa un plan para abrir la lista de corte, guardar, cargar y exportar.",
+    "access.cutlist_reason_locked": "La lista de corte está bloqueada para esta cuenta.",
+})
+
+_TRANSLATIONS.setdefault("pt-br", {}).update({
+    "access.cutlist_reason_free": "O acesso Free permite apenas o design. Lista de corte, salvar, carregar e exportar ficam disponíveis após o pagamento.",
+    "access.cutlist_reason_local": "Esta opção fica disponível depois de ativar o acesso PRO.",
+    "access.cutlist_reason_inactive": "O acesso PRO não está ativo. Ative um plano para abrir a lista de corte, salvar, carregar e exportar.",
+    "access.cutlist_reason_locked": "A lista de corte está bloqueada para esta conta.",
+})
+
+_TRANSLATIONS.setdefault("ru", {}).update({
+    "access.cutlist_reason_free": "Бесплатный доступ позволяет только проектирование. Карта раскроя, сохранение, загрузка и экспорт станут доступны после оплаты.",
+    "access.cutlist_reason_local": "Эта опция станет доступна после активации PRO-доступа.",
+    "access.cutlist_reason_inactive": "PRO-доступ не активен. Активируйте план, чтобы открыть карту раскроя, сохранение, загрузку и экспорт.",
+    "access.cutlist_reason_locked": "Карта раскроя сейчас заблокирована для этого аккаунта.",
+})
+
+_TRANSLATIONS.setdefault("zh-cn", {}).update({
+    "access.cutlist_reason_free": "Free 访问仅支持设计。裁切清单、保存、加载和导出将在付款后开放。",
+    "access.cutlist_reason_local": "激活 PRO 权限后才能使用此功能。",
+    "access.cutlist_reason_inactive": "PRO 权限未激活。请激活套餐后再打开裁切清单、保存、加载和导出。",
+    "access.cutlist_reason_locked": "此账号当前无法使用裁切清单。",
+})
+
+_TRANSLATIONS.setdefault("hi", {}).update({
+    "access.cutlist_reason_free": "Free एक्सेस केवल डिज़ाइन की अनुमति देता है। कट लिस्ट, सेव, लोड और एक्सपोर्ट भुगतान के बाद उपलब्ध होंगे।",
+    "access.cutlist_reason_local": "यह विकल्प PRO एक्सेस सक्रिय करने के बाद उपलब्ध होगा।",
+    "access.cutlist_reason_inactive": "PRO एक्सेस सक्रिय नहीं है। कट लिस्ट, सेव, लोड और एक्सपोर्ट खोलने के लिए प्लान सक्रिय करें।",
+    "access.cutlist_reason_locked": "इस अकाउंट के लिए कट लिस्ट अभी लॉक है।",
+})
+
+_TRANSLATIONS["sr"].update({
     "cutlist.locked_title": "Krojna lista je zaključana",
     "cutlist.locked_desc": "Krojna lista i export (PDF/Excel) su dostupni uz PRO pristup.",
     "cutlist.locked_features_title": "Sa PRO pristupom dobijaš",
