@@ -8918,6 +8918,14 @@ _TRANSLATIONS["sr"].update({
     "wizard.auth_gate_create_btn": "Napravi nalog",
     "wizard.auth_gate_login_btn": "Već imam nalog - Prijavi se",
     "wizard.auth_gate_local_link": "Nastavi lokalno bez naloga",
+    "marketing.saving_label": "Prosečna ušteda",
+    "marketing.saving_pct": "do 50%",
+    "marketing.saving_desc": "pri izradi kuhinje po meri",
+    "marketing.benefit_1": "Isplaniraj kuhinju brzo i jasno",
+    "marketing.benefit_2": "Dobij tačnu krojnu listu spremnu za radionicu",
+    "marketing.benefit_3": "Sastavi elemente uz jasna uputstva",
+    "marketing.video_label": "Pogledaj kako radi — 2 min",
+    "marketing.video_soon": "Video uskoro dostupan",
 })
 
 _TRANSLATIONS["en"].update({
@@ -8926,6 +8934,14 @@ _TRANSLATIONS["en"].update({
     "wizard.auth_gate_create_btn": "Create account",
     "wizard.auth_gate_login_btn": "I already have an account - Sign in",
     "wizard.auth_gate_local_link": "Continue locally without an account",
+    "marketing.saving_label": "Average savings",
+    "marketing.saving_pct": "up to 50%",
+    "marketing.saving_desc": "when building a custom kitchen",
+    "marketing.benefit_1": "Plan your kitchen quickly and clearly",
+    "marketing.benefit_2": "Get an accurate cut list ready for the workshop",
+    "marketing.benefit_3": "Assemble each cabinet with clear instructions",
+    "marketing.video_label": "See how it works — 2 min",
+    "marketing.video_soon": "Video coming soon",
 })
 
 _TRANSLATIONS.setdefault("es", {}).update({
@@ -8934,6 +8950,14 @@ _TRANSLATIONS.setdefault("es", {}).update({
     "wizard.auth_gate_create_btn": "Crear cuenta",
     "wizard.auth_gate_login_btn": "Ya tengo una cuenta - Iniciar sesión",
     "wizard.auth_gate_local_link": "Continuar localmente sin cuenta",
+    "marketing.saving_label": "Ahorro promedio",
+    "marketing.saving_pct": "hasta 50%",
+    "marketing.saving_desc": "al fabricar una cocina a medida",
+    "marketing.benefit_1": "Planifica tu cocina de forma rápida y clara",
+    "marketing.benefit_2": "Obtén una lista de corte precisa lista para el taller",
+    "marketing.benefit_3": "Monta cada módulo con instrucciones claras",
+    "marketing.video_label": "Mira cómo funciona — 2 min",
+    "marketing.video_soon": "Video disponible pronto",
 })
 
 _TRANSLATIONS.setdefault("pt-br", {}).update({
@@ -8942,6 +8966,14 @@ _TRANSLATIONS.setdefault("pt-br", {}).update({
     "wizard.auth_gate_create_btn": "Criar conta",
     "wizard.auth_gate_login_btn": "Já tenho conta - Entrar",
     "wizard.auth_gate_local_link": "Continuar localmente sem conta",
+    "marketing.saving_label": "Economia média",
+    "marketing.saving_pct": "até 50%",
+    "marketing.saving_desc": "na fabricação de uma cozinha sob medida",
+    "marketing.benefit_1": "Planeje sua cozinha com rapidez e clareza",
+    "marketing.benefit_2": "Receba uma lista de corte precisa pronta para a marcenaria",
+    "marketing.benefit_3": "Monte cada módulo com instruções claras",
+    "marketing.video_label": "Veja como funciona — 2 min",
+    "marketing.video_soon": "Vídeo disponível em breve",
 })
 
 _TRANSLATIONS.setdefault("ru", {}).update({
@@ -8950,6 +8982,14 @@ _TRANSLATIONS.setdefault("ru", {}).update({
     "wizard.auth_gate_create_btn": "Создать аккаунт",
     "wizard.auth_gate_login_btn": "У меня уже есть аккаунт - Войти",
     "wizard.auth_gate_local_link": "Продолжить локально без аккаунта",
+    "marketing.saving_label": "Средняя экономия",
+    "marketing.saving_pct": "до 50%",
+    "marketing.saving_desc": "при изготовлении кухни на заказ",
+    "marketing.benefit_1": "Спланируйте кухню быстро и понятно",
+    "marketing.benefit_2": "Получите точную карту раскроя, готовую для мастерской",
+    "marketing.benefit_3": "Соберите каждый модуль по понятным инструкциям",
+    "marketing.video_label": "Посмотрите, как это работает — 2 мин",
+    "marketing.video_soon": "Видео скоро будет доступно",
 })
 
 _TRANSLATIONS.setdefault("zh-cn", {}).update({
@@ -8958,6 +8998,14 @@ _TRANSLATIONS.setdefault("zh-cn", {}).update({
     "wizard.auth_gate_create_btn": "创建账号",
     "wizard.auth_gate_login_btn": "我已有账号 - 登录",
     "wizard.auth_gate_local_link": "不使用账号，本地继续",
+    "marketing.saving_label": "平均节省",
+    "marketing.saving_pct": "最高 50%",
+    "marketing.saving_desc": "用于定制厨房制作",
+    "marketing.benefit_1": "快速清晰地规划你的厨房",
+    "marketing.benefit_2": "获得可直接交给工坊的精确裁切清单",
+    "marketing.benefit_3": "按照清晰说明自己组装每个柜体",
+    "marketing.video_label": "看看它如何工作 — 2 分钟",
+    "marketing.video_soon": "视频即将上线",
 })
 
 _TRANSLATIONS.setdefault("hi", {}).update({
@@ -8966,6 +9014,14 @@ _TRANSLATIONS.setdefault("hi", {}).update({
     "wizard.auth_gate_create_btn": "अकाउंट बनाएं",
     "wizard.auth_gate_login_btn": "मेरे पास पहले से अकाउंट है - लॉग इन करें",
     "wizard.auth_gate_local_link": "बिना अकाउंट के लोकल जारी रखें",
+    "marketing.saving_label": "औसत बचत",
+    "marketing.saving_pct": "50% तक",
+    "marketing.saving_desc": "कस्टम रसोई बनवाने में",
+    "marketing.benefit_1": "अपनी रसोई जल्दी और साफ़ तरीके से प्लान करें",
+    "marketing.benefit_2": "वर्कशॉप के लिए तैयार सटीक कट लिस्ट पाएं",
+    "marketing.benefit_3": "हर कैबिनेट को साफ़ निर्देशों के साथ खुद जोड़ें",
+    "marketing.video_label": "देखें यह कैसे काम करता है — 2 मिनट",
+    "marketing.video_soon": "वीडियो जल्द उपलब्ध होगा",
 })
 
 _TRANSLATIONS["sr"].update({

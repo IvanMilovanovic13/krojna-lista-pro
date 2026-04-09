@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from auth_models import ensure_local_session
 from i18n import SYM_CHEVRON
 
 
@@ -98,31 +97,40 @@ def _render_wizard_auth_gate(
     main_content_refresh: Callable[[], None],
     switch_tab: Callable[[str], None],
 ) -> None:
-    def _continue_local() -> None:
-        session = ensure_local_session()
-        state.current_user_id = int(session.user.user_id)
-        state.current_user_email = str(session.user.email)
-        state.current_user_display = str(session.user.display_name)
-        state.current_auth_mode = "local"
-        state.current_access_tier = str(session.user.access_tier or "local_beta")
-        state.current_subscription_status = str(session.user.subscription_status or "local_active")
-        state.current_gate_reason = str(session.gate_reason or "")
-        state.current_can_access_app = bool(session.can_access_app)
-        main_content_refresh()
-
     with ui.column().classes('w-full h-full overflow-auto bg-gray-50 items-center justify-center p-8 gap-5'):
         with ui.card().classes('w-full max-w-2xl p-8 bg-white border border-gray-200'):
-            ui.label(tr_fn('wizard.auth_gate_title')).classes('text-3xl font-bold text-gray-900')
-            ui.label(tr_fn('wizard.auth_gate_desc')).classes('text-base text-gray-600')
-            with ui.column().classes('w-full gap-3 mt-4'):
-                ui.button(
-                    tr_fn('wizard.auth_gate_create_btn'),
-                    on_click=lambda: switch_tab('nalog'),
-                ).classes('w-full bg-[#111] text-white')
-                ui.button(
-                    tr_fn('wizard.auth_gate_login_btn'),
-                    on_click=lambda: switch_tab('nalog'),
-                ).classes('w-full bg-white text-[#111] border border-[#111]')
+            with ui.column().classes('w-full items-center gap-6'):
+                ui.label(tr_fn('wizard.auth_gate_title')).classes('text-3xl font-bold text-gray-900 text-center')
+                ui.label(tr_fn('wizard.auth_gate_desc')).classes('text-base text-gray-600 text-center max-w-[480px]')
+                with ui.card().classes('w-full max-w-[320px] p-6 bg-gray-50 border border-gray-200 shadow-none'):
+                    with ui.column().classes('items-center gap-2'):
+                        ui.label(tr_fn('marketing.saving_label')).classes('text-sm font-semibold uppercase tracking-[0.16em] text-gray-500')
+                        ui.label(tr_fn('marketing.saving_pct')).classes('text-[48px] leading-none font-bold text-gray-900')
+                        ui.label(tr_fn('marketing.saving_desc')).classes('text-sm text-gray-700 text-center')
+                with ui.column().classes('w-full max-w-[480px] gap-3'):
+                    for icon_name, text_key in (
+                        ('draw', 'marketing.benefit_1'),
+                        ('table_view', 'marketing.benefit_2'),
+                        ('handyman', 'marketing.benefit_3'),
+                    ):
+                        with ui.row().classes('w-full items-start gap-3'):
+                            ui.icon(icon_name).classes('text-gray-700 text-[18px] mt-0.5')
+                            ui.label(tr_fn(text_key)).classes('text-sm text-gray-700')
+                with ui.card().classes(
+                    'w-full max-w-[480px] aspect-video p-0 bg-gray-900 border border-gray-800 rounded-lg shadow-none cursor-pointer hover:bg-gray-800'
+                ).on('click', lambda: ui.notify(tr_fn('marketing.video_soon'), type='info', timeout=3000)):
+                    with ui.column().classes('w-full h-full items-center justify-center gap-3'):
+                        ui.icon('play_circle').classes('text-white text-[32px]')
+                        ui.label(tr_fn('marketing.video_label')).classes('text-[13px] text-white text-center')
+                with ui.column().classes('w-full max-w-[480px] gap-3 mt-2'):
+                    ui.button(
+                        tr_fn('wizard.auth_gate_create_btn'),
+                        on_click=lambda: switch_tab('nalog'),
+                    ).classes('w-full bg-[#111] text-white')
+                    ui.button(
+                        tr_fn('wizard.auth_gate_login_btn'),
+                        on_click=lambda: switch_tab('nalog'),
+                    ).classes('w-full bg-white text-[#111] border border-[#111]')
 
 
 def _render_wizard_step1(
