@@ -123,10 +123,6 @@ def _render_wizard_auth_gate(
                     tr_fn('wizard.auth_gate_login_btn'),
                     on_click=lambda: switch_tab('nalog'),
                 ).classes('w-full bg-white text-[#111] border border-[#111]')
-            ui.link(
-                tr_fn('wizard.auth_gate_local_link'),
-                _continue_local,
-            ).classes('text-sm text-gray-500 mt-4')
 
 
 def _render_wizard_step1(
