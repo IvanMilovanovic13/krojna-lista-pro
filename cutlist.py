@@ -2802,7 +2802,7 @@ def build_project_header(kitchen: Dict[str, Any], lang: str = "sr") -> pd.DataFr
     wall = kitchen.get("wall", {}) or {}
     meta = kitchen.get("project", {}) or {}
     room = str(meta.get("room", "") or kitchen.get("room_name", "") or _t("Kuhinja", "Kitchen"))
-    project_name = str(meta.get("name", "") or kitchen.get("project_name", "") or _t("Krojna Lista PRO", "Cut List PRO"))
+    project_name = str(meta.get("name", "") or kitchen.get("project_name", "") or ("Krojna Lista PRO" if _lang == "sr" else "CabinetCut PRO"))
     version = str(meta.get("version", "") or kitchen.get("version", "") or "v1")
     customer = str(meta.get("customer", "") or kitchen.get("customer_name", "") or "-")
     wall_name = str(meta.get("wall_name", "") or wall.get("name", "") or _t("Zid A", "Wall A"))
@@ -5474,18 +5474,18 @@ def generate_cutlist_pdf(
     lang: str = "sr",
 ) -> bytes:
     """Returns PDF bytes."""
-    if str(lang or "sr").lower().strip() == "en" and title in {"Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
-        title = "Cut List PRO - M1 (single wall)"
+    if str(lang or "sr").lower().strip() == "en" and title in {"Krojna lista PRO", "Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
+        title = "CabinetCut PRO" if title == "Krojna lista PRO" else "CabinetCut PRO - M1 (single wall)"
     if str(lang or "sr").lower().strip() == "es" and title in {"Krojna lista PRO", "Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
-        title = "Lista de Corte PRO" if title == "Krojna lista PRO" else "Lista de Corte PRO - M1 (una pared)"
+        title = "CabinetCut PRO" if title == "Krojna lista PRO" else "CabinetCut PRO - M1 (una pared)"
     if str(lang or "sr").lower().strip() == "ru" and title in {"Krojna lista PRO", "Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
-        title = "Карта раскроя PRO" if title == "Krojna lista PRO" else "Карта раскроя PRO - M1 (одна стена)"
-    if str(lang or "sr").lower().strip() == "pt-br" and title in {"Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
-        title = "Lista de Corte PRO - M1 (uma parede)"
+        title = "CabinetCut PRO" if title == "Krojna lista PRO" else "CabinetCut PRO - M1 (одна стена)"
+    if str(lang or "sr").lower().strip() == "pt-br" and title in {"Krojna lista PRO", "Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
+        title = "CabinetCut PRO" if title == "Krojna lista PRO" else "CabinetCut PRO - M1 (uma parede)"
     if str(lang or "sr").lower().strip() == "zh-cn" and title in {"Krojna lista PRO", "Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
-        title = "裁切清单 PRO" if title == "Krojna lista PRO" else "裁切清单 PRO - M1 (单面墙)"
+        title = "CabinetCut PRO" if title == "Krojna lista PRO" else "CabinetCut PRO - M1 (单面墙)"
     if str(lang or "sr").lower().strip() == "hi" and title in {"Krojna lista PRO", "Krojna lista PRO - M1 (jedan zid)", "Krojna lista PRO – M1 (jedan zid)"}:
-        title = "कट लिस्ट PRO" if title == "Krojna lista PRO" else "कट लिस्ट PRO - M1 (एक दीवार)"
+        title = "CabinetCut PRO" if title == "Krojna lista PRO" else "CabinetCut PRO - M1 (एक दीवार)"
     final_ds = get_final_cutlist_dataset(kitchen, lang=lang)
     sections = final_ds["sections"]
     return build_cutlist_pdf_bytes(kitchen, sections, project_title=title, lang=lang)
@@ -5517,18 +5517,8 @@ def generate_cutlist_excel(
     _lang = str(lang or "sr").lower().strip()
     def _t(sr: str, en: str) -> str:
         return _pdf_t(sr, en, _lang)
-    if _lang == "en" and title == "Krojna lista PRO":
-        title = "Cut List PRO"
-    if _lang == "es" and title == "Krojna lista PRO":
-        title = "Lista de Corte PRO"
-    if _lang == "ru" and title == "Krojna lista PRO":
-        title = "Карта раскроя PRO"
-    if _lang == "pt-br" and title == "Krojna lista PRO":
-        title = "Lista de Corte PRO"
-    if _lang == "zh-cn" and title == "Krojna lista PRO":
-        title = "裁切清单 PRO"
-    if _lang == "hi" and title == "Krojna lista PRO":
-        title = "कट लिस्ट PRO"
+    if _lang != "sr" and title == "Krojna lista PRO":
+        title = "CabinetCut PRO"
 
     final_ds = get_final_cutlist_dataset(kitchen, lang=_lang)
     sections = final_ds["sections"]

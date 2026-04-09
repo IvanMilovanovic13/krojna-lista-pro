@@ -113,9 +113,7 @@ def _tr(key: str, **fmt: object) -> str:
 
 
 def _brand() -> None:
-    with ui.column().classes("gap-0 ml-2"):
-        ui.label("KROJNA").classes("public-brand")
-        ui.label("LISTA PRO").classes("public-brand public-brand-sub")
+    ui.label(_tr("wizard.title_app")).classes("public-brand ml-2")
 
 
 def _topbar(*, action_label: str, action_target: str, current_path: str) -> None:

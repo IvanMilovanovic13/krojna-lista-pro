@@ -216,7 +216,7 @@ def render_cutlist_tab(
                 kitchen=dict(state.kitchen),
                 job_type=job_type,
                 lang=_lang,
-                project_title='Cut List PRO' if _lang == 'en' else 'Krojna lista PRO',
+                project_title='Krojna lista PRO' if _lang == 'sr' else 'CabinetCut PRO',
             )
         except Exception as _job_ex:
             _LOG.debug("Export job queue failed: %s", _job_ex)

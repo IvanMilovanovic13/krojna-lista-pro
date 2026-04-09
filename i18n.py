@@ -1308,7 +1308,7 @@ _TRANSLATIONS = {
         "settings.worktop_top_edge_fmt": "Top edge of base units (working height): {total} mm = legs {foot} + carcass {base} + worktop {wt} mm",
         "settings.upper_bottom_fmt": "Bottom edge of upper unit [mm]: {val}",
         "settings.upper_height_fmt": "Upper unit height: {h} mm (from {bottom} mm to {max_h} mm below the ceiling)",
-        "wizard.title_app": "Cut List PRO",
+        "wizard.title_app": "CabinetCut PRO",
         "wizard.title_pick_type": "Choose what you are designing",
         "wizard.continue_existing": "Or continue with an existing project:",
         "wizard.load_project": "Load project (.json)",
@@ -1447,7 +1447,7 @@ _TRANSLATIONS = {
         "room.compass_c": "C",
         "room.close": "Close",
         "project_io.load_title": "Load project",
-        "project_io.load_desc": "Choose a Cut List PRO .json file",
+        "project_io.load_desc": "Choose a CabinetCut PRO .json file",
         "project_io.upload_label": "Choose .json file",
         "project_io.load_selected": "Load selected file",
         "project_io.cancel": "Cancel",
@@ -1566,7 +1566,7 @@ _TRANSLATIONS = {
         "cutlist.col_cut_length": "CUT length",
         "cutlist.col_cut_width": "CUT width",
         "cutlist.asm_step_line": "Step {step}: {part} | {piece} | {position} | qty {qty}",
-        "help.title": "Guide - Cut List PRO",
+        "help.title": "Guide - CabinetCut PRO",
         "help.md": (
             "## Workflow\n\n"
             "### 1. Wizard\n"
@@ -2186,7 +2186,7 @@ _TRANSLATIONS.setdefault("es", {}).update({
     "settings.worktop_top_edge_fmt": "Canto superior de muebles bajos (altura de trabajo): {total} mm = patas {foot} + cuerpo {base} + encimera {wt} mm",
     "settings.upper_bottom_fmt": "Canto inferior del mueble alto [mm]: {val}",
     "settings.upper_height_fmt": "Altura del mueble alto: {h} mm (de {bottom} mm a {max_h} mm bajo el techo)",
-    "wizard.title_app": "Lista de Corte PRO",
+    "wizard.title_app": "CabinetCut PRO",
     "wizard.title_pick_type": "Elige qué vas a diseñar",
     "wizard.continue_existing": "O continúa con un proyecto existente:",
     "wizard.load_project": "Cargar proyecto (.json)",
@@ -2258,7 +2258,7 @@ _TRANSLATIONS.setdefault("es", {}).update({
     "room.layout_u_shape": "En U",
     "room.layout_galley": "Galera",
     "project_io.load_title": "Cargar proyecto",
-    "project_io.load_desc": "Elige un archivo .json de Lista de Corte PRO",
+    "project_io.load_desc": "Elige un archivo .json de CabinetCut PRO",
     "project_io.upload_label": "Elegir archivo .json",
     "project_io.load_selected": "Cargar archivo seleccionado",
     "project_io.cancel": "Cancelar",
@@ -2303,7 +2303,7 @@ _TRANSLATIONS.setdefault("es", {}).update({
     "cutlist.checklist_service": "Lista antes del taller",
     "cutlist.checklist_assembly": "Lista antes del montaje",
     "cutlist.workflow": "Orden de trabajo",
-    "help.title": "Guía - Lista de Corte PRO",
+    "help.title": "Guía - CabinetCut PRO",
     "nova.title": "Nueva cocina",
     "nova.warn_clear": "Esto borrará el diseño actual.",
     "nova.confirm": "Confirmar - Nueva cocina",
@@ -2640,7 +2640,7 @@ _TRANSLATIONS.setdefault("pt-br", {}).update({
     "settings.worktop_top_edge_fmt": "Borda superior dos módulos inferiores (altura de trabalho): {total} mm = pés {foot} + corpo {base} + bancada {wt} mm",
     "settings.upper_bottom_fmt": "Borda inferior do módulo superior [mm]: {val}",
     "settings.upper_height_fmt": "Altura do módulo superior: {h} mm (de {bottom} mm até {max_h} mm abaixo do teto)",
-    "wizard.title_app": "Lista de Corte PRO",
+    "wizard.title_app": "CabinetCut PRO",
     "wizard.continue_existing": "Or continuar with an existing projeto:",
     "wizard.load_project": "Carregar projeto (.json)",
     "wizard.start_recommended": "Recomendado para o primeiro uso",
@@ -2765,7 +2765,7 @@ _TRANSLATIONS.setdefault("pt-br", {}).update({
     "room.compass_c": "C",
     "room.close": "Close",
     "project_io.load_title": "Load project",
-    "project_io.load_desc": "Choose a Cut List PRO .json file",
+    "project_io.load_desc": "Escolha um arquivo .json do CabinetCut PRO",
     "project_io.upload_label": "Choose .json file",
     "project_io.load_selected": "Load selected file",
     "project_io.cancel": "Cancel",
@@ -2852,7 +2852,7 @@ _TRANSLATIONS.setdefault("pt-br", {}).update({
     "cutlist.col_cut_length": "CUT length",
     "cutlist.col_cut_width": "CUT largura",
     "cutlist.asm_step_line": "Etapa {step}: {part} | {piece} | {position} | qty {qty}",
-    "help.title": "Guide - Cut List PRO",
+    "help.title": "Guia - CabinetCut PRO",
     "edit.apply": "Aplicar",
 })
 
@@ -2967,7 +2967,7 @@ _TRANSLATIONS.setdefault("ru", {}).update({
     "settings.worktop_top_edge_fmt": "Верхняя кромка нижних модулей (рабочая высота): {total} мм = ножки {foot} + корпус {base} + столешница {wt} мм",
     "settings.upper_bottom_fmt": "Нижняя кромка верхнего модуля [мм]: {val}",
     "settings.upper_height_fmt": "Высота верхнего модуля: {h} мм (от {bottom} мм до {max_h} мм ниже потолка)",
-    "wizard.title_app": "Карта раскроя PRO",
+    "wizard.title_app": "CabinetCut PRO",
     "wizard.type_json": "JSON",
     "wizard.type_kitchen": "Kitchen",
     "wizard.back": "Назад",
@@ -3011,7 +3011,7 @@ _TRANSLATIONS.setdefault("ru", {}).update({
     "room.compass_c": "C",
     "room.close": "Close",
     "project_io.load_title": "Load project",
-    "project_io.load_desc": "Choose a Cut List PRO .json file",
+    "project_io.load_desc": "Выберите файл .json CabinetCut PRO",
     "project_io.upload_label": "Choose .json file",
     "project_io.load_selected": "Load selected file",
     "project_io.cancel": "Cancel",
@@ -3052,7 +3052,7 @@ _TRANSLATIONS.setdefault("ru", {}).update({
     "cutlist.col_thickness": "Thk.",
     "cutlist.col_name": "Name",
     "cutlist.col_cut_length": "CUT length",
-    "help.title": "Guide - Cut List PRO",
+    "help.title": "Руководство - CabinetCut PRO",
     "settings.title": "Настройки",
     "edit.apply": "Применить",
 })
@@ -3168,7 +3168,7 @@ _TRANSLATIONS.setdefault("zh-cn", {}).update({
     "settings.worktop_top_edge_fmt": "地柜上边缘（工作高度）：{total} mm = 柜脚 {foot} + 柜体 {base} + 台面 {wt} mm",
     "settings.upper_bottom_fmt": "上柜下边缘 [mm]：{val}",
     "settings.upper_height_fmt": "上柜高度：{h} mm（从 {bottom} mm 到距天花板下方 {max_h} mm）",
-    "wizard.title_app": "裁切清单 PRO",
+    "wizard.title_app": "CabinetCut PRO",
     "wizard.type_json": "JSON",
     "wizard.type_kitchen": "Kitchen",
     "wizard.back": "返回",
@@ -3212,7 +3212,7 @@ _TRANSLATIONS.setdefault("zh-cn", {}).update({
     "room.compass_c": "C",
     "room.close": "Close",
     "project_io.load_title": "Load project",
-    "project_io.load_desc": "Choose a Cut List PRO .json file",
+    "project_io.load_desc": "选择一个 CabinetCut PRO 的 .json 文件",
     "project_io.upload_label": "Choose .json file",
     "project_io.load_selected": "Load selected file",
     "project_io.cancel": "Cancel",
@@ -3253,7 +3253,7 @@ _TRANSLATIONS.setdefault("zh-cn", {}).update({
     "cutlist.col_thickness": "Thk.",
     "cutlist.col_name": "Name",
     "cutlist.col_cut_length": "CUT length",
-    "help.title": "Guide - Cut List PRO",
+    "help.title": "指南 - CabinetCut PRO",
     "edit.apply": "应用",
 })
 
@@ -3368,7 +3368,7 @@ _TRANSLATIONS.setdefault("hi", {}).update({
     "settings.worktop_top_edge_fmt": "निचले मॉड्यूल की ऊपरी किनारी (कार्य ऊँचाई): {total} mm = पैर {foot} + कार्कस {base} + वर्कटॉप {wt} mm",
     "settings.upper_bottom_fmt": "ऊपरी मॉड्यूल की निचली किनारी [mm]: {val}",
     "settings.upper_height_fmt": "ऊपरी मॉड्यूल की ऊँचाई: {h} mm ({bottom} mm से लेकर छत के नीचे {max_h} mm तक)",
-    "wizard.title_app": "कट लिस्ट PRO",
+    "wizard.title_app": "CabinetCut PRO",
     "wizard.type_json": "JSON",
     "wizard.type_kitchen": "Kitchen",
     "wizard.step_type": "Furniture type",
@@ -3411,7 +3411,7 @@ _TRANSLATIONS.setdefault("hi", {}).update({
     "room.compass_c": "C",
     "room.close": "Close",
     "project_io.load_title": "Load project",
-    "project_io.load_desc": "Choose a Cut List PRO .json file",
+    "project_io.load_desc": "CabinetCut PRO की .json फ़ाइल चुनें",
     "project_io.upload_label": "Choose .json file",
     "project_io.load_selected": "Load selected file",
     "project_io.cancel": "Cancel",
@@ -3452,7 +3452,7 @@ _TRANSLATIONS.setdefault("hi", {}).update({
     "cutlist.col_thickness": "Thk.",
     "cutlist.col_name": "Name",
     "cutlist.col_cut_length": "CUT length",
-    "help.title": "Guide - Cut List PRO",
+    "help.title": "गाइड - CabinetCut PRO",
     "edit.apply": "लागू करें",
 })
 
@@ -3554,7 +3554,7 @@ _TRANSLATIONS.setdefault("pt-br", {}).update({
     "room.pro_summary_fmt": "MÍN: {min_v} mm  |  MÁX: {max_v} mm  |  Desvio: {dev} mm",
     "room.close": "Fechar",
     "project_io.load_title": "Carregar projeto",
-    "project_io.load_desc": "Escolha um arquivo .json do Cut List PRO",
+    "project_io.load_desc": "Escolha um arquivo .json do CabinetCut PRO",
     "project_io.upload_label": "Escolha o arquivo .json",
     "project_io.load_selected": "Carregar arquivo selecionado",
     "project_io.cancel": "Cancelar",
@@ -3590,7 +3590,7 @@ _TRANSLATIONS.setdefault("pt-br", {}).update({
     "cutlist.col_name": "Nome",
     "cutlist.col_status": "Situação",
     "cutlist.col_cut_length": "Comprimento CUT",
-    "help.title": "Guia - Cut List PRO",
+    "help.title": "Guia - CabinetCut PRO",
 })
 
 _TRANSLATIONS.setdefault("ru", {}).update({
@@ -3633,7 +3633,7 @@ _TRANSLATIONS.setdefault("ru", {}).update({
     "room.pro_summary_fmt": "МИН: {min_v} мм  |  МАКС: {max_v} мм  |  Отклонение: {dev} мм",
     "room.close": "Закрыть",
     "project_io.load_title": "Загрузить проект",
-    "project_io.load_desc": "Выберите файл .json Cut List PRO",
+    "project_io.load_desc": "Выберите файл .json CabinetCut PRO",
     "project_io.upload_label": "Выберите файл .json",
     "project_io.load_selected": "Загрузить выбранный файл",
     "project_io.cancel": "Отмена",
@@ -3666,7 +3666,7 @@ _TRANSLATIONS.setdefault("ru", {}).update({
     "cutlist.col_thickness": "Толщ.",
     "cutlist.col_name": "Название",
     "cutlist.col_cut_length": "Длина CUT",
-    "help.title": "Руководство - Cut List PRO",
+    "help.title": "Руководство - CabinetCut PRO",
 })
 
 _TRANSLATIONS.setdefault("zh-cn", {}).update({
@@ -3709,7 +3709,7 @@ _TRANSLATIONS.setdefault("zh-cn", {}).update({
     "room.pro_summary_fmt": "最小：{min_v} mm  |  最大：{max_v} mm  |  偏差：{dev} mm",
     "room.close": "关闭",
     "project_io.load_title": "加载项目",
-    "project_io.load_desc": "选择一个 Cut List PRO 的 .json 文件",
+    "project_io.load_desc": "选择一个 CabinetCut PRO 的 .json 文件",
     "project_io.upload_label": "选择 .json 文件",
     "project_io.load_selected": "加载所选文件",
     "project_io.cancel": "取消",
@@ -3742,7 +3742,7 @@ _TRANSLATIONS.setdefault("zh-cn", {}).update({
     "cutlist.col_thickness": "厚度",
     "cutlist.col_name": "名称",
     "cutlist.col_cut_length": "CUT 长度",
-    "help.title": "指南 - Cut List PRO",
+    "help.title": "指南 - CabinetCut PRO",
 })
 
 _TRANSLATIONS.setdefault("hi", {}).update({
@@ -3785,7 +3785,7 @@ _TRANSLATIONS.setdefault("hi", {}).update({
     "room.pro_summary_fmt": "न्यूनतम: {min_v} mm  |  अधिकतम: {max_v} mm  |  विचलन: {dev} mm",
     "room.close": "बंद करें",
     "project_io.load_title": "प्रोजेक्ट लोड करें",
-    "project_io.load_desc": "Cut List PRO की .json फ़ाइल चुनें",
+    "project_io.load_desc": "CabinetCut PRO की .json फ़ाइल चुनें",
     "project_io.upload_label": ".json फ़ाइल चुनें",
     "project_io.load_selected": "चयनित फ़ाइल लोड करें",
     "project_io.cancel": "रद्द करें",
@@ -3818,7 +3818,7 @@ _TRANSLATIONS.setdefault("hi", {}).update({
     "cutlist.col_thickness": "मोटाई",
     "cutlist.col_name": "नाम",
     "cutlist.col_cut_length": "CUT लंबाई",
-    "help.title": "गाइड - Cut List PRO",
+    "help.title": "गाइड - CabinetCut PRO",
 })
 
 _TRANSLATIONS.setdefault("es", {}).update({
@@ -8921,7 +8921,7 @@ _TRANSLATIONS["sr"].update({
 })
 
 _TRANSLATIONS["en"].update({
-    "wizard.auth_gate_title": "Welcome to Cut List PRO",
+    "wizard.auth_gate_title": "Welcome to CabinetCut PRO",
     "wizard.auth_gate_desc": "To design your kitchen and save the project, create a free account.",
     "wizard.auth_gate_create_btn": "Create account",
     "wizard.auth_gate_login_btn": "I already have an account - Sign in",
@@ -8929,7 +8929,7 @@ _TRANSLATIONS["en"].update({
 })
 
 _TRANSLATIONS.setdefault("es", {}).update({
-    "wizard.auth_gate_title": "Bienvenido a Lista de Corte PRO",
+    "wizard.auth_gate_title": "Bienvenido a CabinetCut PRO",
     "wizard.auth_gate_desc": "Para diseñar tu cocina y guardar el proyecto, crea una cuenta gratuita.",
     "wizard.auth_gate_create_btn": "Crear cuenta",
     "wizard.auth_gate_login_btn": "Ya tengo una cuenta - Iniciar sesión",
@@ -8937,7 +8937,7 @@ _TRANSLATIONS.setdefault("es", {}).update({
 })
 
 _TRANSLATIONS.setdefault("pt-br", {}).update({
-    "wizard.auth_gate_title": "Bem-vindo ao Lista de Corte PRO",
+    "wizard.auth_gate_title": "Bem-vindo ao CabinetCut PRO",
     "wizard.auth_gate_desc": "Para criar sua cozinha e salvar o projeto, crie uma conta gratuita.",
     "wizard.auth_gate_create_btn": "Criar conta",
     "wizard.auth_gate_login_btn": "Já tenho conta - Entrar",
@@ -8945,7 +8945,7 @@ _TRANSLATIONS.setdefault("pt-br", {}).update({
 })
 
 _TRANSLATIONS.setdefault("ru", {}).update({
-    "wizard.auth_gate_title": "Добро пожаловать в Карта раскроя PRO",
+    "wizard.auth_gate_title": "Добро пожаловать в CabinetCut PRO",
     "wizard.auth_gate_desc": "Чтобы спроектировать кухню и сохранить проект, создайте бесплатный аккаунт.",
     "wizard.auth_gate_create_btn": "Создать аккаунт",
     "wizard.auth_gate_login_btn": "У меня уже есть аккаунт - Войти",
@@ -8953,7 +8953,7 @@ _TRANSLATIONS.setdefault("ru", {}).update({
 })
 
 _TRANSLATIONS.setdefault("zh-cn", {}).update({
-    "wizard.auth_gate_title": "欢迎使用裁切清单 PRO",
+    "wizard.auth_gate_title": "欢迎使用 CabinetCut PRO",
     "wizard.auth_gate_desc": "要设计厨房并保存项目，请先创建一个免费账号。",
     "wizard.auth_gate_create_btn": "创建账号",
     "wizard.auth_gate_login_btn": "我已有账号 - 登录",
@@ -8961,7 +8961,7 @@ _TRANSLATIONS.setdefault("zh-cn", {}).update({
 })
 
 _TRANSLATIONS.setdefault("hi", {}).update({
-    "wizard.auth_gate_title": "कट लिस्ट PRO में आपका स्वागत है",
+    "wizard.auth_gate_title": "CabinetCut PRO में आपका स्वागत है",
     "wizard.auth_gate_desc": "रसोई बनाना और प्रोजेक्ट सेव करना शुरू करने के लिए एक मुफ्त अकाउंट बनाएं।",
     "wizard.auth_gate_create_btn": "अकाउंट बनाएं",
     "wizard.auth_gate_login_btn": "मेरे पास पहले से अकाउंट है - लॉग इन करें",
