@@ -167,7 +167,7 @@ def render_cutlist_tab(
         get_user_by_email,
         list_export_jobs_for_user,
     )
-    from state_logic import build_checkout_start_message
+    from state_logic import build_checkout_start_message, get_cutlist_access_state
     _lang = str(getattr(state, 'language', 'sr') or 'sr').lower().strip()
 
     def _start_paid_checkout(plan_code: str = 'pro_monthly') -> None:
@@ -178,13 +178,12 @@ def render_cutlist_tab(
         else:
             ui.notify(msg or tr_fn('gate.checkout_btn'), type='info' if ok else 'negative', timeout=5000)
 
-    _access_tier = str(getattr(state, 'current_access_tier', '') or '').strip().lower()
-    _has_cutlist_access = _access_tier in ('pro', 'admin')
-    if not _has_cutlist_access:
+    _access = get_cutlist_access_state()
+    if str(_access.get('allowed', '')).lower() != 'true':
         with ui.column().classes('w-full max-w-2xl mx-auto py-10 gap-4'):
             with ui.card().classes('w-full p-8 border border-amber-200 bg-white'):
                 ui.label(tr_fn('cutlist.locked_title')).classes('text-2xl font-bold text-gray-900')
-                ui.label(tr_fn('cutlist.locked_desc')).classes(
+                ui.label(str(_access.get('reason', '') or tr_fn('cutlist.locked_desc'))).classes(
                     'text-sm text-gray-700'
                 )
                 ui.button(tr_fn('gate.checkout_btn'), on_click=lambda: _start_paid_checkout('pro_monthly')).classes(

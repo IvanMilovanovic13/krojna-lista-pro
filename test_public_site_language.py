@@ -24,6 +24,7 @@ def run_public_site_language_check() -> tuple[bool, str]:
         'def _tr(key: str, **fmt: object) -> str:',
         'ui.button(_tr("public.home_btn")',
         '_topbar(action_label=_tr("public.login_btn"), action_target="/login", current_path="/pricing")',
+        'ui.label(_tr("wizard.title_app")).classes("text-[14px] font-bold tracking-[0.22em] text-slate-500")',
         'ui.label(_tr("public.login_title"))',
         'ui.label(_tr("public.sign_in_card_title"))',
         'ui.label(_tr("public.register_title"))',

@@ -40,7 +40,7 @@ LEMON_SQUEEZY_STORE_ID=12345
 LEMON_SQUEEZY_STORE_SUBDOMAIN=your-store
 LEMON_SQUEEZY_VARIANT_ID_WEEKLY=123456
 LEMON_SQUEEZY_VARIANT_ID_MONTHLY=123456
-LEMON_SQUEEZY_CHECKOUT_SUCCESS_URL=https://tvoj-domen.rs/nalog?checkout=success
+LEMON_SQUEEZY_CHECKOUT_SUCCESS_URL=https://tvoj-domen.rs/login?checkout=success
 ```
 
 Osnova je sada vec pripremljena i kao fajl:

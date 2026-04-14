@@ -61,7 +61,7 @@ except Exception as e:
 # ─────────────────────────────────────────────────────────────
 section("3. LANGUAGE OPTIONS I FALLBACK LANAC")
 # ─────────────────────────────────────────────────────────────
-expected_langs = ["sr", "en", "es", "pt-br", "ru", "zh-cn", "hi"]
+expected_langs = ["sr", "en", "de", "es", "pt-br", "ru", "zh-cn", "hi"]
 for lang in expected_langs:
     if lang in LANGUAGE_OPTIONS:
         ok(f"LANGUAGE_OPTIONS ima '{lang}'")
@@ -70,6 +70,7 @@ for lang in expected_langs:
 
 # normalize_language_code
 norm_tests = [
+    ("de-DE", "de"), ("de", "de"), ("DE-DE", "de"),
     ("pt-BR", "pt-br"), ("pt-br", "pt-br"), ("PT-BR", "pt-br"),
     ("zh-CN", "zh-cn"), ("zh-cn", "zh-cn"), ("ZH-CN", "zh-cn"),
     ("ru", "ru"), ("RU", "ru"),
@@ -134,7 +135,7 @@ for key in en_mandatory:
 # ─────────────────────────────────────────────────────────────
 section("6. PROVJERA ???? PLACEHOLDER VRIJEDNOSTI")
 # ─────────────────────────────────────────────────────────────
-all_langs = ["sr", "en", "es", "pt-br", "ru", "zh-cn", "hi"]
+all_langs = ["sr", "en", "de", "es", "pt-br", "ru", "zh-cn", "hi"]
 for lang in all_langs:
     block = _TRANSLATIONS.get(lang, {})
     import re as _re
@@ -179,7 +180,7 @@ LEGIT_EN = {
     "settings.material_mdf", "settings.material_lacobel",
     "settings.worktop_joint_miter",
 }
-non_sr_langs = ["es", "pt-br", "ru", "zh-cn", "hi"]
+non_sr_langs = ["de", "es", "pt-br", "ru", "zh-cn", "hi"]
 for key in must_translate:
     en_val = en.get(key, "")
     for lang in non_sr_langs:

@@ -32,6 +32,7 @@ def run_cutlist_navigation_guard_check() -> tuple[bool, str]:
         "from state_logic import get_cutlist_access_state",
         "tr_fn('cutlist.locked_title')",
         "str(_access.get('reason', '') or tr_fn('cutlist.locked_desc'))",
+        "str(_access.get('allowed', '')).lower() != 'true'",
     ]
     missing_cutlist = [item for item in required_cutlist if item not in cutlist_tab]
     if missing_cutlist:

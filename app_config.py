@@ -217,7 +217,7 @@ def get_app_config() -> AppConfig:
         lemon_squeezy_store_subdomain=_env("LEMON_SQUEEZY_STORE_SUBDOMAIN"),
         lemon_squeezy_variant_id_weekly=_env("LEMON_SQUEEZY_VARIANT_ID_WEEKLY"),
         lemon_squeezy_variant_id_monthly=_env("LEMON_SQUEEZY_VARIANT_ID_MONTHLY"),
-        lemon_squeezy_checkout_success_url=_env("LEMON_SQUEEZY_CHECKOUT_SUCCESS_URL", f"{_env('BASE_URL', base_url_default)}/nalog?checkout=success"),
+        lemon_squeezy_checkout_success_url=_env("LEMON_SQUEEZY_CHECKOUT_SUCCESS_URL", f"{_env('BASE_URL', base_url_default)}/login?checkout=success"),
         debug=app_env in ("development", "test"),
     )
 

@@ -13,6 +13,8 @@ def run_checkout_return_flow_check() -> tuple[bool, str]:
         'request.query_params.get("checkout", "")',
         'if checkout_state == "success":',
         'elif checkout_state == "cancel":',
+        'refresh_current_session_access()',
+        'ui.button(_tr("nova.paid_success_continue_btn"), on_click=lambda: ui.navigate.to("/app"))',
         '_tr("public.checkout_success_title")',
         '_tr("public.checkout_cancel_title")',
     ]
@@ -24,6 +26,7 @@ def run_checkout_return_flow_check() -> tuple[bool, str]:
         "def index(request: Request) -> None:",
         "render_login_page(request)",
         "def login_page(request: Request) -> None:",
+        "def account_compat_page(request: Request) -> None:",
     ]
     missing_app = [item for item in required_app if item not in app_py]
     if missing_app:

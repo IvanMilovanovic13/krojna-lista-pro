@@ -425,6 +425,11 @@ def login_page(request: Request) -> None:
     render_login_page(request)
 
 
+@ui.page('/nalog')
+def account_compat_page(request: Request) -> None:
+    render_login_page(request)
+
+
 @ui.page('/register')
 def register_page() -> None:
     render_register_page()

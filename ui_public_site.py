@@ -9,6 +9,7 @@ from state_logic import (
     _set_language,
     build_forgot_password_message,
     ensure_runtime_state_initialized,
+    refresh_current_session_access,
     login_user_session,
     register_trial_user_session,
 )
@@ -161,7 +162,7 @@ def render_pricing_page() -> None:
 
 
 def _auth_footer() -> None:
-    ui.label(_tr("public.footer")).classes("public-footer")
+    ui.label(f"Copyright (c) {_tr('wizard.title_app')} 2026.").classes("public-footer")
 
 
 def render_login_page(request: Request | None = None) -> None:
@@ -172,16 +173,25 @@ def render_login_page(request: Request | None = None) -> None:
             checkout_state = str(request.query_params.get("checkout", "") or "").strip().lower()
         except Exception:
             checkout_state = ""
+    if checkout_state == "success":
+        refresh_current_session_access()
     with ui.column().classes("public-shell w-full"):
+        _topbar(action_label=_tr("public.create_account_btn"), action_target="/register", current_path="/login")
         with ui.column().classes("w-full items-center justify-center px-6 py-14 gap-6"):
-            with ui.column().classes("w-full items-center gap-1"):
-                ui.label("KROJNA LISTA PRO").classes("text-[14px] font-bold tracking-[0.22em] text-slate-500")
+            with ui.column().classes("w-full items-center gap-2"):
+                ui.label(_tr("wizard.title_app")).classes("text-[14px] font-bold tracking-[0.22em] text-slate-500")
                 ui.label(_tr("public.login_title")).classes("public-hero-title")
+                ui.label(_tr("nova.auth_login_desc")).classes("public-hero-text max-w-xl")
 
             if checkout_state == "success":
                 with ui.column().classes("public-card auth-card items-center gap-2 bg-[#eefbf3] border border-[#b7e4c7]"):
                     ui.label(_tr("public.checkout_success_title")).classes("text-base font-bold text-[#166534]")
                     ui.label(_tr("public.checkout_success_desc")).classes("text-sm text-[#166534] text-center")
+                    from state_logic import state
+                    if str(getattr(state, "current_user_email", "") or "").strip() and str(getattr(state, "current_auth_mode", "") or "").strip().lower() != "local":
+                        ui.button(_tr("nova.paid_success_continue_btn"), on_click=lambda: ui.navigate.to("/app")).classes(
+                            "w-full bg-[#166534] text-white"
+                        )
             elif checkout_state == "cancel":
                 with ui.column().classes("public-card auth-card items-center gap-2 bg-[#fff7ed] border border-[#fed7aa]"):
                     ui.label(_tr("public.checkout_cancel_title")).classes("text-base font-bold text-[#9a3412]")
@@ -240,9 +250,10 @@ def render_login_page(request: Request | None = None) -> None:
 def render_register_page() -> None:
     _public_shell()
     with ui.column().classes("public-shell w-full"):
+        _topbar(action_label=_tr("public.login_btn"), action_target="/login", current_path="/register")
         with ui.column().classes("w-full items-center justify-center px-6 py-14 gap-6"):
             with ui.column().classes("w-full items-center gap-2"):
-                ui.label("KROJNA LISTA PRO").classes("text-[14px] font-bold tracking-[0.22em] text-slate-500")
+                ui.label(_tr("wizard.title_app")).classes("text-[14px] font-bold tracking-[0.22em] text-slate-500")
                 ui.label(_tr("public.register_title")).classes("public-hero-title")
                 ui.label(_tr("public.register_desc")).classes("public-hero-text")
 
