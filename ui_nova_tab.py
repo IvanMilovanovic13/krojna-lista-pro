@@ -74,7 +74,7 @@ def render_nova_tab(
                 False,
                 False,
             )
-        if account_status == 'paid_active' or billing_status in ('active', 'paid'):
+        if account_status == 'paid_active' or billing_status in ('active', 'paid', 'on_trial'):
             return (
                 tr_fn('nova.billing_state_paid_title'),
                 tr_fn('nova.billing_state_paid_desc'),
@@ -121,7 +121,7 @@ def render_nova_tab(
                 tr_fn('nova.primary_action_start_btn'),
                 'project',
             )
-        if account_status == 'paid_active' or billing_status in ('active', 'paid'):
+        if account_status == 'paid_active' or billing_status in ('active', 'paid', 'on_trial'):
             return (
                 tr_fn('nova.primary_action_start_title'),
                 tr_fn('nova.primary_action_paid_desc'),
@@ -171,7 +171,7 @@ def render_nova_tab(
         access_tier = str(payload.get('access_tier', '') or '').strip().lower()
         return (
             account_status in ('paid_active', 'admin_active')
-            or billing_status in ('active', 'paid')
+            or billing_status in ('active', 'paid', 'on_trial')
             or access_tier == 'admin'
         )
 

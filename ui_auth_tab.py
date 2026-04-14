@@ -58,7 +58,7 @@ def render_auth_tab(
                 False,
                 False,
             )
-        if account_status == 'paid_active' or billing_status in ('active', 'paid'):
+        if account_status == 'paid_active' or billing_status in ('active', 'paid', 'on_trial'):
             return (
                 tr_fn('nova.billing_state_paid_title'),
                 tr_fn('nova.billing_state_paid_desc'),

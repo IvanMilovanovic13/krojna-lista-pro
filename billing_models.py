@@ -95,7 +95,7 @@ def build_customer_portal_placeholder(email: str) -> str:
 
 def _status_to_access(status: str, plan_code: str) -> tuple[str, str]:
     clean = str(status or "").strip().lower()
-    if clean in ("active", "paid"):
+    if clean in ("active", "paid", "on_trial"):
         return ("paid", "paid_active") if plan_code != "trial" else ("trial", "trial_active")
     if clean in ("trialing", "trial"):
         return ("trial", "trial_active")
