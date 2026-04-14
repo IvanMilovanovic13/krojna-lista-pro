@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 from nicegui import app, ui
 from app_config import get_app_config, get_public_runtime_config
 from auth_models import restore_session_from_token
+from billing_models import get_billing_summary_for_email
 from billing_webhooks import process_billing_webhook_payload
 from lemon_squeezy_service import get_billing_runtime_status
 from export_jobs import EXPORTS_DIR
@@ -459,6 +460,15 @@ async def protected_export_download(job_id: int, filename: str, token: str = "")
         raise HTTPException(status_code=401, detail="invalid_session")
 
     tier = str(session.user.access_tier or "").strip().lower()
+    billing_summary = get_billing_summary_for_email(str(session.user.email or ""))
+    if billing_summary is not None:
+        billing_status = str(billing_summary.billing_status or "").strip().lower()
+        plan_code = str(billing_summary.plan_code or "").strip().lower()
+        summary_tier = str(billing_summary.access_tier or "").strip().lower()
+        if summary_tier == "admin":
+            tier = "admin"
+        elif billing_status in {"active", "paid", "on_trial"} and plan_code not in {"", "trial"}:
+            tier = "paid"
     if tier not in {"paid", "admin", "local_beta"}:
         raise HTTPException(status_code=403, detail="paid_access_required")
 
