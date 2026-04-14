@@ -26,8 +26,7 @@ def switch_tab(
     logger,
 ) -> None:
     if key == "krojna":
-        from auth_integration import refresh_current_session_access
-        from state_logic import get_cutlist_access_state
+        from state_logic import get_cutlist_access_state, refresh_current_session_access
 
         # Keep the in-memory session aligned with the latest billing/webhook
         # state before deciding whether the cutlist tab is available.
