@@ -8,6 +8,7 @@ from i18n import (
     ERR_LOAD_PREFIX,
     MSG_SAVE_OK,
 )
+from state_logic import get_effective_access_context
 
 _LOG = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ def render_nova_tab(
 ) -> None:
     is_authenticated = bool(str(getattr(state, 'current_user_email', '') or '').strip())
     billing = get_current_billing_summary()
+    effective_access = get_effective_access_context()
 
     async def _resolve_input_value(element_id: str, fallback: str = "") -> str:
         try:
@@ -272,7 +274,7 @@ def render_nova_tab(
                 )
 
         if is_authenticated:
-            _current_tier = str(getattr(state, 'current_access_tier', '') or '').strip().lower()
+            _current_tier = str(effective_access.get('access_tier', '') or '').strip().lower()
             billing_title, billing_desc, show_checkout, show_portal = _dashboard_billing_copy(billing)
             primary_title, primary_desc, primary_btn, primary_mode = _dashboard_primary_action_copy(billing)
             _show_plan_cards = _current_tier in {'trial', 'local', 'local_beta', ''}
@@ -394,13 +396,13 @@ def render_nova_tab(
                 ui.label(
                     tr_fn(
                         'nova.session_meta',
-                        access_tier=str(getattr(state, 'current_access_tier', '') or 'local_beta'),
+                        access_tier=str(effective_access.get('access_tier', '') or 'local_beta'),
                         auth_mode=str(getattr(state, 'current_auth_mode', '') or 'local'),
-                        status=str(getattr(state, 'current_subscription_status', '') or 'local_active'),
+                        status=str(effective_access.get('subscription_status', '') or 'local_active'),
                     )
                 ).classes('text-xs text-gray-500')
-                if not bool(getattr(state, 'current_can_access_app', True)):
-                    ui.label(str(getattr(state, 'current_gate_reason', '') or tr_fn('nova.session_blocked'))).classes(
+                if not bool(effective_access.get('can_access_app', True)):
+                    ui.label(str(effective_access.get('gate_reason', '') or tr_fn('nova.session_blocked'))).classes(
                         'text-xs text-red-600 mt-1'
                     )
                 with ui.row().classes('w-full gap-2 mt-3 max-md:flex-col'):

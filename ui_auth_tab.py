@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from i18n import ERR_LOAD_PREFIX
+from state_logic import get_effective_access_context
 
 
 def render_auth_tab(
@@ -92,7 +93,8 @@ def render_auth_tab(
 
     with ui.column().classes('w-full max-w-2xl mx-auto gap-6 py-8'):
         is_authenticated = bool(str(getattr(state, 'current_user_email', '') or '').strip())
-        _tier = str(getattr(state, 'current_access_tier', '') or '').strip().lower()
+        effective_access = get_effective_access_context()
+        _tier = str(effective_access.get('access_tier', '') or '').strip().lower()
         _show_plan_cards = _tier in {'trial', 'local', 'local_beta', ''}
         billing = get_current_billing_summary()
 
@@ -164,13 +166,13 @@ def render_auth_tab(
                 ui.label(
                     tr_fn(
                         'nova.session_meta',
-                        access_tier=str(getattr(state, 'current_access_tier', '') or 'local_beta'),
+                        access_tier=str(effective_access.get('access_tier', '') or 'local_beta'),
                         auth_mode=str(getattr(state, 'current_auth_mode', '') or 'local'),
-                        status=str(getattr(state, 'current_subscription_status', '') or 'local_active'),
+                        status=str(effective_access.get('subscription_status', '') or 'local_active'),
                     )
                 ).classes('text-xs text-gray-500')
-                if not bool(getattr(state, 'current_can_access_app', True)):
-                    ui.label(str(getattr(state, 'current_gate_reason', '') or tr_fn('nova.session_blocked'))).classes(
+                if not bool(effective_access.get('can_access_app', True)):
+                    ui.label(str(effective_access.get('gate_reason', '') or tr_fn('nova.session_blocked'))).classes(
                         'text-xs text-red-600 mt-1'
                     )
 
