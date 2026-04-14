@@ -81,6 +81,7 @@ def render_main_content_inner(
     get_release_readiness_summary,
     get_ops_runtime_summary,
     get_visible_audit_logs,
+    get_visible_users,
     render_auth_tab,
     render_admin_tab,
     render_access_gate,
@@ -95,8 +96,11 @@ def render_main_content_inner(
     room_opening_types,
     room_fixture_types,
 ) -> None:
+    from state_logic import get_effective_access_context
+
+    effective_access = get_effective_access_context()
     gate_blocked = (
-        not bool(getattr(state, "current_can_access_app", True))
+        not bool(effective_access.get("can_access_app", True))
         and state.active_tab not in ("nova", "pomoc")
     )
     if gate_blocked:
@@ -208,6 +212,7 @@ def render_main_content_inner(
             get_release_readiness_summary=get_release_readiness_summary,
             get_ops_runtime_summary=get_ops_runtime_summary,
             get_visible_audit_logs=get_visible_audit_logs,
+            get_visible_users=get_visible_users,
         )
         return
     elif state.active_tab == "pomoc":

@@ -3,6 +3,118 @@
 
 ---
 
+## STATUS UPDATE - 9. april 2026.
+
+Aktuelni proizvodni dogovor ima prednost nad starijim beleškama kada postoji razlika izmedju plana i stvarnog stanja repoa.
+
+Dogovoreno i važeće:
+
+- brend:
+  - `sr` = `Krojna lista PRO`
+  - `en`, `es`, `pt-br`, `ru`, `zh-cn`, `hi` = `CabinetCut PRO`
+- billing model ostaje:
+  - `PRO 7 dana`
+  - `PRO 1 mesec`
+- ne vraćamo se na jednokratnu kupovinu
+- Lemon Squeezy checkout je aktivni billing pravac i trenutno se otvara u test modu
+- javni glavni tok ide preko naloga
+- `Nastavi lokalno bez naloga` ne treba da ostane deo glavnog javnog UX toka
+- `Krojna lista`, `Sačuvaj` i `Učitaj` ostaju vidljivi
+- bez `PRO` pristupa klik na te akcije vodi na `Nalog`
+- na `Nalog` korisnik vidi planove:
+  - `PRO 7 dana`
+  - `PRO 1 mesec`
+
+Sta je trenutno vec uradjeno u kodu:
+
+- auth gate pre wizard step 1 postoji
+- `Krojna lista` tab je vracen kao vidljiv tab
+- `Sačuvaj` i `Učitaj` imaju redirect na `Nalog` za neplaceni pristup
+- plan kartice na `Nalog` tabu postoje i vode na Lemon checkout
+- Lemon checkout se sada stvarno otvara u test modu
+
+Sta jos treba uskladiti:
+
+1. branding cleanup
+- svuda van `sr` prevesti user-facing naziv aplikacije na `CabinetCut PRO`
+- ukljucuje wizard, auth gate, toolbar/header i user-facing export/app nazive gde jos stoji stari brand
+
+2. javni UX cleanup
+- ukloniti `Nastavi lokalno bez naloga` iz javnog auth gate ekrana
+- local fallback moze ostati kao interni/dev mehanizam, ali ne kao javna opcija
+
+3. copy alignment
+- uskladiti `Free/PRO` tekstove sa stvarnim access pravilima
+- ukloniti zastarele `Stripe` poruke iz korisnickog copy sloja
+
+4. billing E2E potvrda
+- potvrditi ceo tok:
+  - checkout
+  - webhook
+  - `access_tier` upgrade
+  - unlock funkcija posle uspesne naplate
+
+## STATUS UPDATE - 14. april 2026. - Auth / Admin / Email Verification
+
+Ovaj auth/admin dogovor ima prednost nad starijim parcijalnim auth beleÅ¡kama kada postoji razlika.
+
+Dogovoreno i obavezno za naredni blok rada:
+
+- `admin` mora biti najjaci nivo pristupa u aplikaciji
+- treba da postoje `3` admin naloga
+- treba da postoji `5` privilegovanih test naloga za staging i operativno testiranje
+- admin mora da ima pregled svih korisnickih naloga i njihovog stanja
+- registracija vise ne sme da aktivira nalog samo na osnovu unetog email stringa
+
+Obavezna pravila za email i aktivaciju naloga:
+
+- osnovna format validacija mora da postoji i u formi i u backendu
+- email mora da prodje jacu sintaksnu proveru od prostog `@` / `.` uslova
+- mora da postoji verifikacioni email sa tokenom
+- nalog ne postaje aktivan dok email nije potvrdjen
+- dok verification nije zavrsen, korisnik mora ostati u stanju `pending_verification` ili ekvivalentnom ogranicenom stanju
+- login i puni pristup ne smeju biti dozvoljeni dok email nije potvrden
+
+Prakticni zakljucak:
+
+- sama regex ili format validacija nije dovoljna za produkcioni pojam "validan email"
+- bez token verification koraka korisnik i dalje moze uneti tehnicki ispravan, ali nepostojeci email
+
+Admin pregled koji treba dodati:
+
+- lista svih korisnika
+- email
+- display name
+- auth mode
+- access tier
+- status
+- created / updated vreme
+- jasan pregled ko je `pending_verification`, ko je `trial`, `paid` i `admin`
+
+Preporuceni redosled implementacije:
+
+1. prosiriti backend model korisnika za verification stanja i admin privilegije
+2. pojacati email validaciju u UI i backendu
+3. dodati verification token flow
+4. blokirati aktivaciju naloga dok verification ne prodje
+5. dodati admin UI pregled korisnika
+6. definisati i seed-ovati `3` admin naloga i `5` test naloga
+
+Operativno pravilo rada:
+
+- pre auth/admin/session/billing izmena obavezan je backup / checkpoint
+- ove izmene tretirati kao visokorizicne
+- posle svake takve izmene obavezan je smoke za:
+  - register
+  - verification
+  - login
+  - logout
+  - account page
+  - cutlist access
+  - admin access
+  - paid access
+
+
 ## STATUS UPDATE - 8. april 2026.
 
 Najnoviji zavrseni UX / access koraci:

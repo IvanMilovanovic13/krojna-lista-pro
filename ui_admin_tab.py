@@ -11,11 +11,13 @@ def render_admin_tab(
     get_release_readiness_summary: Callable[[str], dict[str, Any]],
     get_ops_runtime_summary: Callable[[], dict[str, Any]],
     get_visible_audit_logs: Callable[[int], list[dict[str, Any]]],
+    get_visible_users: Callable[[int], list[dict[str, Any]]],
 ) -> None:
     runtime = get_ops_runtime_summary() or {}
     staging = get_release_readiness_summary("staging") or {}
     production = get_release_readiness_summary("production") or {}
     audit_logs = get_visible_audit_logs(20)
+    users = get_visible_users(200)
 
     def _render_readiness_card(title: str, payload: dict[str, Any]) -> None:
         summary = payload.get("summary", {}) if isinstance(payload, dict) else {}
@@ -121,6 +123,7 @@ def render_admin_tab(
                     ui.label(tr_fn("ops.runtime_auth")).classes("text-sm font-semibold")
                     ui.label(tr_fn("ops.runtime_auth_sessions", count=auth_runtime.get("active_sessions", 0))).classes("text-xs text-slate-700")
                     ui.label(tr_fn("ops.runtime_auth_reset_tokens", count=auth_runtime.get("active_reset_tokens", 0))).classes("text-xs text-slate-700")
+                    ui.label(f"Active verification tokens: {auth_runtime.get('active_verification_tokens', 0)}").classes("text-xs text-slate-700")
                     ui.label(tr_fn("ops.runtime_auth_failed_attempts", count=auth_runtime.get("failed_login_attempts", 0))).classes("text-xs text-slate-700")
                 with ui.column().classes("gap-1"):
                     ui.label(tr_fn("ops.runtime_billing_provider")).classes("text-sm font-semibold")
@@ -147,3 +150,20 @@ def render_admin_tab(
                     {"name": "detail", "label": tr_fn("ops.audit_detail"), "field": "detail", "align": "left"},
                 ]
                 ui.table(columns=columns, rows=audit_logs, row_key="created_at").classes("w-full")
+
+        with ui.card().classes("w-full p-4 gap-3"):
+            ui.label("Users").classes("text-lg font-bold")
+            if not users:
+                ui.label("No users available.").classes("text-sm text-slate-500")
+            else:
+                columns = [
+                    {"name": "email", "label": "Email", "field": "email", "align": "left"},
+                    {"name": "display_name", "label": "Display", "field": "display_name", "align": "left"},
+                    {"name": "auth_mode", "label": "Auth", "field": "auth_mode", "align": "left"},
+                    {"name": "access_tier", "label": "Tier", "field": "access_tier", "align": "left"},
+                    {"name": "status", "label": "Status", "field": "status", "align": "left"},
+                    {"name": "email_verified", "label": "Verified", "field": "email_verified", "align": "left"},
+                    {"name": "created_at", "label": "Created", "field": "created_at", "align": "left"},
+                    {"name": "updated_at", "label": "Updated", "field": "updated_at", "align": "left"},
+                ]
+                ui.table(columns=columns, rows=users, row_key="email").classes("w-full")

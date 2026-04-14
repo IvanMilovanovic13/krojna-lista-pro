@@ -23,7 +23,7 @@ from project_store import cleanup_auth_artifacts, get_export_job, get_project_st
 from release_readiness import get_release_readiness_report
 from state_logic import ensure_runtime_state_initialized, refresh_current_session_access, seed_demo_project_store, state
 from ui_panels import render_toolbar, main_content
-from ui_public_site import render_login_page, render_pricing_page, render_register_page
+from ui_public_site import render_login_page, render_pricing_page, render_register_page, render_verify_email_page
 GLOBAL_UI_STYLE = '''
 <style>
   html, body, .nicegui-content {
@@ -434,6 +434,11 @@ def account_compat_page(request: Request) -> None:
 @ui.page('/register')
 def register_page() -> None:
     render_register_page()
+
+
+@ui.page('/verify-email')
+def verify_email_page(request: Request) -> None:
+    render_verify_email_page(request)
 
 
 @app.post('/api/billing/webhook')

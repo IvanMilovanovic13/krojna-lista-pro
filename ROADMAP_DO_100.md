@@ -1,5 +1,123 @@
 ## Uloga I Nacin Rada Na Projektu
 
+## Produktni Update - 9. april 2026.
+
+Ovaj update ima prednost nad starijim planovima kada postoji razlika izmedju starog zadatka i novog dogovora.
+
+Aktuelni dogovor:
+
+- brend:
+  - `sr` = `Krojna lista PRO`
+  - `en`, `es`, `pt-br`, `ru`, `zh-cn`, `hi` = `CabinetCut PRO`
+- billing model ostaje:
+  - `PRO 7 dana`
+  - `PRO 1 mesec`
+- ne vracamo se na jednokratnu kupovinu
+- Lemon Squeezy je aktivni billing provider i checkout se trenutno otvara u test modu
+- javni glavni tok ide preko naloga
+- `Nastavi lokalno bez naloga` ne treba da ostane javna auth gate opcija
+- `Krojna lista`, `Sacuvaj` i `Ucitaj` ostaju vidljivi
+- bez `PRO` pristupa klik vodi na `Nalog`
+- na `Nalog` korisnik jasno vidi:
+  - `PRO 7 dana`
+  - `PRO 1 mesec`
+
+Potvrdjeno trenutno stanje repoa:
+
+- auth gate postoji
+- cutlist paywall postoji
+- `Krojna lista` tab je vracen kao vidljiv
+- `Save/Load/Cutlist` redirect na `Nalog` postoji za neplaceni pristup
+- plan kartice na `Nalog` tabu postoje
+- Lemon checkout se otvara
+
+Sledeci implementacioni blok:
+
+1. branding alignment
+- svuda van `sr` koristiti `CabinetCut PRO`
+
+2. javni UX cleanup
+- ukloniti `Nastavi lokalno bez naloga` iz javnog auth gate UI
+
+3. copy alignment
+- uskladiti `Free/PRO` tekstove sa stvarnim paywall pravilom
+- ukloniti stare `Stripe` poruke iz user-facing copy sloja
+
+4. billing E2E potvrda
+- proveriti:
+  - checkout
+  - webhook
+  - upgrade korisnika
+  - unlock funkcija
+
+## Auth / Admin / Email Verification Update - 14. april 2026.
+
+Ovaj blok je novi obavezni auth/admin smer rada i ima prednost nad starijim parcijalnim auth planovima kada postoji razlika.
+
+Dogovoreno stanje koje treba implementirati:
+
+- mora da postoji `admin` nivo kao najvisi i najjaci nivo pristupa
+- treba da postoje tacno `3` admin naloga
+- admin nalog mora da moze da vidi i upravlja svim relevantnim korisnickim stanjima u aplikaciji
+- treba da postoji i `5` privilegovanih test naloga za staging i operativno testiranje
+- registracija vise ne sme da pusta nalog kao potpuno aktivan samo na osnovu unetog email stringa
+
+Obavezna pravila za email i registraciju:
+
+- osnovna format validacija mora da postoji i u formi i u backendu
+- email mora da prodje jacu sintaksnu proveru od prostog `@` i `.` uslova
+- verifikacioni email mora da se generise preko tokena
+- nalog ne postaje aktivan dok korisnik ne potvrdi email
+- dok email nije potvrdjen, nalog mora biti u stanju tipa `pending_verification` ili ekvivalentnom blok stanju
+- login i puni pristup ne smeju biti dozvoljeni pre potvrde emaila
+
+Prakticna posledica:
+
+- bez koraka `verifikacioni email + potvrda tokena` korisnik i dalje moze uneti tehnicki ispravan, ali nepostojeci email
+- zbog toga se "validan email" za produkciju ne smatra zavrsenim samo regex proverom
+
+Operativni setup koji treba podrzati:
+
+- `3` stvarna admin naloga
+- `5` privilegovanih test naloga
+- staging mora imati rezim za testiranje email verifikacije bez nepotrebnog oslanjanja na veliki broj razlicitih inbox-a
+- za produkciju verification email mora ici kroz pravi email delivery tok
+
+Obavezan admin pregled koji treba dodati:
+
+- lista svih korisnika
+- email
+- display name
+- auth mode
+- access tier
+- status
+- created / updated vreme
+- pregled ko je verifikovan, ko je `pending_verification`, ko je `trial`, `paid` ili `admin`
+
+Preporuceni implementacioni redosled:
+
+1. ucvrstiti backend model korisnika za `pending_verification`, `verified`, `admin`
+2. pojacati email validaciju u UI i backendu
+3. dodati verification token flow
+4. blokirati aktivaciju naloga dok verification ne prodje
+5. dodati admin UI pregled korisnika
+6. definisati i seed-ovati `3` admin naloga i `5` test naloga
+
+Napomena za rad:
+
+- pre auth/admin izmena obavezno napraviti backup / checkpoint
+- auth, billing, session i admin izmene tretirati kao visokorizicne
+- posle svake takve izmene obavezan je smoke za:
+  - register
+  - verification
+  - login
+  - logout
+  - account page
+  - cutlist access
+  - admin access
+  - paid access
+
+
 Na ovom projektu radim u sledecem trajnom fokusu i ulozi:
 
 - kao strucnjak za Python sa veoma velikim iskustvom u razvoju slozenih aplikacija

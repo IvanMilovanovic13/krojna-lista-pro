@@ -321,9 +321,9 @@ def render_auth_tab(
                         register_password_value,
                     )
                     if ok:
-                        state.active_tab = 'wizard'
+                        state.active_tab = 'nalog'
                         main_content_refresh()
-                        ui.notify(tr_fn('nova.auth_register_ok'), type='positive')
+                        ui.notify(str(err or tr_fn('nova.auth_register_ok')), type='positive', timeout=9000)
                     else:
                         ui.notify(ERR_LOAD_PREFIX.format(err=err), type='negative', timeout=5000)
 

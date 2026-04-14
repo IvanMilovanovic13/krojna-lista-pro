@@ -7,7 +7,7 @@ from nicegui import ui
 
 from cutlist import build_cutlist_sections, generate_cutlist_excel, generate_cutlist_pdf
 from module_templates import get_templates
-from state_logic import state, reset_state, _max_allowed_h_for_zone, add_module_instance_local, update_module_local, delete_module_local, clear_all_local, _set_view_mode, _set_show_grid, _set_grid_mm, _set_show_bounds, _set_ceiling_filler, _set_wall_length, _set_wall_height, _set_foot_height, _set_base_height, _set_vertical_gap, _set_material, _set_front_color, _set_worktop_thickness, _set_worktop_width, _set_worktop_reserve_mm, _set_worktop_front_overhang_mm, _set_worktop_field_cut, _set_worktop_edge_protection, _set_worktop_edge_protection_type, _set_worktop_joint_type, _set_max_element_height, get_zone_depth_standard, set_zone_depth_standard, _get_depth_mode, _is_independent_depth, suggest_corner_neighbor_guidance, save_project_json, load_project_json, build_demo_project_json, save_local_recent_project, list_recent_projects, load_recent_project, list_user_store_projects, load_project_from_store, get_autosave_info, load_autosave_project, login_user_session, register_trial_user_session, restore_local_session_state, logout_current_session, build_forgot_password_message, reset_password_with_token, get_current_billing_summary, get_cutlist_access_state, build_checkout_start_message, build_customer_portal_message, get_release_readiness_summary, get_ops_runtime_summary, get_visible_audit_logs, _set_language
+from state_logic import state, reset_state, _max_allowed_h_for_zone, add_module_instance_local, update_module_local, delete_module_local, clear_all_local, _set_view_mode, _set_show_grid, _set_grid_mm, _set_show_bounds, _set_ceiling_filler, _set_wall_length, _set_wall_height, _set_foot_height, _set_base_height, _set_vertical_gap, _set_material, _set_front_color, _set_worktop_thickness, _set_worktop_width, _set_worktop_reserve_mm, _set_worktop_front_overhang_mm, _set_worktop_field_cut, _set_worktop_edge_protection, _set_worktop_edge_protection_type, _set_worktop_joint_type, _set_max_element_height, get_zone_depth_standard, set_zone_depth_standard, _get_depth_mode, _is_independent_depth, suggest_corner_neighbor_guidance, save_project_json, load_project_json, build_demo_project_json, save_local_recent_project, list_recent_projects, load_recent_project, list_user_store_projects, load_project_from_store, get_autosave_info, load_autosave_project, login_user_session, register_trial_user_session, restore_local_session_state, logout_current_session, build_forgot_password_message, reset_password_with_token, get_current_billing_summary, get_cutlist_access_state, build_checkout_start_message, build_customer_portal_message, get_release_readiness_summary, get_ops_runtime_summary, get_visible_audit_logs, get_visible_users, _set_language, get_effective_access_context
 from layout_engine import find_first_free_x, solve_layout
 from visualization import _render, _wall_len_h, _zone_baseline_and_height, render_element_preview
 from svg_icons import svg_for_tid
@@ -152,6 +152,7 @@ def _render_color_picker(
 
 @ui.refreshable
 def render_toolbar() -> None:
+    _effective_access = get_effective_access_context()
     tabs = [
         ("wizard",    _tr("tab.wizard"),    "home"),
         ("podesavanja", _tr("tab.settings"), "settings"),
@@ -159,7 +160,7 @@ def render_toolbar() -> None:
         ("krojna", _tr("tab.cutlist"), "table_rows"),
         ("pomoc",     _tr("tab.help"),      "help"),
     ]
-    _tier = str(getattr(state, "current_access_tier", "") or "").strip().lower()
+    _tier = str(_effective_access.get("access_tier", "") or "").strip().lower()
     if _tier == "admin":
         tabs.insert(5, ("ops", _tr("tab.ops"), "admin_panel_settings"))
 
@@ -221,7 +222,7 @@ def render_toolbar() -> None:
             ui.notify(err, type='negative', timeout=5000)
 
     _session_email = str(getattr(state, "current_user_email", "") or "")
-    _session_tier = str(getattr(state, "current_access_tier", "") or "")
+    _session_tier = str(_effective_access.get("access_tier", "") or "")
     _session_label = ""
     if _session_email:
         _session_label = _tr("toolbar.session_fmt", email=_session_email, tier=_session_tier or "-")
@@ -573,6 +574,7 @@ def _main_content_inner() -> None:
         get_release_readiness_summary=get_release_readiness_summary,
         get_ops_runtime_summary=get_ops_runtime_summary,
         get_visible_audit_logs=get_visible_audit_logs,
+        get_visible_users=get_visible_users,
     )
 
 

@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import copy
 import json
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -13,6 +14,34 @@ from layout_engine import find_first_free_x, available_space_in_zone, solve_layo
 from module_templates import resolve_template
 
 _LOG = logging.getLogger(__name__)
+_EMAIL_RE = re.compile(r"^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)+$", re.IGNORECASE)
+
+
+def normalize_email_address(email: str) -> str:
+    return str(email or "").strip().lower()
+
+
+def is_valid_email_address(email: str) -> bool:
+    clean_email = normalize_email_address(email)
+    if not clean_email or len(clean_email) > 254 or ".." in clean_email:
+        return False
+    return bool(_EMAIL_RE.match(clean_email))
+
+
+def _email_validation_error(email: str) -> str:
+    return "" if is_valid_email_address(email) else "Unesi ispravan email."
+
+
+def _build_email_verification_url(token: str) -> str:
+    try:
+        from app_config import get_public_runtime_config
+
+        base_url = str((get_public_runtime_config() or {}).get("base_url", "") or "").rstrip("/")
+    except Exception:
+        base_url = ""
+    if not base_url:
+        base_url = "http://localhost:8080"
+    return f"{base_url}/verify-email?token={str(token or '').strip()}"
 
 
 def _normalize_project_type(value: Any) -> str:
@@ -1921,13 +1950,17 @@ def login_user_session(email: str, password: str) -> Tuple[bool, str]:
             append_audit_log,
             authenticate_user,
             clear_failed_login_attempts,
+            create_email_verification_token,
             create_auth_session,
             get_login_rate_limit_status,
             record_login_attempt,
         )
-        clean_email = str(email).strip().lower()
+        clean_email = normalize_email_address(email)
         if not clean_email:
             return False, "Unesi email adresu."
+        email_err = _email_validation_error(clean_email)
+        if email_err:
+            return False, email_err
         if not str(password or "").strip():
             return False, "Unesi lozinku."
         rate_limit = get_login_rate_limit_status(clean_email)
@@ -1948,6 +1981,21 @@ def login_user_session(email: str, password: str) -> Tuple[bool, str]:
                 detail=f"email={clean_email}",
             )
             return False, "Pogresan email ili lozinka."
+        if not bool(getattr(user, "email_verified", False)) or str(user.status or "").strip().lower() == "pending_verification":
+            verification = create_email_verification_token(email=clean_email, reuse_existing_active=True)
+            try:
+                append_audit_log(
+                    event_type="auth.login_blocked_unverified_email",
+                    status="warning",
+                    detail=f"email={clean_email}",
+                    user_id=int(user.id),
+                )
+            except Exception as audit_ex:
+                _LOG.debug("login_user_session unverified audit failed: %s", audit_ex)
+            verification_url = _build_email_verification_url(str(verification.verification_token)) if verification else ""
+            if verification_url:
+                return False, f"Email jos nije potvrdjen. Otvori verifikacioni link: {verification_url}"
+            return False, "Email jos nije potvrdjen. Zatrazi novi verifikacioni link."
         record_login_attempt(email=clean_email, success=True)
         clear_failed_login_attempts(clean_email)
         auth_session = create_auth_session(
@@ -1989,11 +2037,11 @@ def login_user_session(email: str, password: str) -> Tuple[bool, str]:
 
 def register_trial_user_session(email: str, display_name: str = "", password: str = "") -> Tuple[bool, str]:
     try:
-        from auth_models import build_session_from_user
-        from project_store import append_audit_log, create_auth_session, create_user_record, hash_password
-        clean_email = str(email).strip().lower()
-        if "@" not in clean_email or "." not in clean_email.split("@", 1)[-1]:
-            return False, "Unesi ispravan email."
+        from project_store import append_audit_log, create_email_verification_token, create_user_record, hash_password
+        clean_email = normalize_email_address(email)
+        email_err = _email_validation_error(clean_email)
+        if email_err:
+            return False, email_err
         clean_password = str(password or "")
         if len(clean_password) < 6:
             return False, "Lozinka mora imati najmanje 6 karaktera."
@@ -2003,43 +2051,55 @@ def register_trial_user_session(email: str, display_name: str = "", password: st
             password_hash=hash_password(clean_password),
             auth_mode="password",
             access_tier="trial",
-            status="trial_active",
+            status="pending_verification",
+            email_verified=False,
         )
-        auth_session = create_auth_session(
-            user_id=int(user.id),
-            session_kind="browser",
-            auth_provider="password",
-            expires_in_days=14,
-        )
-        try:
-            _persist_session_token(
-                str(auth_session.session_token),
-                expires_at=str(auth_session.expires_at),
-            )
-        except Exception:
-            try:
-                from project_store import revoke_auth_session
-                revoke_auth_session(str(auth_session.session_token))
-            except Exception as revoke_ex:
-                _LOG.debug("register_trial_user_session rollback revoke failed: %s", revoke_ex)
-            raise
-        session = build_session_from_user(user)
-        _apply_session_state(session)
-        state.current_session_token = str(auth_session.session_token)
-        state.current_session_expires_at = str(auth_session.expires_at)
+        verification = create_email_verification_token(email=clean_email)
+        verification_url = _build_email_verification_url(str(verification.verification_token)) if verification else ""
         try:
             append_audit_log(
-                event_type="auth.register_trial",
+                event_type="auth.register_trial_pending_verification",
                 status="success",
                 detail=f"email={clean_email}",
                 user_id=int(user.id),
             )
         except Exception as audit_ex:
             _LOG.debug("register_trial_user_session audit failed: %s", audit_ex)
-        state.active_tab = "nova"
-        return True, ""
+        state.active_tab = "nalog"
+        if verification_url:
+            return True, f"Nalog je napravljen. Potvrdi email preko linka: {verification_url}"
+        return True, "Nalog je napravljen. Potvrdi email preko verifikacionog linka."
     except Exception as ex:
         return False, f"Ne mogu da napravim probni nalog: {ex}"
+
+
+def verify_email_with_token(token: str) -> Tuple[bool, str]:
+    clean_token = str(token or "").strip()
+    if not clean_token:
+        return False, "Verifikacioni token nedostaje."
+    try:
+        from project_store import append_audit_log, get_effective_email_verification_token, use_email_verification_token
+
+        token_record = get_effective_email_verification_token(clean_token)
+        if token_record is None:
+            return False, "Verifikacioni token nije pronadjen."
+        if str(token_record.status or "").strip().lower() != "active":
+            return False, "Verifikacioni token vise nije aktivan."
+        user = use_email_verification_token(verification_token=clean_token)
+        if user is None:
+            return False, "Email nije moguce potvrditi."
+        try:
+            append_audit_log(
+                event_type="auth.email_verified",
+                status="success",
+                detail=f"email={user.email}",
+                user_id=int(user.id),
+            )
+        except Exception as audit_ex:
+            _LOG.debug("verify_email_with_token audit failed: %s", audit_ex)
+        return True, f"Email je potvrdjen za {user.email}. Sada mozes da se prijavis."
+    except Exception as ex:
+        return False, f"Ne mogu da potvrdim email: {ex}"
 
 
 def restore_local_session_state() -> Tuple[bool, str]:
@@ -2075,11 +2135,12 @@ def logout_current_session() -> Tuple[bool, str]:
 
 
 def build_forgot_password_message(email: str) -> Tuple[bool, str]:
-    clean_email = str(email).strip().lower()
+    clean_email = normalize_email_address(email)
     if not clean_email:
         return False, "Unesi email adresu."
-    if "@" not in clean_email or "." not in clean_email.split("@", 1)[-1]:
-        return False, "Unesi ispravan email."
+    email_err = _email_validation_error(clean_email)
+    if email_err:
+        return False, email_err
     try:
         from project_store import append_audit_log, create_password_reset_token
         reset_token = create_password_reset_token(email=clean_email, expires_in_minutes=30)
@@ -2454,6 +2515,40 @@ def get_visible_audit_logs(limit: int = 20) -> List[Dict[str, Any]]:
         ]
     except Exception as ex:
         return [{"created_at": "-", "event_type": "ops.error", "status": "warning", "detail": str(ex)}]
+
+
+def get_visible_users(limit: int = 200) -> List[Dict[str, Any]]:
+    try:
+        from project_store import list_users
+
+        tier = str(getattr(state, "current_access_tier", "") or "").strip().lower()
+        if tier != "admin":
+            return []
+        rows = list_users(limit=limit)
+        return [
+            {
+                "email": str(row.email),
+                "display_name": str(row.display_name),
+                "auth_mode": str(row.auth_mode),
+                "access_tier": str(row.access_tier),
+                "status": str(row.status),
+                "email_verified": "yes" if bool(row.email_verified) else "no",
+                "created_at": str(row.created_at),
+                "updated_at": str(row.updated_at),
+            }
+            for row in rows
+        ]
+    except Exception as ex:
+        return [{
+            "email": "-",
+            "display_name": "ops.error",
+            "auth_mode": "-",
+            "access_tier": "-",
+            "status": str(ex),
+            "email_verified": "-",
+            "created_at": "-",
+            "updated_at": "-",
+        }]
 
 
 def save_project_json() -> bytes:

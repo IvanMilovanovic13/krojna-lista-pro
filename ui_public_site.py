@@ -321,12 +321,37 @@ def render_register_page() -> None:
                         str(register_password_value or register_password.value or ""),
                     )
                     if ok:
-                        ui.notify(_tr("public.register_success"), type="positive")
-                        ui.navigate.to("/app")
+                        ui.notify(str(err or _tr("public.register_success")), type="positive", timeout=9000)
+                        ui.navigate.to("/login")
                     else:
                         ui.notify(err, type="negative", timeout=5000)
 
                 ui.button(_tr("public.sign_up_btn"), on_click=_register).classes("w-full bg-[#111827] text-white")
                 with ui.row().classes("w-full justify-center public-auth-links"):
                     ui.link(_tr("public.already_have_account_link"), "/login")
+                _auth_footer()
+
+
+def render_verify_email_page(request: Request | None = None) -> None:
+    from state_logic import verify_email_with_token
+
+    _public_shell()
+    token = ""
+    if request is not None:
+        try:
+            token = str(request.query_params.get("token", "") or "").strip()
+        except Exception:
+            token = ""
+    ok, msg = verify_email_with_token(token) if token else (False, "Verifikacioni token nedostaje.")
+    with ui.column().classes("public-shell w-full"):
+        _topbar(action_label=_tr("public.login_btn"), action_target="/login", current_path="/verify-email")
+        with ui.column().classes("w-full items-center justify-center px-6 py-14 gap-6"):
+            with ui.column().classes("public-card auth-card items-center gap-4"):
+                with ui.element("div").classes("public-auth-icon"):
+                    ui.icon("verified" if ok else "warning", size="20px").classes("text-[#111827]")
+                ui.label("Verifikacija emaila").classes("public-auth-title")
+                ui.label(str(msg or "")).classes("text-sm text-slate-700 text-center")
+                ui.button(_tr("public.login_btn"), on_click=lambda: ui.navigate.to("/login")).classes(
+                    "w-full bg-[#111827] text-white"
+                )
                 _auth_footer()

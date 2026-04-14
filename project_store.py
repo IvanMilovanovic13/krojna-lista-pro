@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
@@ -15,6 +16,20 @@ from storage_backend import get_store_backend, get_store_backend_name, get_store
 LOCAL_USER_EMAIL = "local@krojnalistapro"
 PASSWORD_SCHEME = "pbkdf2_sha256"
 PASSWORD_ITERATIONS = 120_000
+DEFAULT_PRIVILEGED_PASSWORD = "CabinetCut_Auth_2026!"
+DEFAULT_ADMIN_EMAILS = [
+    "admin1@cabinetcutpro.invalid",
+    "admin2@cabinetcutpro.invalid",
+    "admin3@cabinetcutpro.invalid",
+]
+DEFAULT_PRIVILEGED_TEST_EMAILS = [
+    "testpaid1@cabinetcutpro.invalid",
+    "testpaid2@cabinetcutpro.invalid",
+    "testpaid3@cabinetcutpro.invalid",
+    "testpaid4@cabinetcutpro.invalid",
+    "testpaid5@cabinetcutpro.invalid",
+]
+_SEEDING_PRIVILEGED_ACCOUNTS = False
 
 
 @dataclass(frozen=True)
@@ -25,6 +40,7 @@ class UserRecord:
     auth_mode: str
     access_tier: str
     status: str
+    email_verified: bool
     created_at: str
     updated_at: str
 
@@ -87,6 +103,18 @@ class PasswordResetTokenRecord:
 
 
 @dataclass(frozen=True)
+class EmailVerificationTokenRecord:
+    id: int
+    user_id: int
+    email: str
+    verification_token: str
+    status: str
+    created_at: str
+    expires_at: str
+    used_at: str
+
+
+@dataclass(frozen=True)
 class AuditLogRecord:
     id: int
     user_id: int
@@ -139,6 +167,7 @@ CREATE TABLE IF NOT EXISTS users (
     auth_mode TEXT NOT NULL DEFAULT 'local',
     access_tier TEXT NOT NULL DEFAULT 'local_beta',
     status TEXT NOT NULL DEFAULT 'local_active',
+    email_verified INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -218,6 +247,18 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    email TEXT NOT NULL DEFAULT '',
+    verification_token TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TEXT NOT NULL,
+    used_at TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS login_attempts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL,
@@ -262,6 +303,8 @@ CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id ON auth_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_token ON auth_sessions(session_token);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(reset_token);
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON email_verification_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_token ON email_verification_tokens(verification_token);
 CREATE INDEX IF NOT EXISTS idx_login_attempts_email_time ON login_attempts(email, attempted_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
@@ -279,6 +322,7 @@ def _get_backend_name() -> str:
 
 
 def init_project_store() -> None:
+    global _SEEDING_PRIVILEGED_ACCOUNTS
     get_store_backend().assert_ready()
     with _connect() as conn:
         if _get_backend_name() == "postgres":
@@ -286,6 +330,9 @@ def init_project_store() -> None:
         else:
             conn.executescript(SQLITE_SCHEMA_SQL)
         _ensure_users_schema(conn)
+        _ensure_email_verification_schema(conn)
+    if not _SEEDING_PRIVILEGED_ACCOUNTS:
+        ensure_privileged_seed_accounts()
 
 
 def get_project_store_runtime_info() -> dict[str, str]:
@@ -321,6 +368,8 @@ def _ensure_users_schema(conn) -> None:
             conn.execute("ALTER TABLE users ADD COLUMN auth_mode TEXT NOT NULL DEFAULT 'local'")
         if "access_tier" not in existing:
             conn.execute("ALTER TABLE users ADD COLUMN access_tier TEXT NOT NULL DEFAULT 'local_beta'")
+        if "email_verified" not in existing:
+            conn.execute("ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT FALSE")
         conn.execute(
             """
             UPDATE users
@@ -342,6 +391,10 @@ def _ensure_users_schema(conn) -> None:
                             ELSE 'blocked'
                         END
                     ELSE access_tier
+                END,
+                email_verified = CASE
+                    WHEN status IN ('local_active', 'trial_active', 'paid_active', 'admin_active') THEN TRUE
+                    ELSE COALESCE(email_verified, FALSE)
                 END
             """
         )
@@ -355,6 +408,8 @@ def _ensure_users_schema(conn) -> None:
         conn.execute("ALTER TABLE users ADD COLUMN auth_mode TEXT NOT NULL DEFAULT 'local'")
     if "access_tier" not in existing:
         conn.execute("ALTER TABLE users ADD COLUMN access_tier TEXT NOT NULL DEFAULT 'local_beta'")
+    if "email_verified" not in existing:
+        conn.execute("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0")
     conn.execute(
         """
         UPDATE users
@@ -376,8 +431,53 @@ def _ensure_users_schema(conn) -> None:
                         ELSE 'blocked'
                     END
                 ELSE access_tier
+            END,
+            email_verified = CASE
+                WHEN status IN ('local_active', 'trial_active', 'paid_active', 'admin_active') THEN 1
+                ELSE COALESCE(email_verified, 0)
             END
         """
+    )
+
+
+def _ensure_email_verification_schema(conn) -> None:
+    if _get_backend_name() == "postgres":
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS email_verification_tokens (
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL,
+                email TEXT NOT NULL DEFAULT '',
+                verification_token TEXT NOT NULL UNIQUE,
+                status TEXT NOT NULL DEFAULT 'active',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMPTZ NOT NULL,
+                used_at TIMESTAMPTZ,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+    else:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS email_verification_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                email TEXT NOT NULL DEFAULT '',
+                verification_token TEXT NOT NULL UNIQUE,
+                status TEXT NOT NULL DEFAULT 'active',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at TEXT NOT NULL,
+                used_at TEXT NOT NULL DEFAULT '',
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON email_verification_tokens(user_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_token ON email_verification_tokens(verification_token)"
     )
 
 
@@ -386,7 +486,7 @@ def ensure_local_user() -> UserRecord:
     with _connect() as conn:
         row = conn.execute(
             """
-            SELECT id, email, display_name, auth_mode, access_tier, status, created_at, updated_at
+            SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
             FROM users
             WHERE email = ?
             """,
@@ -395,14 +495,14 @@ def ensure_local_user() -> UserRecord:
         if row is None:
             conn.execute(
                 """
-                INSERT INTO users (email, display_name, password_hash, auth_mode, access_tier, status)
-                VALUES (?, 'local', '', 'local', 'local_beta', 'local_active')
+                INSERT INTO users (email, display_name, password_hash, auth_mode, access_tier, status, email_verified)
+                VALUES (?, 'local', '', 'local', 'local_beta', 'local_active', 1)
                 """,
                 (LOCAL_USER_EMAIL,),
             )
             row = conn.execute(
                 """
-                SELECT id, email, display_name, auth_mode, access_tier, status, created_at, updated_at
+                SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
                 FROM users
                 WHERE email = ?
                 """,
@@ -416,6 +516,7 @@ def ensure_local_user() -> UserRecord:
             auth_mode=str(row["auth_mode"]),
             access_tier=str(row["access_tier"]),
             status=str(row["status"]),
+            email_verified=bool(int(row["email_verified"])) if str(row["email_verified"]).strip().isdigit() else bool(row["email_verified"]),
             created_at=str(row["created_at"]),
             updated_at=str(row["updated_at"]),
         )
@@ -429,8 +530,22 @@ def _user_record_from_row(row: Any) -> UserRecord:
         auth_mode=str(row["auth_mode"]),
         access_tier=str(row["access_tier"]),
         status=str(row["status"]),
+        email_verified=bool(int(row["email_verified"])) if str(row["email_verified"]).strip().isdigit() else bool(row["email_verified"]),
         created_at=str(row["created_at"]),
         updated_at=str(row["updated_at"]),
+    )
+
+
+def _email_verification_token_from_row(row: Any) -> EmailVerificationTokenRecord:
+    return EmailVerificationTokenRecord(
+        id=int(row["id"]),
+        user_id=int(row["user_id"]),
+        email=str(row["email"]),
+        verification_token=str(row["verification_token"]),
+        status=str(row["status"]),
+        created_at=str(row["created_at"]),
+        expires_at=str(row["expires_at"]),
+        used_at=str(row["used_at"]),
     )
 
 
@@ -467,7 +582,7 @@ def get_user_by_email(email: str) -> Optional[UserRecord]:
     with _connect() as conn:
         row = conn.execute(
             """
-            SELECT id, email, display_name, auth_mode, access_tier, status, created_at, updated_at
+            SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
             FROM users
             WHERE lower(email) = lower(?)
             """,
@@ -483,7 +598,7 @@ def get_user_by_id(user_id: int) -> Optional[UserRecord]:
     with _connect() as conn:
         row = conn.execute(
             """
-            SELECT id, email, display_name, auth_mode, access_tier, status, created_at, updated_at
+            SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
             FROM users
             WHERE id = ?
             """,
@@ -584,6 +699,55 @@ def verify_password(password: str, stored_hash: str) -> bool:
     return hmac.compare_digest(probe, digest)
 
 
+def _split_seed_emails(raw: str, fallback: list[str]) -> list[str]:
+    if not str(raw or "").strip():
+        return list(fallback)
+    return [item.strip().lower() for item in str(raw).replace(";", ",").split(",") if item.strip()]
+
+
+def ensure_privileged_seed_accounts() -> dict[str, list[str]]:
+    global _SEEDING_PRIVILEGED_ACCOUNTS
+    admin_emails = _split_seed_emails(os.getenv("APP_ADMIN_EMAILS", ""), DEFAULT_ADMIN_EMAILS)[:3]
+    test_emails = _split_seed_emails(os.getenv("APP_PRIVILEGED_TEST_EMAILS", ""), DEFAULT_PRIVILEGED_TEST_EMAILS)[:5]
+    seed_password = str(os.getenv("APP_PRIVILEGED_SEED_PASSWORD", DEFAULT_PRIVILEGED_PASSWORD) or DEFAULT_PRIVILEGED_PASSWORD)
+    password_hash = hash_password(seed_password)
+    created_admins: list[str] = []
+    created_tests: list[str] = []
+    _SEEDING_PRIVILEGED_ACCOUNTS = True
+    try:
+        for email in admin_emails:
+            existing = get_user_by_email(email)
+            create_user_record(
+                email=email,
+                display_name=email.split("@", 1)[0],
+                password_hash=password_hash if existing is None else "",
+                auth_mode="password",
+                access_tier="admin",
+                status="admin_active",
+                email_verified=True,
+            )
+            created_admins.append(email)
+        for email in test_emails:
+            existing = get_user_by_email(email)
+            create_user_record(
+                email=email,
+                display_name=email.split("@", 1)[0],
+                password_hash=password_hash if existing is None else "",
+                auth_mode="password",
+                access_tier="paid",
+                status="paid_active",
+                email_verified=True,
+            )
+            created_tests.append(email)
+    finally:
+        _SEEDING_PRIVILEGED_ACCOUNTS = False
+    return {
+        "admins": created_admins,
+        "tests": created_tests,
+        "seed_password": [seed_password],
+    }
+
+
 def get_password_hash_by_email(email: str) -> str:
     init_project_store()
     with _connect() as conn:
@@ -608,6 +772,7 @@ def create_user_record(
     auth_mode: str = "password",
     access_tier: str = "trial",
     status: str = "trial_active",
+    email_verified: bool = False,
 ) -> UserRecord:
     init_project_store()
     clean_email = str(email).strip().lower()
@@ -615,8 +780,10 @@ def create_user_record(
     with _connect() as conn:
         conn.execute(
             """
-            INSERT INTO users (email, display_name, password_hash, auth_mode, access_tier, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            INSERT INTO users (
+                email, display_name, password_hash, auth_mode, access_tier, status, email_verified, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT(email) DO UPDATE SET
                 display_name = excluded.display_name,
                 password_hash = CASE
@@ -626,6 +793,7 @@ def create_user_record(
                 auth_mode = excluded.auth_mode,
                 access_tier = excluded.access_tier,
                 status = excluded.status,
+                email_verified = excluded.email_verified,
                 updated_at = CURRENT_TIMESTAMP
             """,
             (
@@ -635,6 +803,7 @@ def create_user_record(
                 str(auth_mode),
                 str(access_tier),
                 str(status),
+                bool(email_verified) if _get_backend_name() == "postgres" else (1 if email_verified else 0),
             ),
         )
     user = get_user_by_email(clean_email)
@@ -760,6 +929,42 @@ def set_user_access_status(
                 (str(auth_mode), str(access_tier), str(status), str(email).strip()),
             )
     return get_user_by_email(email)
+
+
+def set_user_email_verification(email: str, *, email_verified: bool, status: str | None = None) -> Optional[UserRecord]:
+    init_project_store()
+    params: list[Any] = [
+        bool(email_verified) if _get_backend_name() == "postgres" else (1 if email_verified else 0),
+    ]
+    query = """
+        UPDATE users
+        SET email_verified = ?,
+            updated_at = CURRENT_TIMESTAMP
+    """
+    if status is not None:
+        query += ", status = ?"
+        params.append(str(status))
+    query += " WHERE lower(email) = lower(?)"
+    params.append(str(email).strip())
+    with _connect() as conn:
+        conn.execute(query, params)
+    return get_user_by_email(email)
+
+
+def list_users(*, limit: int = 200) -> list[UserRecord]:
+    init_project_store()
+    clean_limit = max(1, min(1000, int(limit or 200)))
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
+            FROM users
+            ORDER BY id ASC
+            LIMIT ?
+            """,
+            (clean_limit,),
+        ).fetchall()
+    return [_user_record_from_row(row) for row in rows]
 
 
 def get_user_subscription(user_id: int) -> Optional[SubscriptionRecord]:
@@ -1899,23 +2104,188 @@ def use_password_reset_token(*, reset_token: str, new_password_hash: str) -> Opt
     return get_user_by_id(int(token_record.user_id))
 
 
+def create_email_verification_token(
+    *,
+    email: str,
+    expires_in_minutes: int = 1440,
+    reuse_existing_active: bool = False,
+) -> Optional[EmailVerificationTokenRecord]:
+    user = get_user_by_email(email)
+    if user is None:
+        return None
+    init_project_store()
+    if reuse_existing_active:
+        with _connect() as conn:
+            row = conn.execute(
+                """
+                SELECT id, user_id, email, verification_token, status, created_at, expires_at, used_at
+                FROM email_verification_tokens
+                WHERE user_id = ? AND status = 'active'
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (int(user.id),),
+            ).fetchone()
+        if row is not None:
+            existing = _email_verification_token_from_row(row)
+            expires_at = _parse_datetime_guess(str(existing.expires_at))
+            if expires_at is None or expires_at > datetime.now(timezone.utc):
+                return existing
+    verification_token = secrets.token_urlsafe(32)
+    expires_at = _future_utc_iso_minutes(minutes=max(10, int(expires_in_minutes or 1440)))
+    with _connect() as conn:
+        conn.execute(
+            """
+            UPDATE email_verification_tokens
+            SET status = 'replaced',
+                used_at = ?
+            WHERE user_id = ? AND status = 'active'
+            """,
+            (_utc_now_iso(), int(user.id)),
+        )
+        if _get_backend_name() == "postgres":
+            row = conn.execute(
+                """
+                INSERT INTO email_verification_tokens (
+                    user_id, email, verification_token, status, created_at, expires_at, used_at
+                )
+                VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP, ?, '')
+                RETURNING id, user_id, email, verification_token, status, created_at, expires_at, used_at
+                """,
+                (int(user.id), str(user.email), verification_token, expires_at),
+            ).fetchone()
+        else:
+            conn.execute(
+                """
+                INSERT INTO email_verification_tokens (
+                    user_id, email, verification_token, status, created_at, expires_at, used_at
+                )
+                VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP, ?, '')
+                """,
+                (int(user.id), str(user.email), verification_token, expires_at),
+            )
+            row = conn.execute(
+                """
+                SELECT id, user_id, email, verification_token, status, created_at, expires_at, used_at
+                FROM email_verification_tokens
+                WHERE id = last_insert_rowid()
+                """
+            ).fetchone()
+    if row is None:
+        return None
+    return _email_verification_token_from_row(row)
+
+
+def get_email_verification_token(verification_token: str) -> Optional[EmailVerificationTokenRecord]:
+    init_project_store()
+    clean_token = str(verification_token or "").strip()
+    if not clean_token:
+        return None
+    with _connect() as conn:
+        row = conn.execute(
+            """
+            SELECT id, user_id, email, verification_token, status, created_at, expires_at, used_at
+            FROM email_verification_tokens
+            WHERE verification_token = ?
+            """,
+            (clean_token,),
+        ).fetchone()
+    if row is None:
+        return None
+    return _email_verification_token_from_row(row)
+
+
+def get_effective_email_verification_token(verification_token: str) -> Optional[EmailVerificationTokenRecord]:
+    record = get_email_verification_token(verification_token)
+    if record is None:
+        return None
+    expires_at = _parse_datetime_guess(str(record.expires_at))
+    if str(record.status).lower() != "active":
+        return record
+    if expires_at is not None and expires_at <= datetime.now(timezone.utc):
+        with _connect() as conn:
+            conn.execute(
+                """
+                UPDATE email_verification_tokens
+                SET status = 'expired',
+                    used_at = ?
+                WHERE verification_token = ? AND status = 'active'
+                """,
+                (_utc_now_iso(), str(verification_token)),
+            )
+        return get_email_verification_token(verification_token)
+    return record
+
+
+def _active_status_for_access_tier(access_tier: str) -> str:
+    clean_tier = str(access_tier or "").strip().lower()
+    if clean_tier == "admin":
+        return "admin_active"
+    if clean_tier in {"paid", "pro"}:
+        return "paid_active"
+    if clean_tier == "local_beta":
+        return "local_active"
+    return "trial_active"
+
+
+def use_email_verification_token(*, verification_token: str) -> Optional[UserRecord]:
+    token_record = get_effective_email_verification_token(verification_token)
+    if token_record is None:
+        return None
+    if str(token_record.status).lower() != "active":
+        return None
+    user = get_user_by_id(int(token_record.user_id))
+    if user is None:
+        return None
+    next_status = _active_status_for_access_tier(str(user.access_tier))
+    with _connect() as conn:
+        conn.execute(
+            """
+            UPDATE users
+            SET email_verified = ?,
+                status = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (
+                True if _get_backend_name() == "postgres" else 1,
+                next_status,
+                int(token_record.user_id),
+            ),
+        )
+        conn.execute(
+            """
+            UPDATE email_verification_tokens
+            SET status = 'used',
+                used_at = ?
+            WHERE verification_token = ? AND status = 'active'
+            """,
+            (_utc_now_iso(), str(verification_token)),
+        )
+    return get_user_by_id(int(token_record.user_id))
+
+
 def cleanup_auth_artifacts(
     *,
     keep_login_attempts_days: int = 30,
     keep_reset_tokens_days: int = 7,
+    keep_verification_tokens_days: int = 7,
     keep_revoked_sessions_days: int = 30,
 ) -> dict[str, int]:
     init_project_store()
     now = datetime.now(timezone.utc)
     reset_cutoff = (now - timedelta(days=max(1, int(keep_reset_tokens_days)))).replace(microsecond=0).isoformat()
+    verification_cutoff = (now - timedelta(days=max(1, int(keep_verification_tokens_days)))).replace(microsecond=0).isoformat()
     login_cutoff = (now - timedelta(days=max(1, int(keep_login_attempts_days)))).replace(microsecond=0).isoformat()
     session_cutoff = (now - timedelta(days=max(1, int(keep_revoked_sessions_days)))).replace(microsecond=0).isoformat()
 
     expired_sessions = 0
     expired_resets = 0
+    expired_verifications = 0
     pruned_attempts = 0
     pruned_sessions = 0
     pruned_resets = 0
+    pruned_verifications = 0
 
     with _connect() as conn:
         session_rows = conn.execute(
@@ -1961,6 +2331,27 @@ def cleanup_auth_artifacts(
                 )
                 expired_resets += 1
 
+        verification_rows = conn.execute(
+            """
+            SELECT verification_token, expires_at
+            FROM email_verification_tokens
+            WHERE status = 'active'
+            """
+        ).fetchall()
+        for row in verification_rows:
+            expires_at = _parse_datetime_guess(str(row["expires_at"]))
+            if expires_at is not None and expires_at <= now:
+                conn.execute(
+                    """
+                    UPDATE email_verification_tokens
+                    SET status = 'expired',
+                        used_at = ?
+                    WHERE verification_token = ? AND status = 'active'
+                    """,
+                    (_utc_now_iso(), str(row["verification_token"])),
+                )
+                expired_verifications += 1
+
         attempts_before = conn.execute("SELECT COUNT(*) AS c FROM login_attempts").fetchone()
         conn.execute(
             """
@@ -1994,12 +2385,25 @@ def cleanup_auth_artifacts(
         resets_after = conn.execute("SELECT COUNT(*) AS c FROM password_reset_tokens").fetchone()
         pruned_resets = max(0, int(resets_before["c"]) - int(resets_after["c"]))
 
+        verifications_before = conn.execute("SELECT COUNT(*) AS c FROM email_verification_tokens").fetchone()
+        conn.execute(
+            """
+            DELETE FROM email_verification_tokens
+            WHERE status IN ('used', 'expired', 'replaced') AND created_at < ?
+            """,
+            (verification_cutoff,),
+        )
+        verifications_after = conn.execute("SELECT COUNT(*) AS c FROM email_verification_tokens").fetchone()
+        pruned_verifications = max(0, int(verifications_before["c"]) - int(verifications_after["c"]))
+
     return {
         "expired_sessions": expired_sessions,
         "expired_reset_tokens": expired_resets,
+        "expired_verification_tokens": expired_verifications,
         "pruned_login_attempts": pruned_attempts,
         "pruned_sessions": pruned_sessions,
         "pruned_reset_tokens": pruned_resets,
+        "pruned_verification_tokens": pruned_verifications,
     }
 
 
@@ -2013,12 +2417,16 @@ def get_auth_runtime_summary() -> dict[str, int]:
         reset_tokens = conn.execute(
             "SELECT COUNT(*) AS c FROM password_reset_tokens WHERE status = 'active'"
         ).fetchone()
+        verification_tokens = conn.execute(
+            "SELECT COUNT(*) AS c FROM email_verification_tokens WHERE status = 'active'"
+        ).fetchone()
         failed_login_attempts = conn.execute(
             f"SELECT COUNT(*) AS c FROM login_attempts WHERE success = {failed_false_sql}"
         ).fetchone()
     return {
         "active_sessions": int(active_sessions["c"]) if active_sessions is not None else 0,
         "active_reset_tokens": int(reset_tokens["c"]) if reset_tokens is not None else 0,
+        "active_verification_tokens": int(verification_tokens["c"]) if verification_tokens is not None else 0,
         "failed_login_attempts": int(failed_login_attempts["c"]) if failed_login_attempts is not None else 0,
     }
 
@@ -2204,7 +2612,7 @@ def export_store_snapshot() -> dict[str, Any]:
     with _connect() as conn:
         users = conn.execute(
             """
-            SELECT id, email, display_name, auth_mode, access_tier, status, created_at, updated_at
+            SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
             FROM users
             ORDER BY id ASC
             """
@@ -2250,6 +2658,13 @@ def export_store_snapshot() -> dict[str, Any]:
             ORDER BY user_id ASC, id ASC
             """
         ).fetchall()
+        email_verification_tokens = conn.execute(
+            """
+            SELECT id, user_id, email, verification_token, status, created_at, expires_at, used_at
+            FROM email_verification_tokens
+            ORDER BY user_id ASC, id ASC
+            """
+        ).fetchall()
         login_attempts = conn.execute(
             """
             SELECT id, email, success, attempted_at
@@ -2280,6 +2695,7 @@ def export_store_snapshot() -> dict[str, Any]:
         "billing_events": [dict(row) for row in billing_events],
         "auth_sessions": [dict(row) for row in auth_sessions],
         "password_reset_tokens": [dict(row) for row in password_reset_tokens],
+        "email_verification_tokens": [dict(row) for row in email_verification_tokens],
         "login_attempts": [dict(row) for row in login_attempts],
         "export_jobs": [dict(row) for row in export_jobs],
         "audit_logs": [dict(row) for row in audit_logs],

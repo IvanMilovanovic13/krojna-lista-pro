@@ -35,6 +35,7 @@ def build_session_from_user(user: UserRecord) -> SessionState:
     status = str(user.status or "inactive").strip().lower()
     auth_mode = str(user.auth_mode or "").strip().lower()
     access_tier = str(user.access_tier or "").strip().lower()
+    email_verified = bool(getattr(user, "email_verified", False))
 
     if not auth_mode or not access_tier:
         if status == "local_active":
@@ -61,13 +62,17 @@ def build_session_from_user(user: UserRecord) -> SessionState:
         subscription_status=status,
         display_name=str(user.display_name or _display_name_from_email(str(user.email))),
     )
-    can_access = status in ACCESS_OK_STATUSES
+    can_access = status in ACCESS_OK_STATUSES and email_verified
     gate_reason = ""
-    if not can_access:
+    if not email_verified:
+        gate_reason = "Email nije potvrden. Potvrdi email link da bi nalog postao aktivan."
+    elif not can_access:
         if status in ("inactive", "canceled"):
             gate_reason = "Pretplata nije aktivna. Aktiviraj PRO da nastavis rad bez prekida."
         elif status in ("past_due",):
             gate_reason = "Placanje nije uspesno obradjeno. Proveri naplatu i nastavi rad."
+        elif status in ("pending_verification",):
+            gate_reason = "Email nije potvrden. Potvrdi email link da bi nalog postao aktivan."
         else:
             gate_reason = "Pristup aplikaciji nije aktivan."
     return SessionState(
