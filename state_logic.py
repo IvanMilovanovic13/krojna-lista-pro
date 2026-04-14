@@ -1893,6 +1893,17 @@ def _apply_session_state(session: Any) -> None:
         state.current_subscription_status = str(session.user.subscription_status)
         state.current_gate_reason = str(session.gate_reason or "")
         state.current_can_access_app = bool(session.can_access_app)
+        # Normalizuj UI/session state prema billing istini kako bi toolbar i tabovi
+        # koristili isti efektivni pristup kao access gate logika.
+        effective_access = get_effective_access_context()
+        state.current_access_tier = str(effective_access.get("access_tier", state.current_access_tier) or "")
+        state.current_subscription_status = str(
+            effective_access.get("subscription_status", state.current_subscription_status) or ""
+        )
+        state.current_gate_reason = str(effective_access.get("gate_reason", state.current_gate_reason) or "")
+        state.current_can_access_app = bool(
+            effective_access.get("can_access_app", state.current_can_access_app)
+        )
         if previous_user_id not in (0, next_user_id) or (
             previous_email and previous_email != str(next_email).strip().lower()
         ):
@@ -2156,13 +2167,110 @@ def get_current_billing_summary() -> Dict[str, Any] | None:
         return None
 
 
-def get_cutlist_access_state() -> Dict[str, str]:
+def get_effective_access_context() -> Dict[str, Any]:
     from i18n import tr
 
+    lang = str(getattr(state, "language", "sr") or "sr")
     source = str(getattr(state, "current_project_source", "") or "").strip().lower()
     tier = str(getattr(state, "current_access_tier", "") or "").strip().lower()
     status = str(getattr(state, "current_subscription_status", "") or "").strip().lower()
-    lang = str(getattr(state, "language", "sr") or "sr")
+    gate_reason = str(getattr(state, "current_gate_reason", "") or "")
+    can_access_app = bool(getattr(state, "current_can_access_app", True))
+    auth_mode = str(getattr(state, "current_auth_mode", "") or "").strip().lower()
+
+    context: Dict[str, Any] = {
+        "source": source,
+        "access_tier": tier,
+        "subscription_status": status,
+        "gate_reason": gate_reason,
+        "can_access_app": can_access_app,
+        "auth_mode": auth_mode,
+    }
+
+    if "demo" in source:
+        context.update(
+            {
+                "access_tier": "demo",
+                "subscription_status": "demo_active",
+                "gate_reason": "",
+                "can_access_app": True,
+                "mode": "demo",
+            }
+        )
+        return context
+
+    billing = get_current_billing_summary()
+    if billing:
+        billing_status = str(billing.get("billing_status", "") or "").strip().lower()
+        plan_code = str(billing.get("plan_code", "") or "").strip().lower()
+        billing_access_tier = str(billing.get("access_tier", "") or "").strip().lower()
+        is_paid_billing = billing_status in {"active", "paid", "on_trial"} and plan_code not in {"", "trial"}
+        is_trial_billing = billing_status in {"trial", "trialing"} or (
+            billing_status in {"active", "paid", "on_trial"} and plan_code == "trial"
+        )
+
+        if is_paid_billing:
+            context.update(
+                {
+                    "access_tier": "paid",
+                    "subscription_status": "paid_active",
+                    "gate_reason": "",
+                    "can_access_app": True,
+                    "mode": "paid",
+                }
+            )
+            return context
+
+        if billing_access_tier == "admin":
+            context.update(
+                {
+                    "access_tier": "admin",
+                    "subscription_status": "admin_active",
+                    "gate_reason": "",
+                    "can_access_app": True,
+                    "mode": "admin",
+                }
+            )
+            return context
+
+        if is_trial_billing:
+            context.update(
+                {
+                    "access_tier": "trial",
+                    "subscription_status": "trial_active",
+                    "gate_reason": tr("access.cutlist_reason_free", lang),
+                    "can_access_app": True,
+                    "mode": "trial",
+                }
+            )
+            return context
+
+    if tier in {"admin", "paid", "pro"}:
+        context["mode"] = tier or "paid"
+        return context
+    if tier == "trial":
+        context.setdefault("gate_reason", tr("access.cutlist_reason_free", lang))
+        context["mode"] = "trial"
+        return context
+    if tier in {"local", "local_beta", ""}:
+        context.setdefault("gate_reason", tr("access.cutlist_reason_local", lang))
+        context["mode"] = "free"
+        return context
+    if status in {"inactive", "canceled", "past_due"}:
+        context.setdefault("gate_reason", tr("access.cutlist_reason_inactive", lang))
+        context["mode"] = "blocked"
+        return context
+    context.setdefault("gate_reason", tr("access.cutlist_reason_locked", lang))
+    context["mode"] = "blocked"
+    return context
+
+
+def get_cutlist_access_state() -> Dict[str, str]:
+    context = get_effective_access_context()
+    source = str(context.get("source", "") or "").strip().lower()
+    tier = str(context.get("access_tier", "") or "").strip().lower()
+    status = str(context.get("subscription_status", "") or "").strip().lower()
+    gate_reason = str(context.get("gate_reason", "") or "")
 
     if "demo" in source:
         return {"allowed": "true", "reason": "", "mode": "demo"}
@@ -2171,24 +2279,24 @@ def get_cutlist_access_state() -> Dict[str, str]:
     if tier == "trial":
         return {
             "allowed": "false",
-            "reason": tr("access.cutlist_reason_free", lang),
+            "reason": gate_reason,
             "mode": "free",
         }
     if tier in {"local", "local_beta", ""}:
         return {
             "allowed": "false",
-            "reason": tr("access.cutlist_reason_local", lang),
+            "reason": gate_reason,
             "mode": "free",
         }
     if status in {"inactive", "canceled", "past_due"}:
         return {
             "allowed": "false",
-            "reason": tr("access.cutlist_reason_inactive", lang),
+            "reason": gate_reason,
             "mode": "blocked",
         }
     return {
         "allowed": "false",
-        "reason": tr("access.cutlist_reason_locked", lang),
+        "reason": gate_reason,
         "mode": "blocked",
     }
 
