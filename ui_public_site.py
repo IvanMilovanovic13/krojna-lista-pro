@@ -119,11 +119,37 @@ def _brand() -> None:
     ui.label(_tr("wizard.title_app")).classes("public-brand ml-2")
 
 
+def _split_brand_title() -> tuple[str, str]:
+    title = str(_tr("wizard.title_app") or "").strip()
+    if title.upper().endswith(" PRO"):
+        return title[:-4].strip(), "PRO"
+    return title, ""
+
+
+def _hero_brand(caption: str = "") -> None:
+    brand_main, brand_badge = _split_brand_title()
+    with ui.column().classes("w-full items-center gap-2"):
+        with ui.row().classes("items-start justify-center gap-2"):
+            ui.label(brand_main).classes(
+                "text-[52px] font-black tracking-[-0.05em] leading-none text-[#6d8ee8] "
+                "drop-shadow-[0_8px_24px_rgba(109,142,232,0.18)] max-md:text-[36px]"
+            )
+            if brand_badge:
+                ui.label(brand_badge).classes(
+                    "mt-1 rounded-[10px] border-2 border-[#6d8ee8] px-2 py-0.5 text-[18px] font-black "
+                    "leading-none tracking-[-0.02em] text-[#6d8ee8] max-md:text-[14px]"
+                )
+        if caption:
+            ui.label(caption).classes(
+                "text-xs font-semibold uppercase tracking-[0.28em] text-[#b4bfdc] text-center"
+            )
+
+
 def _topbar(*, action_label: str, action_target: str, current_path: str) -> None:
     from state_logic import state
 
     with ui.row().classes("public-topbar w-full items-center justify-between px-5 py-4"):
-        _brand()
+        ui.element("div").classes("min-w-[120px]")
         with ui.row().classes("items-center gap-2"):
             _language_options = get_language_options()
             _current_language = str(getattr(state, "language", "sr") or "sr")
@@ -180,8 +206,8 @@ def render_login_page(request: Request | None = None) -> None:
     with ui.column().classes("public-shell w-full"):
         _topbar(action_label=_tr("public.create_account_btn"), action_target="/register", current_path="/login")
         with ui.column().classes("w-full items-center justify-center px-6 py-14 gap-6"):
-            with ui.column().classes("w-full items-center gap-2"):
-                ui.label(_tr("wizard.title_app")).classes("text-[14px] font-bold tracking-[0.22em] text-slate-500")
+            with ui.column().classes("w-full items-center gap-3"):
+                _hero_brand("Dashboard / Projekti")
                 ui.label(_tr("public.login_title")).classes("public-hero-title")
                 ui.label(_tr("nova.auth_login_desc")).classes("public-hero-text max-w-xl")
 
@@ -254,8 +280,8 @@ def render_register_page() -> None:
     with ui.column().classes("public-shell w-full"):
         _topbar(action_label=_tr("public.login_btn"), action_target="/login", current_path="/register")
         with ui.column().classes("w-full items-center justify-center px-6 py-14 gap-6"):
-            with ui.column().classes("w-full items-center gap-2"):
-                ui.label(_tr("wizard.title_app")).classes("text-[14px] font-bold tracking-[0.22em] text-slate-500")
+            with ui.column().classes("w-full items-center gap-3"):
+                _hero_brand("Dashboard / Projekti")
                 ui.label(_tr("public.register_title")).classes("public-hero-title")
                 ui.label(_tr("public.register_desc")).classes("public-hero-text")
 

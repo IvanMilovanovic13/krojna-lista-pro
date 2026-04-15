@@ -6,6 +6,32 @@ from typing import Any, Callable
 from i18n import SYM_CHEVRON
 
 
+def _split_brand_title(tr_fn: Callable[[str], str]) -> tuple[str, str]:
+    title = str(tr_fn('wizard.title_app') or '').strip()
+    if title.upper().endswith(' PRO'):
+        return title[:-4].strip(), 'PRO'
+    return title, ''
+
+
+def _render_center_brand(ui: Any, tr_fn: Callable[[str], str], caption: str = '') -> None:
+    brand_main, brand_badge = _split_brand_title(tr_fn)
+    with ui.column().classes('w-full items-center gap-2'):
+        with ui.row().classes('items-start justify-center gap-2'):
+            ui.label(brand_main).classes(
+                'text-[52px] font-black tracking-[-0.05em] leading-none text-[#6d8ee8] '
+                'drop-shadow-[0_8px_24px_rgba(109,142,232,0.18)] max-md:text-[36px]'
+            )
+            if brand_badge:
+                ui.label(brand_badge).classes(
+                    'mt-1 rounded-[10px] border-2 border-[#6d8ee8] px-2 py-0.5 text-[18px] font-black '
+                    'leading-none tracking-[-0.02em] text-[#6d8ee8] max-md:text-[14px]'
+                )
+        if caption:
+            ui.label(caption).classes(
+                'text-xs font-semibold uppercase tracking-[0.28em] text-[#b4bfdc] text-center'
+            )
+
+
 def render_wizard_tab(
     ui: Any,
     state: Any,
@@ -100,6 +126,7 @@ def _render_wizard_auth_gate(
     with ui.column().classes('w-full h-full overflow-auto bg-gray-50 items-center justify-center p-8 gap-5'):
         with ui.card().classes('w-full max-w-2xl p-8 bg-white border border-gray-200'):
             with ui.column().classes('w-full items-center gap-6'):
+                _render_center_brand(ui, tr_fn, 'Dashboard / Projekti')
                 ui.label(tr_fn('wizard.auth_gate_title')).classes('text-3xl font-bold text-gray-900 text-center')
                 ui.label(tr_fn('wizard.auth_gate_desc')).classes('text-base text-gray-600 text-center max-w-[480px]')
                 with ui.card().classes('w-full max-w-[320px] p-6 bg-gray-50 border border-gray-200 shadow-none'):
@@ -152,7 +179,7 @@ def _render_wizard_step1(
         main_content_refresh()
 
     with ui.column().classes('w-full h-full overflow-auto bg-gray-50 items-center justify-center p-8 gap-6'):
-        ui.label(tr_fn('wizard.title_app')).classes('text-4xl font-bold text-gray-800')
+        _render_center_brand(ui, tr_fn, 'Dashboard / Projekti')
         ui.label(tr_fn('wizard.title_pick_type')).classes('text-lg text-gray-500 mb-2')
 
         with ui.row().classes('flex-wrap justify-center items-stretch gap-4 max-w-5xl w-full'):

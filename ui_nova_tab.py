@@ -13,6 +13,13 @@ from state_logic import get_effective_access_context
 _LOG = logging.getLogger(__name__)
 
 
+def _split_brand_title(label: str) -> tuple[str, str]:
+    title = str(label or '').strip()
+    if title.upper().endswith(' PRO'):
+        return title[:-4].strip(), 'PRO'
+    return title, ''
+
+
 def render_nova_tab(
     ui: Any,
     state: Any,
@@ -279,10 +286,24 @@ def render_nova_tab(
             primary_title, primary_desc, primary_btn, primary_mode = _dashboard_primary_action_copy(billing)
             _show_plan_cards = _current_tier in {'trial', 'local', 'local_beta', ''}
             _upgrade_focus = bool(getattr(state, 'account_upgrade_focus', False))
+            _brand_main, _brand_badge = _split_brand_title(tr_fn('wizard.title_app'))
+
+            with ui.column().classes('w-full items-center gap-2 pt-2 pb-1'):
+                with ui.row().classes('items-start justify-center gap-2'):
+                    ui.label(_brand_main).classes(
+                        'text-[52px] font-black tracking-[-0.05em] leading-none text-[#6d8ee8] '
+                        'drop-shadow-[0_8px_24px_rgba(109,142,232,0.18)] max-md:text-[36px]'
+                    )
+                    if _brand_badge:
+                        ui.label(_brand_badge).classes(
+                            'mt-1 rounded-[10px] border-2 border-[#6d8ee8] px-2 py-0.5 text-[18px] font-black '
+                            'leading-none tracking-[-0.02em] text-[#6d8ee8] max-md:text-[14px]'
+                        )
+                ui.label('DASHBOARD / PROJEKTI').classes(
+                    'text-xs font-semibold uppercase tracking-[0.28em] text-[#b4bfdc]'
+                )
 
             with ui.card().classes('w-full p-6 bg-[#f7f5ef] border border-gray-200'):
-                ui.label('krojna lista PRO').classes('text-3xl font-bold text-gray-900')
-                ui.label('Dashboard / Projekti').classes('text-xs font-semibold uppercase tracking-[0.18em] text-gray-400')
                 if _show_plan_cards:
                     ui.label(tr_fn('nova.plan_choose_title')).classes('text-lg text-gray-700')
                     ui.label(tr_fn('nova.plan_choose_desc')).classes('text-sm text-gray-500')
