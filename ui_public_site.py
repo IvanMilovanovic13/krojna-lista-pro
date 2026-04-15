@@ -265,6 +265,7 @@ def render_register_page() -> None:
                 ui.label(_tr("public.sign_up_card_title")).classes("public-auth-title")
                 first_name = ui.input(label=_tr("public.first_name_label")).props("id=public-register-first-name autocomplete=given-name").classes("w-full")
                 last_name = ui.input(label=_tr("public.last_name_label")).props("id=public-register-last-name autocomplete=family-name").classes("w-full")
+                register_username = ui.input(label=_tr("public.username_label")).props("id=public-register-username autocomplete=username").classes("w-full")
                 register_email = ui.input(label=_tr("public.email_address_label")).props("id=public-register-email autocomplete=email").classes("w-full")
                 register_password = ui.input(
                     label=_tr("public.password_label"), password=True, password_toggle_button=True
@@ -298,6 +299,15 @@ def render_register_page() -> None:
                         })()
                         """
                     )
+                    register_username_value = await ui.run_javascript(
+                        """
+                        (() => {
+                            const root = document.getElementById('public-register-username');
+                            const input = root ? root.querySelector('input') : null;
+                            return input ? (input.value || '') : '';
+                        })()
+                        """
+                    )
                     register_password_value = await ui.run_javascript(
                         """
                         (() => {
@@ -322,6 +332,7 @@ def render_register_page() -> None:
                         str(register_email_value or register_email.value or ""),
                         display_name,
                         str(register_password_value or register_password.value or ""),
+                        str(register_username_value or register_username.value or ""),
                     )
                     if ok:
                         ui.notify(str(err or _tr("public.register_success")), type="positive", timeout=9000)

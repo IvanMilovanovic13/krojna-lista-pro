@@ -161,36 +161,6 @@ def render_auth_tab(
                         on_click=lambda: _start_checkout_with_plan('pro_monthly'),
                     ).classes('w-full mt-4 bg-[#111] text-white')
 
-        if is_authenticated:
-            with ui.card().classes('w-full p-4 bg-white border border-gray-200'):
-                ui.label(tr_fn('nova.session_title')).classes('text-sm font-bold text-gray-800')
-                ui.label(str(getattr(state, 'current_user_email', '') or '')).classes('text-base text-gray-900')
-                ui.label(
-                    tr_fn(
-                        'nova.session_meta',
-                        access_tier=str(effective_access.get('access_tier', '') or 'local_beta'),
-                        auth_mode=str(getattr(state, 'current_auth_mode', '') or 'local'),
-                        status=str(effective_access.get('subscription_status', '') or 'local_active'),
-                    )
-                ).classes('text-xs text-gray-500')
-                if not bool(effective_access.get('can_access_app', True)):
-                    ui.label(str(effective_access.get('gate_reason', '') or tr_fn('nova.session_blocked'))).classes(
-                        'text-xs text-red-600 mt-1'
-                    )
-
-                def _logout() -> None:
-                    ok, err = logout_current_session()
-                    if ok:
-                        main_content_refresh()
-                        ui.notify(tr_fn('nova.auth_logout_ok'), type='positive')
-                        ui.navigate.to('/login')
-                    else:
-                        ui.notify(ERR_LOAD_PREFIX.format(err=err), type='negative', timeout=5000)
-
-                ui.button(tr_fn('nova.auth_logout_btn'), on_click=_logout).classes(
-                    'w-full bg-white text-[#111] border border-[#111] mt-3'
-                )
-
         if billing:
             with ui.card().classes('w-full p-6 bg-[#eef6ff] border border-[#c7ddff]'):
                 ui.label(tr_fn('nova.billing_title')).classes('text-lg font-bold mb-1')
@@ -305,6 +275,9 @@ def render_auth_tab(
                 register_name = ui.input(label=tr_fn('nova.auth_register_name')).props(
                     'id=account-register-name autocomplete=name'
                 ).classes('w-full')
+                register_username = ui.input(label=tr_fn('nova.auth_register_username')).props(
+                    'id=account-register-username autocomplete=username'
+                ).classes('w-full')
                 register_email = ui.input(label=tr_fn('nova.auth_register_email')).props(
                     'id=account-register-email autocomplete=email'
                 ).classes('w-full')
@@ -316,6 +289,7 @@ def render_auth_tab(
 
                 async def _register_trial() -> None:
                     register_name_value = await _resolve_input_value('account-register-name', str(register_name.value or ''))
+                    register_username_value = await _resolve_input_value('account-register-username', str(register_username.value or ''))
                     register_email_value = await _resolve_input_value('account-register-email', str(register_email.value or ''))
                     register_password_value = await _resolve_input_value('account-register-password', str(register_password.value or ''))
                     ok, err = await asyncio.to_thread(
@@ -323,6 +297,7 @@ def render_auth_tab(
                         register_email_value,
                         register_name_value,
                         register_password_value,
+                        register_username_value,
                     )
                     if ok:
                         state.active_tab = 'nalog'

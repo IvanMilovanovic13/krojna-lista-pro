@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
 import threading
 from datetime import datetime, timedelta, timezone
@@ -37,10 +38,70 @@ _PROJECT_STORE_INIT_LOCK = threading.Lock()
 _PROJECT_STORE_READY = False
 
 
+def _normalize_username_value(value: str) -> str:
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return ""
+    cleaned = re.sub(r"[^a-z0-9._+-]+", "-", raw)
+    cleaned = cleaned.strip("._+-")
+    cleaned = re.sub(r"[-]{2,}", "-", cleaned)
+    return cleaned[:40]
+
+
+def _username_base_from_email(email: str) -> str:
+    local = str(email or "").split("@", 1)[0].strip()
+    return _normalize_username_value(local)
+
+
+def _ensure_unique_username_candidate(conn, candidate: str, *, current_email: str = "") -> str:
+    base = _normalize_username_value(candidate) or "user"
+    probe = base
+    suffix = 1
+    while True:
+        row = conn.execute(
+            """
+            SELECT email
+            FROM users
+            WHERE lower(username) = lower(?)
+            LIMIT 1
+            """,
+            (probe,),
+        ).fetchone()
+        if row is None or str(row["email"] or "").strip().lower() == str(current_email or "").strip().lower():
+            return probe
+        suffix += 1
+        probe = f"{base}-{suffix}"
+
+
+def _backfill_usernames(conn) -> None:
+    rows = conn.execute(
+        """
+        SELECT id, email, username
+        FROM users
+        ORDER BY id ASC
+        """
+    ).fetchall()
+    taken: set[str] = set()
+    assignments: list[tuple[str, int]] = []
+    for row in rows:
+        user_id = int(row["id"])
+        email = str(row["email"] or "").strip().lower()
+        base = _normalize_username_value(str(row["username"] or "")) or _username_base_from_email(email) or f"user-{user_id}"
+        candidate = base
+        while candidate in taken:
+            candidate = f"{base}-{user_id}"
+        taken.add(candidate)
+        if candidate != str(row["username"] or ""):
+            assignments.append((candidate, user_id))
+    for username, user_id in assignments:
+        conn.execute("UPDATE users SET username = ? WHERE id = ?", (username, int(user_id)))
+
+
 @dataclass(frozen=True)
 class UserRecord:
     id: int
     email: str
+    username: str
     display_name: str
     auth_mode: str
     access_tier: str
@@ -167,6 +228,7 @@ SQLITE_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL DEFAULT '',
     display_name TEXT NOT NULL DEFAULT '',
     password_hash TEXT NOT NULL DEFAULT '',
     auth_mode TEXT NOT NULL DEFAULT 'local',
@@ -297,6 +359,7 @@ CREATE TABLE IF NOT EXISTS export_jobs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_projects_last_opened_at ON projects(last_opened_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_autosave_per_user
 ON projects(user_id, is_autosave)
@@ -374,6 +437,8 @@ def _ensure_users_schema(conn) -> None:
             """
         ).fetchall()
         existing = {str(row["name"]) for row in rows}
+        if "username" not in existing:
+            conn.execute("ALTER TABLE users ADD COLUMN username TEXT NOT NULL DEFAULT ''")
         if "display_name" not in existing:
             conn.execute("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''")
         if "auth_mode" not in existing:
@@ -410,10 +475,14 @@ def _ensure_users_schema(conn) -> None:
                 END
             """
         )
+        _backfill_usernames(conn)
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)")
         return
 
     rows = conn.execute("PRAGMA table_info(users)").fetchall()
     existing = {str(row["name"]) for row in rows}
+    if "username" not in existing:
+        conn.execute("ALTER TABLE users ADD COLUMN username TEXT NOT NULL DEFAULT ''")
     if "display_name" not in existing:
         conn.execute("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''")
     if "auth_mode" not in existing:
@@ -450,6 +519,8 @@ def _ensure_users_schema(conn) -> None:
             END
         """
     )
+    _backfill_usernames(conn)
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)")
 
 
 def _ensure_email_verification_schema(conn) -> None:
@@ -550,7 +621,7 @@ def ensure_local_user() -> UserRecord:
     with _connect() as conn:
         row = conn.execute(
             """
-            SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
+            SELECT id, email, username, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
             FROM users
             WHERE email = ?
             """,
@@ -559,14 +630,14 @@ def ensure_local_user() -> UserRecord:
         if row is None:
             conn.execute(
                 """
-                INSERT INTO users (email, display_name, password_hash, auth_mode, access_tier, status, email_verified)
-                VALUES (?, 'local', '', 'local', 'local_beta', 'local_active', 1)
+                INSERT INTO users (email, username, display_name, password_hash, auth_mode, access_tier, status, email_verified)
+                VALUES (?, 'local', 'local', '', 'local', 'local_beta', 'local_active', 1)
                 """,
                 (LOCAL_USER_EMAIL,),
             )
             row = conn.execute(
                 """
-                SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
+                SELECT id, email, username, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
                 FROM users
                 WHERE email = ?
                 """,
@@ -576,6 +647,7 @@ def ensure_local_user() -> UserRecord:
         return UserRecord(
             id=int(row["id"]),
             email=str(row["email"]),
+            username=str(row["username"] or ""),
             display_name=str(row["display_name"]),
             auth_mode=str(row["auth_mode"]),
             access_tier=str(row["access_tier"]),
@@ -590,6 +662,7 @@ def _user_record_from_row(row: Any) -> UserRecord:
     return UserRecord(
         id=int(row["id"]),
         email=str(row["email"]),
+        username=str(row["username"] or ""),
         display_name=str(row["display_name"]),
         auth_mode=str(row["auth_mode"]),
         access_tier=str(row["access_tier"]),
@@ -646,7 +719,7 @@ def get_user_by_email(email: str) -> Optional[UserRecord]:
     with _connect() as conn:
         row = conn.execute(
             """
-            SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
+            SELECT id, email, username, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
             FROM users
             WHERE lower(email) = lower(?)
             """,
@@ -662,7 +735,7 @@ def get_user_by_id(user_id: int) -> Optional[UserRecord]:
     with _connect() as conn:
         row = conn.execute(
             """
-            SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
+            SELECT id, email, username, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
             FROM users
             WHERE id = ?
             """,
@@ -671,6 +744,34 @@ def get_user_by_id(user_id: int) -> Optional[UserRecord]:
     if row is None:
         return None
     return _user_record_from_row(row)
+
+
+def get_user_by_username(username: str) -> Optional[UserRecord]:
+    init_project_store()
+    clean_username = _normalize_username_value(username)
+    if not clean_username:
+        return None
+    with _connect() as conn:
+        row = conn.execute(
+            """
+            SELECT id, email, username, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
+            FROM users
+            WHERE lower(username) = lower(?)
+            """,
+            (clean_username,),
+        ).fetchone()
+    if row is None:
+        return None
+    return _user_record_from_row(row)
+
+
+def get_user_by_login_identifier(identifier: str) -> Optional[UserRecord]:
+    raw = str(identifier or "").strip()
+    if not raw:
+        return None
+    if "@" in raw:
+        return get_user_by_email(raw)
+    return get_user_by_username(raw)
 
 
 def append_audit_log(
@@ -798,6 +899,7 @@ def ensure_privileged_seed_accounts() -> dict[str, list[str]]:
                 existing = get_user_by_email(email)
                 create_user_record(
                     email=email,
+                    username=email.split("@", 1)[0],
                     display_name=email.split("@", 1)[0],
                     password_hash=password_hash if existing is None else "",
                     auth_mode="password",
@@ -810,6 +912,7 @@ def ensure_privileged_seed_accounts() -> dict[str, list[str]]:
                 existing = get_user_by_email(email)
                 create_user_record(
                     email=email,
+                    username=email.split("@", 1)[0],
                     display_name=email.split("@", 1)[0],
                     password_hash=password_hash if existing is None else "",
                     auth_mode="password",
@@ -847,6 +950,7 @@ def get_password_hash_by_email(email: str) -> str:
 def create_user_record(
     *,
     email: str,
+    username: str = "",
     display_name: str = "",
     password_hash: str = "",
     auth_mode: str = "password",
@@ -856,15 +960,22 @@ def create_user_record(
 ) -> UserRecord:
     init_project_store()
     clean_email = str(email).strip().lower()
+    requested_username = _normalize_username_value(username)
     clean_display = str(display_name).strip() or clean_email.split("@", 1)[0]
     with _connect() as conn:
+        resolved_username = _ensure_unique_username_candidate(
+            conn,
+            requested_username or _username_base_from_email(clean_email) or clean_email.split("@", 1)[0],
+            current_email=clean_email,
+        )
         conn.execute(
             """
             INSERT INTO users (
-                email, display_name, password_hash, auth_mode, access_tier, status, email_verified, created_at, updated_at
+                email, username, display_name, password_hash, auth_mode, access_tier, status, email_verified, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT(email) DO UPDATE SET
+                username = excluded.username,
                 display_name = excluded.display_name,
                 password_hash = CASE
                     WHEN excluded.password_hash <> '' THEN excluded.password_hash
@@ -878,6 +989,7 @@ def create_user_record(
             """,
             (
                 clean_email,
+                resolved_username,
                 clean_display,
                 str(password_hash),
                 str(auth_mode),
@@ -891,11 +1003,11 @@ def create_user_record(
     return user
 
 
-def authenticate_user(email: str, password: str) -> Optional[UserRecord]:
-    user = get_user_by_email(email)
+def authenticate_user(identifier: str, password: str) -> Optional[UserRecord]:
+    user = get_user_by_login_identifier(identifier)
     if user is None:
         return None
-    password_hash = get_password_hash_by_email(email)
+    password_hash = get_password_hash_by_email(user.email)
     if not verify_password(password, password_hash):
         return None
     return user
@@ -1037,7 +1149,7 @@ def list_users(*, limit: int = 200) -> list[UserRecord]:
     with _connect() as conn:
         rows = conn.execute(
             """
-            SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
+            SELECT id, email, username, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
             FROM users
             ORDER BY id ASC
             LIMIT ?
@@ -2692,7 +2804,7 @@ def export_store_snapshot() -> dict[str, Any]:
     with _connect() as conn:
         users = conn.execute(
             """
-            SELECT id, email, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
+            SELECT id, email, username, display_name, auth_mode, access_tier, status, email_verified, created_at, updated_at
             FROM users
             ORDER BY id ASC
             """

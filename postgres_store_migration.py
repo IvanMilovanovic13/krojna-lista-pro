@@ -13,6 +13,7 @@ POSTGRES_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL DEFAULT '',
     display_name TEXT NOT NULL DEFAULT '',
     password_hash TEXT NOT NULL DEFAULT '',
     auth_mode TEXT NOT NULL DEFAULT 'local',
@@ -204,6 +205,7 @@ def import_snapshot_to_postgres(*, snapshot_path: str, database_url: str = "") -
         {
             "id": user_id,
             "email": f"migrated_user_{user_id}@local.invalid",
+            "username": f"migrated-user-{user_id}",
             "display_name": f"Migrated User {user_id}",
             "auth_mode": "migration_placeholder",
             "access_tier": "local_beta",
@@ -223,9 +225,10 @@ def import_snapshot_to_postgres(*, snapshot_path: str, database_url: str = "") -
                 for user in all_users:
                     cur.execute(
                         """
-                        INSERT INTO users (id, email, display_name, auth_mode, access_tier, status, created_at, updated_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO users (id, email, username, display_name, auth_mode, access_tier, status, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (email) DO UPDATE SET
+                            username = EXCLUDED.username,
                             display_name = EXCLUDED.display_name,
                             auth_mode = EXCLUDED.auth_mode,
                             access_tier = EXCLUDED.access_tier,
@@ -235,6 +238,7 @@ def import_snapshot_to_postgres(*, snapshot_path: str, database_url: str = "") -
                         (
                             int(user.get("id", 0) or 0),
                             str(user.get("email", "") or ""),
+                            str(user.get("username", "") or str(user.get("email", "") or "").split("@", 1)[0]),
                             str(user.get("display_name", "") or ""),
                             str(user.get("auth_mode", "") or "local"),
                             str(user.get("access_tier", "") or "local_beta"),

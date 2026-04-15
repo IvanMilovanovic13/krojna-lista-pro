@@ -21,6 +21,27 @@ def normalize_email_address(email: str) -> str:
     return str(email or "").strip().lower()
 
 
+def normalize_username(username: str) -> str:
+    import re
+
+    raw = str(username or "").strip().lower()
+    if not raw:
+        return ""
+    cleaned = re.sub(r"[^a-z0-9._+-]+", "-", raw)
+    cleaned = cleaned.strip("._+-")
+    cleaned = re.sub(r"[-]{2,}", "-", cleaned)
+    return cleaned[:40]
+
+
+def _username_validation_error(username: str) -> str:
+    clean_username = normalize_username(username)
+    if not clean_username:
+        return "Unesi korisnicko ime."
+    if len(clean_username) < 3:
+        return "Korisnicko ime mora imati najmanje 3 karaktera."
+    return ""
+
+
 def is_valid_email_address(email: str) -> bool:
     clean_email = normalize_email_address(email)
     if not clean_email or len(clean_email) > 254 or ".." in clean_email:
@@ -1943,7 +1964,7 @@ def _apply_session_state(session: Any) -> None:
         _LOG.debug("_apply_session_state failed: %s", ex)
 
 
-def login_user_session(email: str, password: str) -> Tuple[bool, str]:
+def login_user_session(identifier: str, password: str) -> Tuple[bool, str]:
     try:
         from auth_models import build_session_from_user
         from project_store import (
@@ -1953,41 +1974,50 @@ def login_user_session(email: str, password: str) -> Tuple[bool, str]:
             create_email_verification_token,
             create_auth_session,
             get_login_rate_limit_status,
+            get_user_by_login_identifier,
             record_login_attempt,
         )
-        clean_email = normalize_email_address(email)
-        if not clean_email:
-            return False, "Unesi email adresu."
-        email_err = _email_validation_error(clean_email)
-        if email_err:
-            return False, email_err
+        raw_identifier = str(identifier or "").strip()
+        if not raw_identifier:
+            return False, "Unesi email ili korisnicko ime."
+        using_email = "@" in raw_identifier
+        clean_identifier = normalize_email_address(raw_identifier) if using_email else normalize_username(raw_identifier)
+        if using_email:
+            email_err = _email_validation_error(clean_identifier)
+            if email_err:
+                return False, email_err
+        else:
+            username_err = _username_validation_error(clean_identifier)
+            if username_err:
+                return False, username_err
         if not str(password or "").strip():
             return False, "Unesi lozinku."
-        rate_limit = get_login_rate_limit_status(clean_email)
+        rate_limit = get_login_rate_limit_status(clean_identifier)
         if bool(rate_limit.get("is_locked", False)):
             append_audit_log(
                 event_type="auth.login_locked",
                 status="warning",
-                detail=f"email={clean_email} retry_after={int(rate_limit.get('retry_after_minutes', 0) or 0)}",
+                detail=f"login={clean_identifier} retry_after={int(rate_limit.get('retry_after_minutes', 0) or 0)}",
             )
             retry_after = int(rate_limit.get("retry_after_minutes", 0) or 0)
             return False, f"Previse neuspesnih prijava. Pokusaj ponovo za oko {retry_after} min."
-        user = authenticate_user(clean_email, str(password))
+        user = authenticate_user(clean_identifier, str(password))
         if user is None:
-            record_login_attempt(email=clean_email, success=False)
+            record_login_attempt(email=clean_identifier, success=False)
             append_audit_log(
                 event_type="auth.login_failed",
                 status="warning",
-                detail=f"email={clean_email}",
+                detail=f"login={clean_identifier}",
             )
-            return False, "Pogresan email ili lozinka."
+            return False, "Pogresan email, korisnicko ime ili lozinka."
+        effective_email = normalize_email_address(str(user.email or ""))
         if not bool(getattr(user, "email_verified", False)) or str(user.status or "").strip().lower() == "pending_verification":
-            verification = create_email_verification_token(email=clean_email, reuse_existing_active=True)
+            verification = create_email_verification_token(email=effective_email, reuse_existing_active=True)
             try:
                 append_audit_log(
                     event_type="auth.login_blocked_unverified_email",
                     status="warning",
-                    detail=f"email={clean_email}",
+                    detail=f"email={effective_email}",
                     user_id=int(user.id),
                 )
             except Exception as audit_ex:
@@ -1996,8 +2026,8 @@ def login_user_session(email: str, password: str) -> Tuple[bool, str]:
             if verification_url:
                 return False, f"Email jos nije potvrdjen. Otvori verifikacioni link: {verification_url}"
             return False, "Email jos nije potvrdjen. Zatrazi novi verifikacioni link."
-        record_login_attempt(email=clean_email, success=True)
-        clear_failed_login_attempts(clean_email)
+        record_login_attempt(email=effective_email, success=True)
+        clear_failed_login_attempts(effective_email)
         auth_session = create_auth_session(
             user_id=int(user.id),
             session_kind="browser",
@@ -2024,7 +2054,7 @@ def login_user_session(email: str, password: str) -> Tuple[bool, str]:
             append_audit_log(
                 event_type="auth.login_success",
                 status="success",
-                detail=f"email={clean_email}",
+                detail=f"email={effective_email}",
                 user_id=int(user.id),
             )
         except Exception as audit_ex:
@@ -2035,18 +2065,32 @@ def login_user_session(email: str, password: str) -> Tuple[bool, str]:
         return False, f"Ne mogu da pokrenem prijavu: {ex}"
 
 
-def register_trial_user_session(email: str, display_name: str = "", password: str = "") -> Tuple[bool, str]:
+def register_trial_user_session(email: str, display_name: str = "", password: str = "", username: str = "") -> Tuple[bool, str]:
     try:
-        from project_store import append_audit_log, create_email_verification_token, create_user_record, hash_password
+        from project_store import (
+            append_audit_log,
+            create_email_verification_token,
+            create_user_record,
+            get_user_by_username,
+            hash_password,
+        )
         clean_email = normalize_email_address(email)
         email_err = _email_validation_error(clean_email)
         if email_err:
             return False, email_err
+        clean_username = normalize_username(username) if str(username or "").strip() else normalize_username(clean_email.split("@", 1)[0])
+        username_err = _username_validation_error(clean_username)
+        if username_err:
+            return False, username_err
+        existing_username = get_user_by_username(clean_username)
+        if existing_username is not None and normalize_email_address(existing_username.email) != clean_email:
+            return False, "Korisnicko ime je zauzeto."
         clean_password = str(password or "")
         if len(clean_password) < 6:
             return False, "Lozinka mora imati najmanje 6 karaktera."
         user = create_user_record(
             email=clean_email,
+            username=clean_username,
             display_name=str(display_name).strip(),
             password_hash=hash_password(clean_password),
             auth_mode="password",
@@ -2528,6 +2572,7 @@ def get_visible_users(limit: int = 200) -> List[Dict[str, Any]]:
         return [
             {
                 "email": str(row.email),
+                "username": str(getattr(row, "username", "") or ""),
                 "display_name": str(row.display_name),
                 "auth_mode": str(row.auth_mode),
                 "access_tier": str(row.access_tier),
@@ -2541,6 +2586,7 @@ def get_visible_users(limit: int = 200) -> List[Dict[str, Any]]:
     except Exception as ex:
         return [{
             "email": "-",
+            "username": "-",
             "display_name": "ops.error",
             "auth_mode": "-",
             "access_tier": "-",

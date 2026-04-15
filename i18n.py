@@ -9360,5 +9360,25 @@ def tr(key: str, lang: str = "sr", **fmt: object) -> str:
             return text
     return text
 
+
+_TRANSLATIONS["sr"].update({
+    "nova.auth_login_email": "Email ili korisničko ime",
+    "nova.auth_register_username": "Korisničko ime",
+    "public.email_label": "Email ili korisničko ime",
+    "public.username_label": "Korisničko ime",
+})
+_TRANSLATIONS["en"].update({
+    "nova.auth_login_email": "Email or username",
+    "nova.auth_register_username": "Username",
+    "public.email_label": "Email or username",
+    "public.username_label": "Username",
+})
+_TRANSLATIONS.setdefault("de", {}).update({
+    "nova.auth_login_email": "E-Mail oder Benutzername",
+    "nova.auth_register_username": "Benutzername",
+    "public.email_label": "E-Mail oder Benutzername",
+    "public.username_label": "Benutzername",
+})
+
 # Canvas 2D
 CANVAS_ERR_FMT = "Greška u nacrtu: {err}"

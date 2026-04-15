@@ -390,41 +390,6 @@ def render_nova_tab(
                         'w-full bg-white text-[#111] border border-[#111] mt-3'
                     )
 
-            with ui.card().classes('w-full p-4 bg-white border border-gray-200'):
-                ui.label(tr_fn('nova.account_card_title')).classes('text-sm font-bold text-gray-800')
-                ui.label(str(getattr(state, 'current_user_email', '') or '')).classes('text-base text-gray-900')
-                ui.label(
-                    tr_fn(
-                        'nova.session_meta',
-                        access_tier=str(effective_access.get('access_tier', '') or 'local_beta'),
-                        auth_mode=str(getattr(state, 'current_auth_mode', '') or 'local'),
-                        status=str(effective_access.get('subscription_status', '') or 'local_active'),
-                    )
-                ).classes('text-xs text-gray-500')
-                if not bool(effective_access.get('can_access_app', True)):
-                    ui.label(str(effective_access.get('gate_reason', '') or tr_fn('nova.session_blocked'))).classes(
-                        'text-xs text-red-600 mt-1'
-                    )
-                with ui.row().classes('w-full gap-2 mt-3 max-md:flex-col'):
-                    ui.button(
-                        tr_fn('nova.dashboard_account_btn'),
-                        on_click=lambda: switch_tab('nalog'),
-                    ).classes('flex-1 bg-white text-[#111] border border-[#111]')
-
-                    def _logout_dashboard() -> None:
-                        ok, err = logout_current_session()
-                        if ok:
-                            render_toolbar_refresh()
-                            main_content_refresh()
-                            ui.notify(tr_fn('nova.auth_logout_ok'), type='positive')
-                            ui.navigate.to('/login')
-                        else:
-                            ui.notify(ERR_LOAD_PREFIX.format(err=err), type='negative', timeout=5000)
-
-                    ui.button(tr_fn('nova.auth_logout_btn'), on_click=_logout_dashboard).classes(
-                        'flex-1 bg-white text-[#111] border border-[#111]'
-                    )
-
         if int(getattr(state, 'current_project_id', 0) or 0):
             with ui.card().classes('w-full p-4 bg-[#f7f5ef] border border-gray-200'):
                 ui.label(tr_fn('nova.current_project_title')).classes('text-sm font-bold text-gray-800')

@@ -158,6 +158,7 @@ def render_admin_tab(
             else:
                 columns = [
                     {"name": "email", "label": "Email", "field": "email", "align": "left"},
+                    {"name": "username", "label": "Username", "field": "username", "align": "left"},
                     {"name": "display_name", "label": "Display", "field": "display_name", "align": "left"},
                     {"name": "auth_mode", "label": "Auth", "field": "auth_mode", "align": "left"},
                     {"name": "access_tier", "label": "Tier", "field": "access_tier", "align": "left"},
