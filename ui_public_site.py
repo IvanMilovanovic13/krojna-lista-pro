@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import Request
 from nicegui import ui
 
@@ -227,7 +229,7 @@ def render_login_page(request: Request | None = None) -> None:
                 async def _login() -> None:
                     email_value = await _resolve_input_value("public-login-email", str(login_email.value or ""))
                     password_value = await _resolve_input_value("public-login-password", str(login_password.value or ""))
-                    ok, err = login_user_session(email_value, password_value)
+                    ok, err = await asyncio.to_thread(login_user_session, email_value, password_value)
                     if ok:
                         ui.notify(_tr("public.login_success"), type="positive")
                         ui.navigate.to("/app")
@@ -236,7 +238,7 @@ def render_login_page(request: Request | None = None) -> None:
 
                 async def _forgot() -> None:
                     email_value = await _resolve_input_value("public-login-email", str(login_email.value or ""))
-                    ok, msg = build_forgot_password_message(str(email_value or ""))
+                    ok, msg = await asyncio.to_thread(build_forgot_password_message, str(email_value or ""))
                     ui.notify(msg, type="info" if ok else "negative", timeout=6000)
 
                 ui.button(_tr("public.sign_in_btn"), on_click=_login).classes("w-full bg-[#111827] text-white")
@@ -315,7 +317,8 @@ def render_register_page() -> None:
                             if part
                         ]
                     ).strip()
-                    ok, err = register_trial_user_session(
+                    ok, err = await asyncio.to_thread(
+                        register_trial_user_session,
                         str(register_email_value or register_email.value or ""),
                         display_name,
                         str(register_password_value or register_password.value or ""),

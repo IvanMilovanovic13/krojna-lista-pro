@@ -6,6 +6,7 @@ import hmac
 import json
 import os
 import secrets
+import threading
 from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional
@@ -30,6 +31,10 @@ DEFAULT_PRIVILEGED_TEST_EMAILS = [
     "testpaid5@cabinetcutpro.invalid",
 ]
 _SEEDING_PRIVILEGED_ACCOUNTS = False
+_PRIVILEGED_SEED_LOCK = threading.Lock()
+_PRIVILEGED_SEED_DONE = False
+_PROJECT_STORE_INIT_LOCK = threading.Lock()
+_PROJECT_STORE_READY = False
 
 
 @dataclass(frozen=True)
@@ -322,17 +327,24 @@ def _get_backend_name() -> str:
 
 
 def init_project_store() -> None:
-    global _SEEDING_PRIVILEGED_ACCOUNTS
-    get_store_backend().assert_ready()
-    with _connect() as conn:
-        if _get_backend_name() == "postgres":
-            conn.executescript(get_postgres_schema_sql())
-        else:
-            conn.executescript(SQLITE_SCHEMA_SQL)
-        _ensure_users_schema(conn)
-        _ensure_email_verification_schema(conn)
-    if not _SEEDING_PRIVILEGED_ACCOUNTS:
-        ensure_privileged_seed_accounts()
+    global _SEEDING_PRIVILEGED_ACCOUNTS, _PRIVILEGED_SEED_DONE, _PROJECT_STORE_READY
+    if _PROJECT_STORE_READY:
+        return
+    with _PROJECT_STORE_INIT_LOCK:
+        if _PROJECT_STORE_READY:
+            return
+        get_store_backend().assert_ready()
+        with _connect() as conn:
+            if _get_backend_name() == "postgres":
+                conn.executescript(get_postgres_schema_sql())
+            else:
+                conn.executescript(SQLITE_SCHEMA_SQL)
+            _ensure_users_schema(conn)
+            _ensure_auth_runtime_schema(conn)
+            _ensure_email_verification_schema(conn)
+        _PROJECT_STORE_READY = True
+        if not _SEEDING_PRIVILEGED_ACCOUNTS and not _PRIVILEGED_SEED_DONE:
+            ensure_privileged_seed_accounts()
 
 
 def get_project_store_runtime_info() -> dict[str, str]:
@@ -481,6 +493,58 @@ def _ensure_email_verification_schema(conn) -> None:
     )
 
 
+def _ensure_auth_runtime_schema(conn) -> None:
+    if _get_backend_name() != "postgres":
+        return
+    auth_rows = conn.execute(
+        """
+        SELECT column_name AS name, data_type, is_nullable
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'auth_sessions'
+        """
+    ).fetchall()
+    auth_columns = {str(row["name"]): row for row in auth_rows}
+    revoked_row = auth_columns.get("revoked_at")
+    if revoked_row is not None:
+        revoked_type = str(revoked_row["data_type"] or "").strip().lower()
+        revoked_nullable = str(revoked_row["is_nullable"] or "").strip().upper()
+        conn.execute("ALTER TABLE auth_sessions ALTER COLUMN revoked_at DROP DEFAULT")
+        if revoked_nullable != "YES":
+            conn.execute("ALTER TABLE auth_sessions ALTER COLUMN revoked_at DROP NOT NULL")
+        if revoked_type != "timestamp with time zone":
+            conn.execute(
+                """
+                ALTER TABLE auth_sessions
+                ALTER COLUMN revoked_at TYPE TIMESTAMPTZ
+                USING NULLIF(revoked_at::text, '')::timestamptz
+                """
+            )
+
+    reset_rows = conn.execute(
+        """
+        SELECT column_name AS name, data_type, is_nullable
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'password_reset_tokens'
+        """
+    ).fetchall()
+    reset_columns = {str(row["name"]): row for row in reset_rows}
+    used_row = reset_columns.get("used_at")
+    if used_row is not None:
+        used_type = str(used_row["data_type"] or "").strip().lower()
+        used_nullable = str(used_row["is_nullable"] or "").strip().upper()
+        conn.execute("ALTER TABLE password_reset_tokens ALTER COLUMN used_at DROP DEFAULT")
+        if used_nullable != "YES":
+            conn.execute("ALTER TABLE password_reset_tokens ALTER COLUMN used_at DROP NOT NULL")
+        if used_type != "timestamp with time zone":
+            conn.execute(
+                """
+                ALTER TABLE password_reset_tokens
+                ALTER COLUMN used_at TYPE TIMESTAMPTZ
+                USING NULLIF(used_at::text, '')::timestamptz
+                """
+            )
+
+
 def ensure_local_user() -> UserRecord:
     init_project_store()
     with _connect() as conn:
@@ -545,7 +609,7 @@ def _email_verification_token_from_row(row: Any) -> EmailVerificationTokenRecord
         status=str(row["status"]),
         created_at=str(row["created_at"]),
         expires_at=str(row["expires_at"]),
-        used_at=str(row["used_at"]),
+        used_at=str(row["used_at"] or ""),
     )
 
 
@@ -706,46 +770,62 @@ def _split_seed_emails(raw: str, fallback: list[str]) -> list[str]:
 
 
 def ensure_privileged_seed_accounts() -> dict[str, list[str]]:
-    global _SEEDING_PRIVILEGED_ACCOUNTS
-    admin_emails = _split_seed_emails(os.getenv("APP_ADMIN_EMAILS", ""), DEFAULT_ADMIN_EMAILS)[:3]
-    test_emails = _split_seed_emails(os.getenv("APP_PRIVILEGED_TEST_EMAILS", ""), DEFAULT_PRIVILEGED_TEST_EMAILS)[:5]
-    seed_password = str(os.getenv("APP_PRIVILEGED_SEED_PASSWORD", DEFAULT_PRIVILEGED_PASSWORD) or DEFAULT_PRIVILEGED_PASSWORD)
-    password_hash = hash_password(seed_password)
-    created_admins: list[str] = []
-    created_tests: list[str] = []
-    _SEEDING_PRIVILEGED_ACCOUNTS = True
-    try:
-        for email in admin_emails:
-            existing = get_user_by_email(email)
-            create_user_record(
-                email=email,
-                display_name=email.split("@", 1)[0],
-                password_hash=password_hash if existing is None else "",
-                auth_mode="password",
-                access_tier="admin",
-                status="admin_active",
-                email_verified=True,
-            )
-            created_admins.append(email)
-        for email in test_emails:
-            existing = get_user_by_email(email)
-            create_user_record(
-                email=email,
-                display_name=email.split("@", 1)[0],
-                password_hash=password_hash if existing is None else "",
-                auth_mode="password",
-                access_tier="paid",
-                status="paid_active",
-                email_verified=True,
-            )
-            created_tests.append(email)
-    finally:
-        _SEEDING_PRIVILEGED_ACCOUNTS = False
-    return {
-        "admins": created_admins,
-        "tests": created_tests,
-        "seed_password": [seed_password],
-    }
+    global _SEEDING_PRIVILEGED_ACCOUNTS, _PRIVILEGED_SEED_DONE
+    if _PRIVILEGED_SEED_DONE:
+        seed_password = str(os.getenv("APP_PRIVILEGED_SEED_PASSWORD", DEFAULT_PRIVILEGED_PASSWORD) or DEFAULT_PRIVILEGED_PASSWORD)
+        return {
+            "admins": list(_split_seed_emails(os.getenv("APP_ADMIN_EMAILS", ""), DEFAULT_ADMIN_EMAILS)[:3]),
+            "tests": list(_split_seed_emails(os.getenv("APP_PRIVILEGED_TEST_EMAILS", ""), DEFAULT_PRIVILEGED_TEST_EMAILS)[:5]),
+            "seed_password": [seed_password],
+        }
+    with _PRIVILEGED_SEED_LOCK:
+        if _PRIVILEGED_SEED_DONE:
+            seed_password = str(os.getenv("APP_PRIVILEGED_SEED_PASSWORD", DEFAULT_PRIVILEGED_PASSWORD) or DEFAULT_PRIVILEGED_PASSWORD)
+            return {
+                "admins": list(_split_seed_emails(os.getenv("APP_ADMIN_EMAILS", ""), DEFAULT_ADMIN_EMAILS)[:3]),
+                "tests": list(_split_seed_emails(os.getenv("APP_PRIVILEGED_TEST_EMAILS", ""), DEFAULT_PRIVILEGED_TEST_EMAILS)[:5]),
+                "seed_password": [seed_password],
+            }
+        admin_emails = _split_seed_emails(os.getenv("APP_ADMIN_EMAILS", ""), DEFAULT_ADMIN_EMAILS)[:3]
+        test_emails = _split_seed_emails(os.getenv("APP_PRIVILEGED_TEST_EMAILS", ""), DEFAULT_PRIVILEGED_TEST_EMAILS)[:5]
+        seed_password = str(os.getenv("APP_PRIVILEGED_SEED_PASSWORD", DEFAULT_PRIVILEGED_PASSWORD) or DEFAULT_PRIVILEGED_PASSWORD)
+        password_hash = hash_password(seed_password)
+        created_admins: list[str] = []
+        created_tests: list[str] = []
+        _SEEDING_PRIVILEGED_ACCOUNTS = True
+        try:
+            for email in admin_emails:
+                existing = get_user_by_email(email)
+                create_user_record(
+                    email=email,
+                    display_name=email.split("@", 1)[0],
+                    password_hash=password_hash if existing is None else "",
+                    auth_mode="password",
+                    access_tier="admin",
+                    status="admin_active",
+                    email_verified=True,
+                )
+                created_admins.append(email)
+            for email in test_emails:
+                existing = get_user_by_email(email)
+                create_user_record(
+                    email=email,
+                    display_name=email.split("@", 1)[0],
+                    password_hash=password_hash if existing is None else "",
+                    auth_mode="password",
+                    access_tier="paid",
+                    status="paid_active",
+                    email_verified=True,
+                )
+                created_tests.append(email)
+            _PRIVILEGED_SEED_DONE = True
+        finally:
+            _SEEDING_PRIVILEGED_ACCOUNTS = False
+        return {
+            "admins": created_admins,
+            "tests": created_tests,
+            "seed_password": [seed_password],
+        }
 
 
 def get_password_hash_by_email(email: str) -> str:
@@ -1642,7 +1722,7 @@ def _auth_session_record_from_row(row: Any) -> AuthSessionRecord:
         created_at=str(row["created_at"]),
         updated_at=str(row["updated_at"]),
         expires_at=str(row["expires_at"]),
-        revoked_at=str(row["revoked_at"]),
+        revoked_at=str(row["revoked_at"] or ""),
     )
 
 
@@ -1654,7 +1734,7 @@ def _password_reset_token_from_row(row: Any) -> PasswordResetTokenRecord:
         status=str(row["status"]),
         created_at=str(row["created_at"]),
         expires_at=str(row["expires_at"]),
-        used_at=str(row["used_at"]),
+        used_at=str(row["used_at"] or ""),
     )
 
 
@@ -1796,7 +1876,7 @@ def create_auth_session(
                     user_id, session_token, session_kind, auth_provider, status,
                     created_at, updated_at, expires_at, revoked_at
                 )
-                VALUES (?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, '')
+                VALUES (?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, NULL)
                 RETURNING id, user_id, session_token, session_kind, auth_provider,
                           status, created_at, updated_at, expires_at, revoked_at
                 """,
@@ -1997,7 +2077,7 @@ def create_password_reset_token(
                 INSERT INTO password_reset_tokens (
                     user_id, reset_token, status, created_at, expires_at, used_at
                 )
-                VALUES (?, ?, 'active', CURRENT_TIMESTAMP, ?, '')
+                VALUES (?, ?, 'active', CURRENT_TIMESTAMP, ?, NULL)
                 RETURNING id, user_id, reset_token, status, created_at, expires_at, used_at
                 """,
                 (int(user.id), reset_token, expires_at),
@@ -2149,7 +2229,7 @@ def create_email_verification_token(
                 INSERT INTO email_verification_tokens (
                     user_id, email, verification_token, status, created_at, expires_at, used_at
                 )
-                VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP, ?, '')
+                VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP, ?, NULL)
                 RETURNING id, user_id, email, verification_token, status, created_at, expires_at, used_at
                 """,
                 (int(user.id), str(user.email), verification_token, expires_at),

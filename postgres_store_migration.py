@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMPTZ NOT NULL,
-    revoked_at TEXT NOT NULL DEFAULT ''
+    revoked_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     status TEXT NOT NULL DEFAULT 'active',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMPTZ NOT NULL,
-    used_at TEXT NOT NULL DEFAULT ''
+    used_at TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS login_attempts (

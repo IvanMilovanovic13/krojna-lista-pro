@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import asyncio
+
 from typing import Any, Callable
 
 from i18n import ERR_LOAD_PREFIX
@@ -241,7 +243,8 @@ def render_auth_tab(
                 async def _login_existing() -> None:
                     email_value = await _resolve_input_value('account-login-email', str(login_email.value or ''))
                     password_value = await _resolve_input_value('account-login-password', str(login_password.value or ''))
-                    ok, err = login_user_session(
+                    ok, err = await asyncio.to_thread(
+                        login_user_session,
                         email_value,
                         password_value,
                     )
@@ -262,7 +265,7 @@ def render_auth_tab(
 
                 async def _forgot_password() -> None:
                     forgot_value = await _resolve_input_value('account-forgot-email', str(forgot_email.value or ''))
-                    ok, msg = build_forgot_password_message(forgot_value)
+                    ok, msg = await asyncio.to_thread(build_forgot_password_message, forgot_value)
                     if ok:
                         ui.notify(msg, type='info', timeout=5000)
                     else:
@@ -315,7 +318,8 @@ def render_auth_tab(
                     register_name_value = await _resolve_input_value('account-register-name', str(register_name.value or ''))
                     register_email_value = await _resolve_input_value('account-register-email', str(register_email.value or ''))
                     register_password_value = await _resolve_input_value('account-register-password', str(register_password.value or ''))
-                    ok, err = register_trial_user_session(
+                    ok, err = await asyncio.to_thread(
+                        register_trial_user_session,
                         register_email_value,
                         register_name_value,
                         register_password_value,
