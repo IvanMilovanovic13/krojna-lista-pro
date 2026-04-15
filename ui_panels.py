@@ -155,7 +155,6 @@ def render_toolbar() -> None:
     _effective_access = get_effective_access_context()
     tabs = [
         ("wizard",    _tr("tab.wizard"),    "home"),
-        ("podesavanja", _tr("tab.settings"), "settings"),
         ("elementi",  _tr("tab.elements"),  "grid_view"),
         ("krojna", _tr("tab.cutlist"), "table_rows"),
         ("pomoc",     _tr("tab.help"),      "help"),

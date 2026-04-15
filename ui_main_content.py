@@ -152,31 +152,23 @@ def render_main_content_inner(
         )
         return
     elif state.active_tab == "podesavanja":
-        render_settings_tab(
+        state.active_tab = "wizard"
+        render_toolbar_refresh()
+        render_wizard_tab(
             ui=ui,
             state=state,
-            tr_fn=settings_tr,
-            get_zone_depth_standard=get_zone_depth_standard,
-            set_zone_depth_standard=set_zone_depth_standard,
-            nacrt_refresh=nacrt_refresh,
+            tr_fn=wizard_tr,
+            main_content=main_content,
             main_content_refresh=main_content_refresh,
-            set_front_color=set_front_color,
-            set_material=set_material,
+            switch_tab=switch_tab,
+            render_room_setup_step3=render_room_setup_step3,
+            plt=plt,
+            ensure_room_walls=ensure_room_walls,
+            get_room_wall=get_room_wall,
             set_wall_length=set_wall_length,
             set_wall_height=set_wall_height,
-            set_foot_height=set_foot_height,
-            set_worktop_thickness=set_worktop_thickness,
-            set_base_height=set_base_height,
-            set_worktop_width=set_worktop_width,
-            set_worktop_reserve_mm=set_worktop_reserve_mm,
-            set_worktop_front_overhang_mm=set_worktop_front_overhang_mm,
-            set_worktop_field_cut=set_worktop_field_cut,
-            set_worktop_edge_protection=set_worktop_edge_protection,
-            set_worktop_edge_protection_type=set_worktop_edge_protection_type,
-            set_worktop_joint_type=set_worktop_joint_type,
-            set_vertical_gap=set_vertical_gap,
-            set_max_element_height=set_max_element_height,
-            render_color_picker=render_color_picker,
+            room_opening_types=room_opening_types,
+            room_fixture_types=room_fixture_types,
         )
         return
     elif state.active_tab == "nova":

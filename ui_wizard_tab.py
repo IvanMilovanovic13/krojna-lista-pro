@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from app_config import get_app_config
 from i18n import SYM_CHEVRON
 
 
@@ -30,6 +31,13 @@ def _render_center_brand(ui: Any, tr_fn: Callable[[str], str], caption: str = ''
             ui.label(caption).classes(
                 'text-xs font-semibold uppercase tracking-[0.28em] text-[#b4bfdc] text-center'
             )
+
+
+def _room_setup_pages_enabled() -> bool:
+    try:
+        return str(get_app_config().app_env or '').strip().lower() in ('development', 'test')
+    except Exception:
+        return True
 
 
 def render_wizard_tab(
@@ -90,6 +98,10 @@ def _render_wizard(
 
     if state.wizard_step == 3:
         state.wizard_step = 4
+
+    if not _room_setup_pages_enabled() and int(getattr(state, 'wizard_step', 1) or 1) >= 2:
+        state.wizard_step = 1
+        state.measurement_mode = ''
 
     _auth_mode = str(getattr(state, 'current_auth_mode', '') or '').strip().lower()
     if state.wizard_step == 1 and not _auth_mode:
@@ -175,7 +187,11 @@ def _render_wizard_step1(
         state.kitchen['layout'] = 'jedan_zid'
         state.active_group = 'donji'
         state.measurement_mode = ''
-        state.wizard_step = 2
+        if _room_setup_pages_enabled():
+            state.wizard_step = 2
+        else:
+            state.wizard_step = 1
+            state.active_tab = 'elementi'
         main_content_refresh()
 
     with ui.column().classes('w-full h-full overflow-auto bg-gray-50 items-center justify-center p-8 gap-6'):
