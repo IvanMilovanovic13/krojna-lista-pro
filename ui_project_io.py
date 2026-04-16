@@ -74,17 +74,18 @@ def make_toolbar_actions(
         if is_authenticated and list_account_projects is not None and load_from_account is not None:
             with ui.dialog() as _dlg:
                 _dlg.open()
-                with ui.card().classes('p-6 min-w-[420px] max-w-lg gap-3'):
-                    ui.label(tr_fn('project_io.account_load_title')).classes('text-lg font-bold')
+                with ui.card().classes('p-6 gap-4').style('min-width: 540px; max-width: 640px;'):
+                    ui.label(tr_fn('project_io.account_load_title')).classes('text-xl font-bold text-gray-900')
                     projects = list_account_projects()
                     if not projects:
                         ui.label(tr_fn('project_io.account_load_empty')).classes('text-sm text-gray-500')
                     else:
-                        with ui.scroll_area().classes('w-full max-h-80'):
+                        with ui.scroll_area().style('width: 100%; max-height: 400px;'):
                             for item in projects:
                                 pid = int(item.get('project_id', 0) or 0)
                                 name = str(item.get('name', '') or tr_fn('project_io.account_load_unknown'))
                                 updated = str(item.get('updated_at', '') or item.get('last_opened_at', '') or '')
+                                updated_short = updated[:16] if updated else ''
 
                                 def _do_load(project_id=pid) -> None:
                                     ok, err = load_from_account(project_id)
@@ -96,16 +97,16 @@ def make_toolbar_actions(
                                     else:
                                         ui.notify(tr_fn('project_io.account_load_fail', err=err), type='negative', timeout=5000)
 
-                                with ui.card().classes('w-full p-3 mb-2 border border-gray-200 bg-white'):
-                                    with ui.row().classes('w-full items-center justify-between gap-3'):
-                                        with ui.column().classes('gap-0'):
-                                            ui.label(name).classes('text-sm font-bold text-gray-800')
-                                            if updated:
-                                                ui.label(updated[:16]).classes('text-xs text-gray-400')
+                                with ui.card().classes('w-full p-4 mb-2 border border-gray-200 bg-white shadow-sm'):
+                                    with ui.row().classes('w-full items-center justify-between gap-4'):
+                                        with ui.column().classes('gap-1 flex-1'):
+                                            ui.label(name).classes('text-base font-bold text-gray-900')
+                                            if updated_short:
+                                                ui.label(updated_short).classes('text-sm text-gray-500')
                                         ui.button(
                                             tr_fn('project_io.account_load_open'),
                                             on_click=_do_load,
-                                        ).classes('bg-[#111] text-white text-xs px-3 py-1')
+                                        ).classes('bg-[#111] text-white px-5 py-2 text-sm font-medium')
                     ui.button(tr_fn('project_io.cancel'), on_click=_dlg.close).classes(
                         'w-full bg-white text-[#111] border border-[#111] mt-2'
                     )
