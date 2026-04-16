@@ -163,6 +163,8 @@ def render_toolbar() -> None:
     if _tier == "admin":
         tabs.insert(5, ("ops", _tr("tab.ops"), "admin_panel_settings"))
 
+    from state_logic import account_save_current_project
+
     _raw_toolbar_save, _raw_toolbar_load = make_toolbar_actions(
         ui=ui,
         state=state,
@@ -171,6 +173,7 @@ def render_toolbar() -> None:
         save_project_json=save_project_json,
         load_project_json=load_project_json,
         main_content_refresh=main_content.refresh,
+        save_to_account=account_save_current_project,
     )
 
     def _redirect_locked_toolbar_action() -> None:

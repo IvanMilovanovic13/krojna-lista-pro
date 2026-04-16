@@ -5,6 +5,7 @@ import copy
 import json
 import logging
 import re
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -330,15 +331,45 @@ class AppState:
 _STATE_REGISTRY: Dict[str, AppState] = {"default": AppState()}
 
 
+def _get_storage_scoped_state_key() -> str:
+    try:
+        from nicegui import app as nicegui_app
+
+        storage = getattr(nicegui_app, "storage", None)
+        user_storage = getattr(storage, "user", None) if storage is not None else None
+        if user_storage is None:
+            return ""
+
+        auth_token = str(user_storage.get("auth_session_token", "") or "").strip()
+        if auth_token:
+            return f"session:{auth_token}"
+
+        anon_key = str(user_storage.get("_state_scope_key", "") or "").strip()
+        if anon_key:
+            return f"anon:{anon_key}"
+
+        anon_key = uuid.uuid4().hex
+        user_storage["_state_scope_key"] = anon_key
+        return f"anon:{anon_key}"
+    except Exception:
+        return ""
+
+
 def _get_current_client_key() -> str:
     try:
         from nicegui import context
         client = getattr(context, "client", None)
         client_id = getattr(client, "id", None)
         if client_id is None:
+            storage_key = _get_storage_scoped_state_key()
+            if storage_key:
+                return storage_key
             return "default"
         return str(client_id)
     except Exception:
+        storage_key = _get_storage_scoped_state_key()
+        if storage_key:
+            return storage_key
         return "default"
 
 
@@ -453,6 +484,63 @@ def reset_state() -> None:
         "tall":       560,
         "tall_top":   560,
     }
+    _sync_kitchen_wall_from_room(room=state.room, wall_key="A")
+
+
+def reset_workspace_for_active_session() -> None:
+    """
+    Resetuje samo radni prostor projekta, ali zadržava aktivnog korisnika,
+    sesiju i izabrani jezik. Ovo je važno kada se korisnik promeni u istom tabu,
+    kako novi nalog ne bi nasledio prethodnu kuhinju iz memorije.
+    """
+    preserved_language = str(getattr(state, "language", "sr") or "sr")
+
+    state.active_tab = "wizard"
+    state.wizard_step = 1
+    state.project_type = "kitchen"
+    state.furniture_type = ""
+    state.measurement_mode = ""
+    state.kitchen_layout = "jedan_zid"
+    state.l_corner_side = "right"
+    state.wardrobe_profile = "standard"
+    state.wardrobe_to_ceiling = True
+    state.wardrobe_door_mode = "hinged"
+    state.wardrobe_target_wall = "A"
+    state.account_upgrade_focus = False
+    state.current_project_id = 0
+    state.current_project_name = ""
+    state.current_project_source = ""
+    state.room = _default_room()
+    state.room_setup_done = False
+    state.active_group = "donji"
+    state.selected_tid = ""
+    state.kitchen = _default_kitchen()
+    state.next_id = 1
+    state.view_mode = "Tehnički"
+    state.show_grid = False
+    state.grid_mm = 10
+    state.show_bounds = True
+    state.ceiling_filler = False
+    state.wall_upper_target_x = -1
+    state.front_color = "#FDFDFB"
+    state.selected_edit_id = 0
+    state.mode = "add"
+    state.sidebar_tab = 'dodaj'
+    state.zone_defaults = {
+        "base": {"h_mm": 720, "d_mm": 560},
+        "wall": {"h_mm": 720, "d_mm": 350},
+        "wall_upper": {"h_mm": 400, "d_mm": 350},
+        "tall": {},
+        "tall_top": {},
+    }
+    state.zone_depth_standards = {
+        "base": 560,
+        "wall": 320,
+        "wall_upper": 300,
+        "tall": 560,
+        "tall_top": 560,
+    }
+    state.language = preserved_language if preserved_language in ("sr", "en", "de") else "sr"
     _sync_kitchen_wall_from_room(room=state.room, wall_key="A")
 
 
@@ -1623,6 +1711,54 @@ def save_local_recent_project(*, label: str) -> str:
     return str(path)
 
 
+def account_save_current_project(name: str | None = None) -> tuple[bool, str]:
+    """
+    Snima ili azurira projekat u bazi za aktivnog korisnika.
+    Ako projekat vec postoji (current_project_id > 0), azurira ga.
+    Ako je novi, kreira novi zapis.
+    Vraca (True, naziv) ili (False, poruka_greske).
+    """
+    try:
+        from project_store import save_payload_from_bytes, update_payload_from_bytes
+        _user = _get_active_user_record()
+        if _user is None:
+            return False, "Korisnik nije prijavljen."
+        payload_bytes = save_project_json()
+        project_name = str(name or getattr(state, "current_project_name", "") or "Moj projekat").strip()
+        if not project_name:
+            project_name = "Moj projekat"
+        current_project_id = int(getattr(state, "current_project_id", 0) or 0)
+        if current_project_id > 0:
+            _record = update_payload_from_bytes(
+                project_id=current_project_id,
+                user_id=_user.id,
+                name=project_name,
+                payload_bytes=payload_bytes,
+                source="account_saved",
+            )
+            if _record is None:
+                _record = save_payload_from_bytes(
+                    user_id=_user.id,
+                    name=project_name,
+                    payload_bytes=payload_bytes,
+                    source="account_saved",
+                )
+        else:
+            _record = save_payload_from_bytes(
+                user_id=_user.id,
+                name=project_name,
+                payload_bytes=payload_bytes,
+                source="account_saved",
+            )
+        state.current_project_id = int(_record.id)
+        state.current_project_name = str(_record.name)
+        state.current_project_source = str(_record.source)
+        return True, str(_record.name)
+    except Exception as ex:
+        _LOG.warning("account_save_current_project failed: %s", ex)
+        return False, str(ex)
+
+
 def load_recent_project(path: str) -> Tuple[bool, str]:
     try:
         data = Path(path).read_bytes()
@@ -1935,6 +2071,11 @@ def _apply_session_state(session: Any) -> None:
         previous_email = str(getattr(state, "current_user_email", "") or "").strip().lower()
         next_user_id = int(session.user.user_id)
         next_email = str(session.user.email)
+        user_changed = previous_user_id not in (0, next_user_id) or (
+            previous_email and previous_email != str(next_email).strip().lower()
+        )
+        if user_changed:
+            reset_workspace_for_active_session()
         state.current_user_id = int(session.user.user_id)
         state.current_user_email = str(session.user.email)
         state.current_user_display = str(session.user.display_name)
@@ -1954,9 +2095,7 @@ def _apply_session_state(session: Any) -> None:
         state.current_can_access_app = bool(
             effective_access.get("can_access_app", state.current_can_access_app)
         )
-        if previous_user_id not in (0, next_user_id) or (
-            previous_email and previous_email != str(next_email).strip().lower()
-        ):
+        if user_changed:
             _clear_current_project_binding()
         if str(getattr(state, "active_tab", "") or "").strip() in ("wizard", "nalog", ""):
             state.active_tab = "nova"

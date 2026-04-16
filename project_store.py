@@ -24,6 +24,11 @@ DEFAULT_ADMIN_EMAILS = [
     "admin2@cabinetcutpro.invalid",
     "admin3@cabinetcutpro.invalid",
 ]
+DEFAULT_ADMIN_PASSWORDS = [
+    "Krojnalista1",
+    "Krojnalista2",
+    "Krojnalista3",
+]
 DEFAULT_PRIVILEGED_TEST_EMAILS = [
     "testpaid1@cabinetcutpro.invalid",
     "testpaid2@cabinetcutpro.invalid",
@@ -870,38 +875,52 @@ def _split_seed_emails(raw: str, fallback: list[str]) -> list[str]:
     return [item.strip().lower() for item in str(raw).replace(";", ",").split(",") if item.strip()]
 
 
+def _split_seed_passwords(raw: str, fallback: list[str]) -> list[str]:
+    if not str(raw or "").strip():
+        return list(fallback)
+    values = [item.strip() for item in str(raw).replace(";", ",").split(",") if item.strip()]
+    return values or list(fallback)
+
+
 def ensure_privileged_seed_accounts() -> dict[str, list[str]]:
     global _SEEDING_PRIVILEGED_ACCOUNTS, _PRIVILEGED_SEED_DONE
     if _PRIVILEGED_SEED_DONE:
         seed_password = str(os.getenv("APP_PRIVILEGED_SEED_PASSWORD", DEFAULT_PRIVILEGED_PASSWORD) or DEFAULT_PRIVILEGED_PASSWORD)
+        admin_passwords = _split_seed_passwords(os.getenv("APP_ADMIN_PASSWORDS", ""), DEFAULT_ADMIN_PASSWORDS)[:3]
         return {
             "admins": list(_split_seed_emails(os.getenv("APP_ADMIN_EMAILS", ""), DEFAULT_ADMIN_EMAILS)[:3]),
             "tests": list(_split_seed_emails(os.getenv("APP_PRIVILEGED_TEST_EMAILS", ""), DEFAULT_PRIVILEGED_TEST_EMAILS)[:5]),
             "seed_password": [seed_password],
+            "admin_passwords": admin_passwords,
         }
     with _PRIVILEGED_SEED_LOCK:
         if _PRIVILEGED_SEED_DONE:
             seed_password = str(os.getenv("APP_PRIVILEGED_SEED_PASSWORD", DEFAULT_PRIVILEGED_PASSWORD) or DEFAULT_PRIVILEGED_PASSWORD)
+            admin_passwords = _split_seed_passwords(os.getenv("APP_ADMIN_PASSWORDS", ""), DEFAULT_ADMIN_PASSWORDS)[:3]
             return {
                 "admins": list(_split_seed_emails(os.getenv("APP_ADMIN_EMAILS", ""), DEFAULT_ADMIN_EMAILS)[:3]),
                 "tests": list(_split_seed_emails(os.getenv("APP_PRIVILEGED_TEST_EMAILS", ""), DEFAULT_PRIVILEGED_TEST_EMAILS)[:5]),
                 "seed_password": [seed_password],
+                "admin_passwords": admin_passwords,
             }
         admin_emails = _split_seed_emails(os.getenv("APP_ADMIN_EMAILS", ""), DEFAULT_ADMIN_EMAILS)[:3]
         test_emails = _split_seed_emails(os.getenv("APP_PRIVILEGED_TEST_EMAILS", ""), DEFAULT_PRIVILEGED_TEST_EMAILS)[:5]
+        admin_passwords = _split_seed_passwords(os.getenv("APP_ADMIN_PASSWORDS", ""), DEFAULT_ADMIN_PASSWORDS)[:3]
+        while len(admin_passwords) < len(admin_emails):
+            admin_passwords.append(DEFAULT_ADMIN_PASSWORDS[min(len(admin_passwords), len(DEFAULT_ADMIN_PASSWORDS) - 1)])
         seed_password = str(os.getenv("APP_PRIVILEGED_SEED_PASSWORD", DEFAULT_PRIVILEGED_PASSWORD) or DEFAULT_PRIVILEGED_PASSWORD)
         password_hash = hash_password(seed_password)
         created_admins: list[str] = []
         created_tests: list[str] = []
         _SEEDING_PRIVILEGED_ACCOUNTS = True
         try:
-            for email in admin_emails:
-                existing = get_user_by_email(email)
+            for idx, email in enumerate(admin_emails):
+                admin_password = str(admin_passwords[idx] or DEFAULT_ADMIN_PASSWORDS[min(idx, len(DEFAULT_ADMIN_PASSWORDS) - 1)])
                 create_user_record(
                     email=email,
-                    username=email.split("@", 1)[0],
-                    display_name=email.split("@", 1)[0],
-                    password_hash=password_hash if existing is None else "",
+                    username=f"admin{idx + 1}",
+                    display_name=f"admin{idx + 1}",
+                    password_hash=hash_password(admin_password),
                     auth_mode="password",
                     access_tier="admin",
                     status="admin_active",
@@ -928,6 +947,7 @@ def ensure_privileged_seed_accounts() -> dict[str, list[str]]:
             "admins": created_admins,
             "tests": created_tests,
             "seed_password": [seed_password],
+            "admin_passwords": admin_passwords,
         }
 
 
@@ -1970,6 +1990,97 @@ def save_project_record(
         return _project_record_from_row(row)
 
 
+def update_project_record(
+    *,
+    project_id: int,
+    user_id: int,
+    name: str,
+    payload_json: str,
+    project_type: str = "kitchen",
+    kitchen_layout: str = "jedan_zid",
+    language: str = "sr",
+    source: str = "account_saved",
+    is_demo: bool = False,
+    is_autosave: bool = False,
+) -> Optional[ProjectRecord]:
+    init_project_store()
+    with _connect() as conn:
+        if _get_backend_name() == "postgres":
+            row = conn.execute(
+                """
+                UPDATE projects
+                SET name = ?,
+                    project_type = ?,
+                    kitchen_layout = ?,
+                    language = ?,
+                    source = ?,
+                    is_demo = ?,
+                    is_autosave = ?,
+                    payload_json = ?::jsonb,
+                    updated_at = CURRENT_TIMESTAMP,
+                    last_opened_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND user_id = ?
+                RETURNING id, user_id, name, project_type, kitchen_layout, language, source,
+                          is_demo, is_autosave, created_at, updated_at, last_opened_at
+                """,
+                (
+                    str(name),
+                    str(project_type),
+                    str(kitchen_layout),
+                    str(language),
+                    str(source),
+                    bool(is_demo),
+                    bool(is_autosave),
+                    str(payload_json),
+                    int(project_id),
+                    int(user_id),
+                ),
+            ).fetchone()
+        else:
+            result = conn.execute(
+                """
+                UPDATE projects
+                SET name = ?,
+                    project_type = ?,
+                    kitchen_layout = ?,
+                    language = ?,
+                    source = ?,
+                    is_demo = ?,
+                    is_autosave = ?,
+                    payload_json = ?,
+                    updated_at = CURRENT_TIMESTAMP,
+                    last_opened_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND user_id = ?
+                """,
+                (
+                    str(name),
+                    str(project_type),
+                    str(kitchen_layout),
+                    str(language),
+                    str(source),
+                    1 if is_demo else 0,
+                    1 if is_autosave else 0,
+                    str(payload_json),
+                    int(project_id),
+                    int(user_id),
+                ),
+            )
+            if int(getattr(result, "rowcount", 0) or 0) <= 0:
+                return None
+            row = conn.execute(
+                """
+                SELECT id, user_id, name, project_type, kitchen_layout, language, source,
+                       is_demo, is_autosave, created_at, updated_at, last_opened_at
+                FROM projects
+                WHERE id = ? AND user_id = ?
+                """,
+                (int(project_id), int(user_id)),
+            ).fetchone()
+    if row is None:
+        return None
+    return _project_record_from_row(row)
+
+
 def create_auth_session(
     *,
     user_id: int,
@@ -2764,6 +2875,32 @@ def save_payload_from_bytes(
         is_demo=is_demo,
         is_autosave=is_autosave,
         replace_source=replace_source,
+    )
+
+
+def update_payload_from_bytes(
+    *,
+    project_id: int,
+    user_id: int,
+    name: str,
+    payload_bytes: bytes,
+    source: str = "account_saved",
+    is_demo: bool = False,
+    is_autosave: bool = False,
+) -> Optional[ProjectRecord]:
+    payload = json.loads(payload_bytes.decode("utf-8"))
+    kitchen = payload.get("kitchen", {}) if isinstance(payload, dict) else {}
+    return update_project_record(
+        project_id=project_id,
+        user_id=user_id,
+        name=name,
+        payload_json=json.dumps(payload, ensure_ascii=False, indent=2),
+        project_type=str(payload.get("project_type", "kitchen") or "kitchen"),
+        kitchen_layout=str(payload.get("kitchen_layout", kitchen.get("layout", "jedan_zid")) or "jedan_zid"),
+        language=str(payload.get("language", "sr") or "sr"),
+        source=source,
+        is_demo=is_demo,
+        is_autosave=is_autosave,
     )
 
 

@@ -12,6 +12,85 @@ from i18n import normalize_language_code, tr
 
 
 _PDF_PHRASES: dict[str, dict[str, str]] = {
+    "de": {
+        "Cut List": "Zuschnittliste",
+        "Summary - all cut parts": "Zusammenfassung - alle Zuschnittteile",
+        "Project data": "Projektdaten",
+        "Field": "Feld",
+        "Value": "Wert",
+        "What you take to the workshop - cutting": "Was du in die Werkstatt mitnimmst: Zuschnitt",
+        "What you take to the workshop - edging": "Was du in die Werkstatt mitnimmst: Kanten",
+        "What you take to the workshop - processing": "Was du in die Werkstatt mitnimmst: Bearbeitung",
+        "Workshop instructions": "Werkstattanweisungen",
+        "Material": "Material",
+        "Thk.": "Stärke",
+        "Length [mm]": "Länge [mm]",
+        "Width [mm]": "Breite [mm]",
+        "Edge": "Kante",
+        "Qty": "Menge",
+        "Wall": "Wand",
+        "Module": "Modul",
+        "Part": "Teil",
+        "Note": "Hinweis",
+        "Processing type": "Bearbeitungsart",
+        "Operations": "Vorgänge",
+        "Execution basis": "Ausführungsgrundlage",
+        "Processing / note": "Bearbeitung / Hinweis",
+        "Carcass (sides, bottom, top)": "Korpus (Seiten, Boden, Deckel)",
+        "Back panels": "Rückwände",
+        "Fronts": "Fronten",
+        "Worktop and supports": "Arbeitsplatte und Stützen",
+        "Plinth / toe kick": "Sockel",
+        "By unit - details and assembly": "Nach Element - Details und Montage",
+        "Label": "PartCode",
+        "Where it goes": "Wo es hingehört",
+        "Step": "Schritt",
+        "Note for beginners": "Hinweis für Einsteiger",
+        "Important part notes": "Wichtige Teilehinweise",
+        "Check before assembly": "Vor der Montage prüfen",
+        "Assembly parts map": "Montage-Teileplan",
+        "Cut parts": "Zuschnittteile",
+        "Required tools and hardware": "Benötigte Werkzeuge und Beschläge",
+        "Assembly instructions": "Montageanleitung",
+        "What you buy separately": "Was separat gekauft wird",
+        "Ready-made products - not included in cutting": "Fertige Produkte — nicht im Zuschnitt enthalten",
+        "Workflow order": "Ablauf",
+        "What you do": "Eintrag",
+        "Checklist before workshop": "Checkliste vor der Werkstatt",
+        "Checklist before home assembly": "Checkliste vor der Montage",
+        "Status": "Status",
+        "Group": "Gruppe",
+        "Name": "Name",
+        "Type / Code": "Typ / Code",
+        "Wall L": "Wandlänge",
+        "Required": "Erforderlich",
+        "Purchase": "Einkauf",
+        "Field cut": "Bauseitiger Schnitt",
+        "Joint": "Verbindung",
+        "Cut-outs": "Ausschnitte",
+        "Cut length": "Schnittlänge",
+        "Cut width": "Schnittbreite",
+        "Item": "Eintrag",
+        "The labels in the 2D view use the same short label as the table and assembly steps.": "Die Beschriftungen im Bild sind aus dem echten PartCode gekürzt und stimmen deshalb direkt mit Tabelle und Montageschritten überein.",
+        "The part label is the same in the image, table and text. Sort the parts by label first, then start assembly.": "Die Teilebezeichnung ist im Bild, in der Tabelle und im Text identisch. Sortiere die Teile zuerst nach Bezeichnung und beginne dann mit der Montage.",
+        "Drill-driver or screwdriver": "Akkuschrauber oder Schraubendreher",
+        "Tape measure": "Maßband",
+        "Spirit level": "Wasserwaage",
+        "Wall brackets / hanging hardware": "Wandhalter / Aufhängebeschläge",
+        "Door hinges": "Topfscharniere",
+        "Drawer runners": "Schubladenauszüge",
+        "Lift-up mechanism": "Klappenbeschlag",
+        "Glass-door hinges": "Scharniere für Glastüren",
+        "Dishwasher front mounting kit": "Montageset für Geschirrspülerfront",
+        "Wall plugs / screws according to wall type": "Dübel / Schrauben passend zur Wand",
+        "Check that the number of parts matches the table.": "Prüfe, ob die Teileanzahl mit der Tabelle übereinstimmt.",
+        "Separate carcass parts, fronts, backs and hardware before assembly.": "Trenne Korpusteile, Fronten, Rückwände und Beschläge vor der Montage.",
+        "Check the edged sides so the front of the unit is oriented correctly.": "Prüfe die bekanteten Seiten, damit die Front des Elements korrekt ausgerichtet ist.",
+        "Before drilling, check the wall type and choose suitable plugs and screws.": "Vor dem Bohren den Wandtyp prüfen und passende Dübel und Schrauben wählen.",
+        "Before assembly, verify the service positions and appliance opening.": "Vor der Montage Installationspositionen und Geräteöffnung prüfen.",
+        "A tall unit must always be planned for wall fixing.": "Ein Hochschrank muss immer für die Wandbefestigung vorgesehen werden.",
+        "Checklist before workshop and assembly": "Checkliste vor Werkstatt und Montage",
+    },
     "es": {
         "Cut List": "Lista de corte",
         "Summary - all cut parts": "Resumen - todas las piezas de corte",
@@ -461,6 +540,116 @@ _PDF_PHRASES["es"].update({
     "Separate carcass parts first, then fronts, then hardware": "Separa primero piezas de cuerpo, luego frentes y después herrajes",
     "Assemble the carcasses first, then doors, drawers and appliances": "Monta primero los cuerpos, luego puertas, cajones y electrodomésticos",
     "Always secure tall and wall units to the wall": "Fija siempre a la pared los módulos altos y colgantes",
+})
+
+_PDF_PHRASES["de"].update({
+    "How to use": "Verwendung",
+    "How to use this document": "So verwendest du dieses Dokument",
+    "First check the main dimensions and materials": "Prüfe zuerst die Hauptmaße und Materialien",
+    "If you see an error here, do not order cutting yet.": "Wenn du hier einen Fehler siehst, bestelle den Zuschnitt noch nicht.",
+    "If you see an error here, do not send the document to the workshop.": "Wenn du hier einen Fehler siehst, sende das Dokument noch nicht in die Werkstatt.",
+    "Use only the cutting, edging and machining sheets for the workshop": "Für die Werkstatt nur die Tabellen für Zuschnitt, Kanten und Bearbeitung verwenden",
+    "The workshop works by CUT dimensions and notes from those sheets.": "Die Werkstatt arbeitet nach CUT-Maßen und den Hinweisen aus diesen Tabellen.",
+    "Take only the 'For workshop' section to the workshop": "Nimm nur den Abschnitt 'Für die Werkstatt' mit in die Werkstatt",
+    "The workshop works by CUT dimensions and notes from that section.": "Die Werkstatt arbeitet nach den CUT-Maßen und Hinweisen aus diesem Abschnitt.",
+    "Use the 'For assembly' section during assembly": "Verwende den Abschnitt 'Für die Montage' während der Montage",
+    "Purchase ready-made appliances, hardware and tools separately": "Fertiggeräte, Beschläge und Werkzeuge separat beschaffen",
+    "These items are not cut from board material.": "Diese Teile werden nicht aus Plattenmaterial zugeschnitten.",
+    "Use the guide and checklists during assembly": "Verwende Anleitung und Checklisten während der Montage",
+    "Follow the order: carcasses, fronts, drawers, appliances, final check.": "Reihenfolge: Korpusse, Fronten, Schubladen, Geräte, Endkontrolle.",
+    "Overview": "Überblick",
+    "Overview of all panels": "Überblick aller Platten",
+    "Summary cut list of panels": "Zusammengefasste Zuschnittliste der Platten",
+    "Summary cut list - panels": "Zuschnitt-Übersicht - Platten",
+    "Dimensions are finished sizes. CUT dimensions include edging allowances and workshop rules.": "Die Maße sind Fertigmaße. CUT-Maße enthalten Kantenzugaben und Werkstattregeln.",
+    "Dimensions are finished sizes, after edging.": "Die Maße sind Fertigmaße nach dem Bekanten.",
+    "Cutting": "Zuschnitt",
+    "By units": "Nach Elementen",
+    "Detailed cut list by units": "Detaillierte Zuschnittliste nach Elementen",
+    "Detailed cut list - by units": "Detaillierte Zuschnittliste - nach Elementen",
+    "Each part is shown by unit. Dimensions are finished sizes, after edging.": "Jedes Teil wird je Element gezeigt. Die Maße sind Fertigmaße nach dem Bekanten.",
+    "Carcass": "Korpus",
+    "Carcass — sides, bottom, top": "Korpus — Seiten, Boden, Deckel",
+    "Backs": "Rückwände",
+    "Back panels": "Rückwandplatten",
+    "Drawers": "Schubladen",
+    "Drawer box": "Schubladenkasten",
+    "Worktop": "Arbeitsplatte",
+    "Worktop spec": "Arbeitsplatten-Spezifikation",
+    "WORKTOP SPECIFICATION": "ARBEITSPLATTEN-SPEZIFIKATION",
+    "Plinth": "Sockel",
+    "Plinths and trims": "Sockel und Abschlussleisten",
+    "Hardware": "Beschläge",
+    "Hardware and consumables": "Beschläge und Verbrauchsmaterial",
+    "Work order": "Arbeitsauftrag",
+    "Workshop cutting": "Werkstatt - Zuschnitt",
+    "Workshop edging": "Werkstatt - Kanten",
+    "Workshop machining": "Werkstatt - Bearbeitung",
+    "Workshop packet - cutting": "Werkstattpaket - Zuschnitt",
+    "Workshop packet - edging": "Werkstattpaket - Kanten",
+    "Workshop packet - machining": "Werkstattpaket - Bearbeitung",
+    "Workshop note": "Werkstatt-Hinweis",
+    "Workshop packet for board material": "Werkstattpaket für Plattenmaterial",
+    "Shopping": "Einkauf",
+    "Shopping list": "Einkaufsliste",
+    "Ready-made": "Fertig gekauft",
+    "Purchased ready-made": "Fertig gekauft",
+    "Guide": "Anleitung",
+    "Quick user guide": "Kurzanleitung",
+    "Workshop checklist": "Checkliste für die Werkstatt",
+    "Home checklist": "Checkliste für zu Hause",
+    "Checklist before assembly": "Checkliste vor der Montage",
+    "Checklist before home assembly": "Checkliste vor der Montage zu Hause",
+    "FOR CUSTOMER": "FÜR DEN KUNDEN",
+    "FOR WORKSHOP": "FÜR DIE WERKSTATT",
+    "FOR ASSEMBLY": "FÜR DIE MONTAGE",
+    "Beginner legend": "Legende für Einsteiger",
+    "The name of the panel or unit part.": "Name der Platte oder des Elementteils.",
+    "How many pieces of that part are needed.": "Wie viele Stück von diesem Teil benötigt werden.",
+    "Panel thickness in millimeters.": "Plattenstärke in Millimetern.",
+    "Finished part dimensions.": "Fertigmaße des Teils.",
+    "What the part is made of.": "Material des Teils.",
+    "Orientation": "Ausrichtung",
+    "Board or grain direction.": "Platten- oder Faserrichtung.",
+    "Which edges get edge banding.": "Welche Kanten bekantet werden.",
+    "L1/L2 are long edges, K1/K2 are short edges.": "L1/L2 sind lange Kanten, K1/K2 kurze Kanten.",
+    "1 = edged, 0 = not edged.": "1 = bekantet, 0 = nicht bekantet.",
+    "Workshop size before final processing, where applicable.": "Werkstattmaß vor der Endbearbeitung, falls anwendbar.",
+    "Size used by the workshop before final processing.": "Maß, das die Werkstatt vor der Endbearbeitung verwendet.",
+    "Edge that receives edge banding.": "Kante, die eine Bekantung erhält.",
+    "How many pieces the workshop should prepare.": "Wie viele Stück die Werkstatt vorbereiten soll.",
+    "Extra instruction for cutting, edging or machining.": "Zusätzliche Anweisung für Zuschnitt, Kanten oder Bearbeitung.",
+    "Project coordinates": "Projektkoordinaten",
+    "Wall (L x H)": "Wand (L x H)",
+    "Legs": "Füße",
+    "Base carcass height": "Höhe Unterkorpus",
+    "Worktop thickness": "Arbeitsplattenstärke",
+    "Working height (total)": "Arbeitshöhe (gesamt)",
+    "Use this section to review the main dimensions, important panels and overall project readiness.": "In diesem Abschnitt prüfst du Hauptmaße, wichtige Platten und die allgemeine Projektbereitschaft.",
+    "Image labels use the same labels as the table and steps.": "Bildkennzeichnungen verwenden dieselben Kürzel wie Tabelle und Montageschritte.",
+    "Materials": "Materialien",
+    "Generated": "Erstellt",
+    "Grain": "Faserrichtung",
+    "CUT Length": "CUT-Länge",
+    "CUT Width": "CUT-Breite",
+    "FIN Length": "FIN-Länge",
+    "FIN Width": "FIN-Breite",
+    "Check that the material and thickness values are correct for carcass, fronts and backs": "Prüfe, ob Material und Stärken für Korpus, Fronten und Rückwände korrekt sind",
+    "Check that all CUT dimensions and quantities are listed": "Prüfe, ob alle CUT-Maße und Mengen aufgeführt sind",
+    "Check edge banding on every edge before sending to the workshop": "Prüfe jede Bekantung, bevor das Projekt in die Werkstatt geht",
+    "Check that fronts, backs, plinths and special panels are included": "Prüfe, ob Fronten, Rückwände, Sockel und Sonderplatten enthalten sind",
+    "Check that all ready-made purchased items are separated from cut parts": "Prüfe, ob alle Fertigprodukte von den Zuschnittteilen getrennt sind",
+    "Check all openings and special machining for services and ventilation": "Prüfe alle Öffnungen und Sonderbearbeitungen für Installationen und Belüftung",
+    "Check that the shopping list includes hardware, consumables and tools": "Prüfe, ob die Einkaufsliste Beschläge, Verbrauchsmaterial und Werkzeuge enthält",
+    "Before home assembly": "Vor der Montage zu Hause",
+    "Count all cut panels and compare them against the list": "Zähle alle zugeschnittenen Platten und vergleiche sie mit der Liste",
+    "Sort parts by unit before starting assembly": "Sortiere die Teile nach Elementen, bevor du mit der Montage beginnst",
+    "Check that all hardware, appliances and tools have been purchased": "Prüfe, ob alle Beschläge, Geräte und Werkzeuge beschafft wurden",
+    "Assemble the carcasses first, then doors and drawers, and only then the appliances": "Montiere zuerst die Korpusse, dann Türen und Schubladen und erst danach die Geräte",
+    "Sort parts by unit on site": "Sortiere die Teile vor Ort nach Elementen",
+    "Separate carcass parts first, then fronts, then hardware": "Trenne zuerst Korpusteile, dann Fronten, dann Beschläge",
+    "Assemble the carcasses first, then doors, drawers and appliances": "Montiere zuerst die Korpusse, dann Türen, Schubladen und Geräte",
+    "Always secure tall and wall units to the wall": "Hochschränke und Hängeschränke immer an der Wand sichern",
 })
 
 _PDF_PHRASES["pt-br"].update({
@@ -1017,6 +1206,211 @@ def _pdf_t(sr: str, en: str, lang: str) -> str:
     return _PDF_PHRASES.get(lang_key, {}).get(en, en)
 
 
+def _pdf_localize_text(value, lang: str = "sr") -> str:
+    txt = str(value or "").strip()
+    lang_key = normalize_language_code(lang)
+    if not txt or lang_key != "de":
+        return txt
+    exact = {
+        "FOR CUSTOMER": "FÜR DEN KUNDEN",
+        "FOR WORKSHOP": "FÜR DIE WERKSTATT",
+        "FOR ASSEMBLY": "FÜR DIE MONTAGE",
+        "Project coordinates": "Projektkoordinaten",
+        "Summary cut list - panels": "Zuschnitt-Übersicht - Platten",
+        "Detailed cut list - by units": "Detaillierte Zuschnittliste - nach Elementen",
+        "Detailed cut list by units": "Detaillierte Zuschnittliste nach Elementen",
+        "Summary cut list of panels": "Zusammengefasste Zuschnittliste der Platten",
+        "Workshop packet for board material": "Werkstattpaket für Plattenmaterial",
+        "Cutting table": "Zuschnitt-Tabelle",
+        "Edging table": "Kanten-Tabelle",
+        "Machining table": "Bearbeitungs-Tabelle",
+        "Worktop specification": "Arbeitsplatten-Spezifikation",
+        "Assembly map by unit (part orientation)": "Montageplan nach Elementen (Teilorientierung)",
+        "Image labels use the same labels as the table and steps.": "Bildkennzeichnungen verwenden dieselben Kürzel wie Tabelle und Montageschritte.",
+        "Each part is shown by unit. Dimensions are finished sizes, after edging.": "Jedes Teil wird je Element gezeigt. Die Maße sind Fertigmaße nach dem Bekanten.",
+        "Use this section to review the main dimensions, important panels and overall project readiness.": "In diesem Abschnitt prüfst du Hauptmaße, wichtige Platten und die allgemeine Projektbereitschaft.",
+        "Take this section to the workshop. The workshop works by CUT dimensions, edging notes and machining notes from these tables.": "Nimm diesen Abschnitt mit in die Werkstatt. Die Werkstatt arbeitet nach CUT-Maßen sowie Kanten- und Bearbeitungshinweisen aus diesen Tabellen.",
+        "This goes to the workshop: cutting by CUT dimensions, edging by table, and machining by notes.": "Dieser Abschnitt geht in die Werkstatt: Zuschnitt nach CUT-Maßen, Kanten nach Tabelle und Bearbeitung nach Hinweisen.",
+        "The workshop works strictly by CUT dimensions. Final trimming and fitting are done on site.": "Die Werkstatt arbeitet strikt nach CUT-Maßen. Endanpassung und Einbau erfolgen vor Ort.",
+        "Note: appliances, sink, tap, trap, and similar items are purchased as ready-made products and are not part of the cutting list.": "Hinweis: Geräte, Spüle, Armatur, Siphon und ähnliche Teile werden als Fertigprodukte gekauft und gehören nicht zur Zuschnittliste.",
+        "Use this section for assembly order, part orientation and final checklists.": "Verwende diesen Abschnitt für Montagereihenfolge, Teilausrichtung und finale Checklisten.",
+        "Each unit links the image, part labels, table and assembly order.": "Jedes Element verbindet Bild, Teilekennzeichnungen, Tabelle und Montagereihenfolge.",
+        "BASE UNIT PARTS LIST": "LISTE DER UNTERSCHRANK-TEILE",
+        "SINK BASE UNIT": "SPÜLEN-UNTERSCHRANK",
+        "Project": "Projekt",
+        "Customer": "Kunde",
+        "Room": "Raum",
+        "Wall": "Wand",
+        "Wall size": "Wandgröße",
+        "Version": "Version",
+        "Generated": "Erstellt",
+        "Measured by": "Gemessen von",
+        "Designed by": "Geplant von",
+        "Workshop note": "Werkstatt-Hinweis",
+        "Kitchen": "Küche",
+        "Wall A": "Wand A",
+        "Wall B": "Wand B",
+        "Wall C": "Wand C",
+        "Cutting": "Zuschnitt",
+        "Edging": "Kanten",
+        "Machining": "Bearbeitung",
+        "Worktop": "Arbeitsplatte",
+        "Who performs it": "Wer es ausführt",
+        "Execution basis": "Ausführungsgrundlage",
+        "Services": "Installationen",
+        "Final check": "Endkontrolle",
+        "Purchased ready-made": "Fertig gekauft",
+        "Consumables by unit": "Verbrauchsmaterial je Element",
+        "Hardware and mechanisms by unit": "Beschläge und Mechanismen je Element",
+        "Project consumables": "Projekt-Verbrauchsmaterial",
+        "Purchased ready-made - not included in cutting": "Fertigprodukte — nicht im Zuschnitt enthalten",
+        "Workshop": "Werkstatt",
+        "Workshop + on site": "Werkstatt + vor Ort",
+        "On site": "Vor Ort",
+        "According to project dimensions": "Nach Projektmaßen",
+        "According to wall geometry and template": "Nach Wandgeometrie und Schablone",
+        "According to the manufacturer's template": "Nach Herstellerschablone",
+        "Ruckvande": "Rückwände",
+        "Cut strictly by the CUT dimensions from the workshop packet.": "Schneide strikt nach den CUT-Maßen aus dem Werkstattpaket.",
+        "Apply edging only to the edges marked in the edging table and verify the ABS type.": "Bekante nur die in der Kantentabelle markierten Kanten und prüfe den ABS-Typ.",
+        "Make special openings, grooves and ventilation cuts only where they are explicitly specified.": "Sonderöffnungen, Nuten und Lüftungsausschnitte nur dort ausführen, wo sie ausdrücklich angegeben sind.",
+        "Cut the sink or hob opening according to the manufacturer's template, not by estimation.": "Den Ausschnitt für Spüle oder Kochfeld nach Herstellerschablone ausführen, nicht nach Schätzung.",
+        "The 'Operations' column clearly shows whether the workshop performs the job or whether it must be confirmed on site.": "Die Spalte „Vorgänge“ zeigt klar, ob die Werkstatt die Arbeit ausführt oder ob sie vor Ort bestätigt werden muss.",
+        "The 'Execution basis' column shows whether the work follows project dimensions or the appliance manufacturer's template.": "Die Spalte „Ausführungsgrundlage“ zeigt, ob nach Projektmaßen oder nach Herstellerschablone gearbeitet wird.",
+        "If the service positions differ from the project, confirm all machining before cutting or on site.": "Wenn die Installationspositionen vom Projekt abweichen, alle Bearbeitungen vor dem Zuschnitt oder vor Ort bestätigen.",
+        "Before delivery, verify the piece count, part labels and that all panels/fronts are included.": "Vor der Auslieferung Stückzahl, Teilekennzeichnungen und Vollständigkeit aller Platten und Fronten prüfen.",
+        "Check that the material and thickness values are correct for carcass, fronts and backs": "Prüfe, ob Material- und Dickenangaben für Korpus, Fronten und Rückwände korrekt sind",
+        "Check that all CUT dimensions and quantities are listed": "Prüfe, ob alle CUT-Maße und Mengen aufgeführt sind",
+        "Check edge banding on every edge before sending to the workshop": "Prüfe die Kantenbearbeitung an jeder Kante, bevor es in die Werkstatt geht",
+        "Check that fronts, backs, plinths and special panels are included": "Prüfe, ob Fronten, Rückwände, Sockel und Sonderplatten enthalten sind",
+        "Check that all ready-made purchased items are separated from cut parts": "Prüfe, ob alle fertig gekauften Teile von den Zuschnittteilen getrennt sind",
+        "Check all openings and special machining for services and ventilation": "Prüfe alle Öffnungen und Sonderbearbeitungen für Installationen und Belüftung",
+        "Check that the shopping list includes hardware, consumables and tools": "Prüfe, ob die Einkaufsliste Beschläge, Verbrauchsmaterial und Werkzeuge enthält",
+        "Count all cut panels and compare them against the list": "Zähle alle Zuschnittteile und vergleiche sie mit der Liste",
+        "Sort parts by unit before starting assembly": "Sortiere die Teile nach Elementen, bevor du mit der Montage beginnst",
+        "Check that all hardware, appliances and tools have been purchased": "Prüfe, ob alle Beschläge, Geräte und Werkzeuge vorhanden sind",
+        "Assemble the carcasses first, then doors and drawers, and only then the appliances": "Montiere zuerst die Korpusse, dann Türen und Schubladen und erst danach die Geräte",
+        "Always secure tall and wall units to the wall": "Hochschränke und Hängeschränke immer an der Wand sichern",
+    }
+    if txt in exact:
+        return exact[txt]
+    replacements = [
+        ("Purchased ready-made", "Fertig gekauft"),
+        ("Consumables by unit", "Verbrauchsmaterial je Element"),
+        ("Hardware and mechanisms by unit", "Beschläge und Mechanismen je Element"),
+        ("Project consumables", "Projekt-Verbrauchsmaterial"),
+        ("Kitchen", "Küche"),
+        ("Wall A", "Wand A"),
+        ("Wall B", "Wand B"),
+        ("Wall C", "Wand C"),
+        ("Leva strana", "Linke Korpusseite"),
+        ("Desna strana", "Rechte Korpusseite"),
+        ("Leđa", "Rückwand"),
+        ("Ledja", "Rückwand"),
+        ("Leđna ploča", "Rückwand"),
+        ("Ledjna ploca", "Rückwand"),
+        ("Dno sanduka fioke", "Schubladenkastenboden"),
+        ("Prednja strana sanduka fioke", "Schubladenkasten vorne"),
+        ("Zadnja strana sanduka fioke", "Schubladenkasten hinten"),
+        ("Bočna stranica sanduka fioke", "Schubladenkastenseite"),
+        ("Bocna stranica sanduka fioke", "Schubladenkastenseite"),
+        ("Front fioke", "Schubladenfront"),
+        ("Vrata (ispod sudopere)", "Türfront unter der Spüle"),
+        ("Vrata rerne", "Backofenfront"),
+        ("Polica (podesiva)", "Verstellbarer Boden"),
+        ("Vrata", "Türfront"),
+        ("Nosač radne ploče", "Arbeitsplattenträger"),
+        ("Nosac radne ploce", "Arbeitsplattenträger"),
+        ("Sokla (lajsna)", "Sockel"),
+        ("Sokla", "Sockel"),
+        ("Leva stranica korpusa", "Linke Korpusseite"),
+        ("Desna stranica korpusa", "Rechte Korpusseite"),
+        ("Donja ploča korpusa", "Korpusboden"),
+        ("Donja ploca korpusa", "Korpusboden"),
+        ("Gornja ploča korpusa", "Korpusdeckel"),
+        ("Gornja ploca korpusa", "Korpusdeckel"),
+        ("Front vrata", "Türfront"),
+        ("Front za rernu", "Backofenfront"),
+        ("LEVO", "LINKS"),
+        ("LEVA", "LINKS"),
+        ("DESNO", "RECHTS"),
+        ("DESNA", "RECHTS"),
+        ("POZADI", "HINTEN"),
+        ("ZADNJA", "HINTEN"),
+        ("NAPRED", "VORNE"),
+        ("PREDNJA", "VORNE"),
+        ("GORE", "OBEN"),
+        ("DOLE", "UNTEN"),
+        ("Gore", "Oben"),
+        ("Dole", "Unten"),
+        ("Transparentni / sivi", "Transparent / grau"),
+        ("Kupuje se kao gotov proizvod, otvor se reže u radnoj ploči prema šablonu", "Wird als Fertigprodukt gekauft; der Ausschnitt in der Arbeitsplatte wird nach Schablone geschnitten"),
+        ("Kupuje se kao gotov proizvod, otvor se reze u radnoj ploci prema sablonu", "Wird als Fertigprodukt gekauft; der Ausschnitt in der Arbeitsplatte wird nach Schablone geschnitten"),
+        ("Kupuje se posebno prema izboru korisnika", "Wird separat nach Wahl des Nutzers gekauft"),
+        ("Kupovni vodoinstalaterski set za sudoperu", "Gekauftes Sanitärset für die Spüle"),
+        ("Za zaptivanje ruba sudopere i spojeva uz radnu ploču", "Zum Abdichten des Spülenrandes und der Fugen an der Arbeitsplatte"),
+        ("Za zaptivanje ruba sudopere i spojeva uz radnu plocu", "Zum Abdichten des Spülenrandes und der Fugen an der Arbeitsplatte"),
+        ("Osnovni set po elementu", "Grundsatz je Element"),
+        ("Po jedna klipsa po stopici za prihvat sokle", "Je Fuß eine Sockelklammer"),
+        ("Osnovno 2 spojnice po spoju susednih korpusa u istoj ravni", "Standardmäßig 2 Verbinder je Verbindung benachbarter Korpusse in einer Ebene"),
+        ("Radna ploča - Zid A", "Arbeitsplatte - Wand A"),
+        ("Radna ploca - Zid A", "Arbeitsplatte - Wand A"),
+        ("Zid A", "Wand A"),
+        ("Zid B", "Wand B"),
+        ("Zid C", "Wand C"),
+        ("Deo", "Teil"),
+        ("Kom", "Menge"),
+        ("Dužina [mm]", "Länge [mm]"),
+        ("Duzina [mm]", "Länge [mm]"),
+        ("Širina [mm]", "Breite [mm]"),
+        ("Sirina [mm]", "Breite [mm]"),
+        ("Deb.", "Stärke"),
+        ("Napomena", "Hinweis"),
+        ("Stavka", "Eintrag"),
+        ("Instrukcija", "Anweisung"),
+        ("Pozicija", "Position"),
+        ("SklopKorak", "Montage-Schritt"),
+        ("Tip obrade", "Bearbeitungsart"),
+        ("Izvodi", "Vorgänge"),
+        ("Osnov izvode", "Ausführungsgrundlage"),
+        ("Osnov izvođenja", "Ausführungsgrundlage"),
+        ("Obrada / napomena", "Bearbeitung / Hinweis"),
+        ("Montažni plan", "Montage-Teileplan"),
+        ("Montazni plan", "Montage-Teileplan"),
+        ("Montažna uputstva", "Montageanleitung"),
+        ("Montazna uputstva", "Montageanleitung"),
+        ("Potrebni alati i okovi", "Benötigte Werkzeuge und Beschläge"),
+        ("Leva bočna ploča", "Linke Seitenwand"),
+        ("Leva bocna ploca", "Linke Seitenwand"),
+        ("Desna bočna ploča", "Rechte Seitenwand"),
+        ("Desna bocna ploca", "Rechte Seitenwand"),
+        ("Gornji vez", "Oberer Verbinder"),
+        ("pričvršćuje radnu ploču", "befestigt die Arbeitsplatte"),
+        ("pricvrscuje radnu plocu", "befestigt die Arbeitsplatte"),
+        ("utor 8mm", "Nut 8 mm"),
+        ("Slavina", "Armatur"),
+        ("Sifon i odvodni set", "Siphon und Ablaufset"),
+        ("Podesiva h=100 mm", "Verstellbar h=100 mm"),
+        ("Pojam", "Begriff"),
+        ("objašnjenje", "Erklärung"),
+        ("objasnjenje", "Erklärung"),
+        ("Zid", "Wand"),
+        ("Modul", "Modul"),
+        ("Materijal", "Material"),
+        ("Kol.", "Menge"),
+        ("Kant", "Kante"),
+        ("Vrednost", "Wert"),
+        ("Polica", "Boden"),
+        ("Leđna ploča", "Rückwand"),
+        ("Ledjna ploča", "Rückwand"),
+        ("Leđna ploča / prolaz", "Rückwand / Öffnung"),
+        ("Ledjna ploca / prolaz", "Rückwand / Öffnung"),
+    ]
+    for src, dst in replacements:
+        txt = txt.replace(src, dst)
+    return txt
+
+
 def _friendly_part_name(value, lang: str = "sr") -> str:
     txt = str(value or "").strip()
     txt = (
@@ -1044,6 +1438,7 @@ def _friendly_part_name(value, lang: str = "sr") -> str:
         "Front fioke (ispod rerne)": "Front fioke ispod rerne",
         "Vrata (ispod sudopere)": "Front vrata ispod sudopere",
         "Vrata rerne": "Front za rernu",
+        "Polica (podesiva)": "Polica (podesiva)",
         "Prednja strana sanduka": "Prednja strana sanduka fioke",
         "Zadnja strana sanduka": "Zadnja strana sanduka fioke",
         "Dno sanduka": "Dno sanduka fioke",
@@ -1118,22 +1513,43 @@ def _friendly_position_name(value, lang: str = "sr") -> str:
     lang_key = normalize_language_code(lang)
     mapping = {
         "LEVO": "Levo",
+        "LEVA": "Levo",
         "DESNO": "Desno",
+        "DESNA": "Desno",
         "GORE": "Gore",
         "DOLE": "Dole",
         "CENTAR": "Sredina",
         "NAPRED": "Napred",
+        "PREDNJA": "Napred",
         "POZADI": "Pozadi",
+        "ZADNJA": "Pozadi",
     }
     localized = {
         "en": {
             "LEVO": "Left",
+            "LEVA": "Left",
             "DESNO": "Right",
+            "DESNA": "Right",
             "GORE": "Top",
             "DOLE": "Bottom",
             "CENTAR": "Center",
             "NAPRED": "Front",
+            "PREDNJA": "Front",
             "POZADI": "Back",
+            "ZADNJA": "Back",
+        },
+        "de": {
+            "LEVO": "Links",
+            "LEVA": "Links",
+            "DESNO": "Rechts",
+            "DESNA": "Rechts",
+            "GORE": "Oben",
+            "DOLE": "Unten",
+            "CENTAR": "Mitte",
+            "NAPRED": "Vorne",
+            "PREDNJA": "Vorne",
+            "POZADI": "Hinten",
+            "ZADNJA": "Hinten",
         },
         "es": {
             "LEVO": "Izquierda",
@@ -1267,6 +1683,7 @@ def _friendly_part_name(value, lang: str = "sr") -> str:
         "Front fioke (ispod rerne)": "Drawer front below oven",
         "Vrata (ispod sudopere)": "Door front below sink",
         "Vrata rerne": "Oven front",
+        "Polica (podesiva)": "Adjustable shelf",
         "Prednja strana sanduka": "Drawer box front",
         "Zadnja strana sanduka": "Drawer box back",
         "Dno sanduka": "Drawer box bottom",
@@ -1300,6 +1717,7 @@ def _friendly_part_name(value, lang: str = "sr") -> str:
                 "Front fioke ispod rerne": "Drawer front below oven",
                 "Front vrata ispod sudopere": "Door front below sink",
                 "Front za rernu": "Oven front",
+                "Polica (podesiva)": "Adjustable shelf",
                 "Prednja strana sanduka fioke": "Drawer box front",
                 "Zadnja strana sanduka fioke": "Drawer box back",
                 "Dno sanduka fioke": "Drawer box bottom",
@@ -1308,6 +1726,24 @@ def _friendly_part_name(value, lang: str = "sr") -> str:
                 "Leđna ploča / prolaz": "Back panel / opening",
             }.get(sr_label, sr_label)
     translated = {
+        "de": {
+            "Left carcass side": "Linke Korpusseite",
+            "Right carcass side": "Rechte Korpusseite",
+            "Bottom carcass panel": "Korpusboden",
+            "Top carcass panel": "Korpusdeckel",
+            "Door front": "Türfront",
+            "Drawer front": "Schubladenfront",
+            "Drawer front below oven": "Schubladenfront unter dem Backofen",
+            "Door front below sink": "Türfront unter der Spüle",
+            "Oven front": "Backofenfront",
+            "Adjustable shelf": "Verstellbarer Boden",
+            "Drawer box front": "Schubladenkasten vorne",
+            "Drawer box back": "Schubladenkasten hinten",
+            "Drawer box bottom": "Schubladenkastenboden",
+            "Drawer box side": "Schubladenkastenseite",
+            "Back panel": "Rückwand",
+            "Back panel / opening": "Rückwand / Öffnung",
+        },
         "es": {
             "Left carcass side": "Lateral izquierdo de carcasa",
             "Right carcass side": "Lateral derecho de carcasa",
@@ -1401,6 +1837,8 @@ def _kant_legend(lang: str = "sr") -> str:
     lang_key = normalize_language_code(lang)
     if lang_key == "en":
         return "Edge legend: T = top edge, B = bottom edge, L = left edge, R = right edge, F = front edge."
+    if lang_key == "de":
+        return "Kanten-Legende: T = obere Kante, B = untere Kante, L = linke Kante, R = rechte Kante, F = Vorderkante."
     if lang_key == "es":
         return "Leyenda de canto: T = canto superior, B = canto inferior, L = canto izquierdo, R = canto derecho, F = canto frontal."
     if lang_key == "pt-br":
@@ -1427,6 +1865,15 @@ def _format_material_role_pdf(material: str, role: str, lang: str = "sr") -> str
             "drawer_box": "Drawer box",
             "worktop": "Worktop",
             "plinth": "Plinth",
+        }
+    elif lang_key == "de":
+        role_map = {
+            "carcass": "Korpus",
+            "front": "Front",
+            "back": "Rückwand",
+            "drawer_box": "Schubladenkasten",
+            "worktop": "Arbeitsplatte",
+            "plinth": "Sockel",
         }
     elif lang_key == "es":
         role_map = {
@@ -1509,6 +1956,7 @@ def _part_role_note(part_name: str, material: str, thickness: str, lang: str = "
             return {
                 "sr": "Tanja zadnja ploča elementa.",
                 "en": "Thin back panel of the unit.",
+                "de": "Dünne Rückwand des Elements.",
                 "es": "Panel trasero fino del módulo.",
                 "pt-br": "Painel traseiro fino do módulo.",
                 "ru": "Тонкая задняя панель модуля.",
@@ -1519,6 +1967,7 @@ def _part_role_note(part_name: str, material: str, thickness: str, lang: str = "
             return {
                 "sr": "Zadnja ploča elementa.",
                 "en": "Back panel of the unit.",
+                "de": "Rückwand des Elements.",
                 "es": "Panel trasero del módulo.",
                 "pt-br": "Painel traseiro do módulo.",
                 "ru": "Задняя панель модуля.",
@@ -1530,6 +1979,7 @@ def _part_role_note(part_name: str, material: str, thickness: str, lang: str = "
             return {
                 "sr": f"MDF front {thk} mm.",
                 "en": f"MDF front {thk} mm.",
+                "de": f"MDF-Front {thk} mm.",
                 "es": f"Frente MDF {thk} mm.",
                 "pt-br": f"Frente MDF {thk} mm.",
                 "ru": f"Фасад MDF {thk} мм.",
@@ -1863,7 +2313,10 @@ def build_pdf_bytes(
     if _hdr_df is not None and not _hdr_df.empty:
         story.append(Paragraph(_t('Podaci o projektu', 'Project data'), H1))
         _hd = [[_t('Polje', 'Field'), _t('Vrednost', 'Value')]]
-        _hd += [[_safe(str(r.get('Polje', ''))), _safe(str(r.get('Vrednost', '')))] for r in _hdr_df.to_dict('records')]
+        _hd += [[
+            _safe(_pdf_localize_text(r.get('Polje', ''), _lang)),
+            _safe(_pdf_localize_text(r.get('Vrednost', ''), _lang)),
+        ] for r in _hdr_df.to_dict('records')]
         _ht = Table(_hd, colWidths=[PW * 0.22, PW * 0.78], repeatRows=1)
         _ht.setStyle(_tbl_style())
         story.append(_ht)
@@ -1875,8 +2328,8 @@ def build_pdf_bytes(
         _sh = [['RB', _t('Zid', 'Wall'), _t('Materijal', 'Material'), _t('Deb.', 'Thk.'), _t('CUT Duž.', 'Cut length'), _t('CUT Šir.', 'Cut width'), _t('Kant', 'Edge'), _t('Kol.', 'Qty')]]
         _sr = [[
             str(r.get('RB', '')),
-            _safe_val(r.get('Zid', ''), '-'),
-            _safe(str(r.get('Materijal', ''))),
+            _safe_val(_pdf_localize_text(r.get('Zid', ''), _lang), '-'),
+            _safe(_pdf_localize_text(r.get('Materijal', ''), _lang)),
             str(r.get('Deb.', '')),
             _safe_val(r.get('CUT_W [mm]', '')),
             _safe_val(r.get('CUT_H [mm]', '')),
@@ -1896,12 +2349,12 @@ def build_pdf_bytes(
         _eh = [['PartCode', _t('Zid', 'Wall'), _t('Modul', 'Module'), _t('Deo', 'Part'), _t('Kol.', 'Qty'), _t('Kant', 'Edge'), _t('Napomena', 'Note')]]
         _er = [[
             _safe(str(r.get('PartCode', ''))),
-            _safe_val(r.get('Zid', ''), '-'),
-            _safe(str(r.get('Modul', ''))),
+            _safe_val(_pdf_localize_text(r.get('Zid', ''), _lang), '-'),
+            _safe(_pdf_localize_text(r.get('Modul', ''), _lang)),
             _safe(_friendly_part_name(r.get('Deo', ''), _lang)),
             str(r.get('Kol.', '')),
             _safe_val(r.get('Kant', ''), '-'),
-            _safe(str(r.get('Napomena', ''))),
+            _safe(_pdf_localize_text(r.get('Napomena', ''), _lang)),
         ] for r in _svc_edge.to_dict('records')]
         _et = Table(_eh + _er,
                     colWidths=[PW*0.10, PW*0.08, PW*0.16, PW*0.15, PW*0.06, PW*0.18, PW*0.27],
@@ -1916,13 +2369,13 @@ def build_pdf_bytes(
         _ph = [['PartCode', _t('Modul', 'Module'), _t('Deo', 'Part'), _t('Tip obrade', 'Processing type'), _t('Izvodi', 'Operations'), _t('Osnov izvođenja', 'Execution basis'), _t('Kol.', 'Qty'), _t('Obrada / napomena', 'Processing / note')]]
         _pr = [[
             _safe(str(r.get('PartCode', ''))),
-            _safe(str(r.get('Modul', ''))),
-            _safe(str(r.get('Deo', ''))),
-            _safe(str(r.get('Tip obrade', ''))),
-            _safe(str(r.get('Izvodi', ''))),
-            _safe(str(r.get('Osnov izvođenja', ''))),
+            _safe(_pdf_localize_text(r.get('Modul', ''), _lang)),
+            _safe(_friendly_part_name(r.get('Deo', ''), _lang)),
+            _safe(_pdf_localize_text(r.get('Tip obrade', ''), _lang)),
+            _safe(_pdf_localize_text(r.get('Izvodi', ''), _lang)),
+            _safe(_pdf_localize_text(r.get('Osnov izvođenja', ''), _lang)),
             str(r.get('Kol.', '')),
-            _safe(str(r.get('Obrada / napomena', ''))),
+            _safe(_pdf_localize_text(r.get('Obrada / napomena', ''), _lang)),
         ] for r in _svc_proc.to_dict('records')]
         _pt = Table(_ph + _pr,
                     colWidths=[PW*0.07, PW*0.11, PW*0.10, PW*0.12, PW*0.10, PW*0.16, PW*0.05, PW*0.29],
@@ -1937,8 +2390,8 @@ def build_pdf_bytes(
         _ih = [['RB', _t('Stavka', 'Item'), _t('Instrukcija', 'Instruction')]]
         _ir = [[
             str(r.get('RB', '')),
-            _safe(str(r.get('Stavka', ''))),
-            _safe(str(r.get('Instrukcija', ''))),
+            _safe(_pdf_localize_text(r.get('Stavka', ''), _lang)),
+            _safe(_pdf_localize_text(r.get('Instrukcija', ''), _lang)),
         ] for r in _svc_instr.to_dict('records')]
         _it = Table(_ih + _ir,
                     colWidths=[PW*0.06, PW*0.20, PW*0.74],
@@ -1972,15 +2425,15 @@ def build_pdf_bytes(
                 _t('Napomena', 'Note'),
             ]]
             _sdr = [[
-                _safe(str(r.get('Modul', ''))[:24]),
+                _safe(_pdf_localize_text(str(r.get('Modul', ''))[:24], _lang)),
                 str(int(float(r.get('Wall length [mm]', 0) or 0))) if str(r.get('Wall length [mm]', '')).strip() else '',
                 str(int(float(r.get('Required length [mm]', 0) or 0))) if str(r.get('Required length [mm]', '')).strip() else '',
                 str(int(float(r.get('Purchase length [mm]', 0) or 0))) if str(r.get('Purchase length [mm]', '')).strip() else '',
                 str(int(float(r.get('Širina [mm]', 0) or 0))) if str(r.get('Širina [mm]', '')).strip() else '',
-                _safe(str(r.get('Field cut', ''))),
-                _safe(str(r.get('Joint type', ''))),
-                _safe(str(r.get('Cutouts', ''))),
-                _safe(str(r.get('Napomena', ''))),
+                _safe(_pdf_localize_text(r.get('Field cut', ''), _lang)),
+                _safe(_pdf_localize_text(r.get('Joint type', ''), _lang)),
+                _safe(_pdf_localize_text(r.get('Cutouts', ''), _lang)),
+                _safe(_pdf_localize_text(r.get('Napomena', ''), _lang)),
             ] for r in _df.to_dict('records')]
             _sdt = Table(
                 _sdh + _sdr,
@@ -1997,11 +2450,11 @@ def build_pdf_bytes(
                 if str(_wid_v).strip() == '':
                     _wid_v = r.get('CUT_H [mm]', '')
                 _rows.append([
-                    _safe(str(r.get('Modul', ''))[:22]),
+                    _safe(_pdf_localize_text(str(r.get('Modul', ''))[:22], _lang)),
                     _safe(_friendly_part_name(r.get('Deo', ''), _lang)),
                     _safe_val(_len_v), _safe_val(_wid_v),
                     str(r.get('Deb.', '')), str(int(r.get('Kol.', 0))),
-                    _safe_val(r.get('Kant', ''), '-'), _safe(str(r.get('Napomena', '')))
+                    _safe_val(r.get('Kant', ''), '-'), _safe(_pdf_localize_text(r.get('Napomena', ''), _lang))
                 ])
             _sdh = [[_t('Modul', 'Module'), _t('Deo', 'Part'), _t('Duž.', 'Length'), _t('Šir.', 'Width'), _t('Deb.', 'Thk.'), _t('Kol.', 'Qty'), _t('Kant', 'Edge'), _t('Napomena', 'Note')]]
             _sdr = _rows
@@ -2031,13 +2484,13 @@ def build_pdf_bytes(
 
     for _m in mods:
         _mid_e = int(_m.get('id', 0))
-        _mlbl  = _safe(str(_m.get('label', '')))
+        _mlbl  = _safe(_pdf_localize_text(_m.get('label', ''), _lang))
         _mz    = str(_m.get('zone', 'base')).lower()
         _mw    = int(_m.get('w_mm', 0))
         _mh    = int(_m.get('h_mm', 0))
         _md    = int(_m.get('d_mm', 0))
         _mtid  = str(_m.get('template_id', ''))
-        _wall  = _safe(str(_m.get('wall_key', '') or ''))
+        _wall  = _safe(_pdf_localize_text(_m.get('wall_key', '') or '', _lang))
         _mparts = _comb_e[_comb_e['ID'] == _mid_e] if _comb_has_id else pd.DataFrame()
         story.append(Paragraph(_t(f"#{_mid_e} – {_mlbl}", f"#{_mid_e} - {_mlbl}"), H2))
         story.append(Paragraph(
@@ -2230,11 +2683,11 @@ def build_pdf_bytes(
         story.append(Paragraph(_t('Šta kupuješ posebno', 'What you buy separately'), H1))
         _hh = [[_t('Grupa', 'Group'), _t('Naziv', 'Name'), _t('Tip / Sifra', 'Type / Code'), _t('Kol.', 'Qty'), _t('Napomena', 'Note')]]
         _rr = [[
-            _safe(str(r.get('Grupa', ''))),
-            _safe(str(r.get('Naziv', ''))),
-            _safe(str(r.get('Tip / Šifra', ''))),
+            _safe(_pdf_localize_text(r.get('Grupa', ''), _lang)),
+            _safe(_pdf_localize_text(r.get('Naziv', ''), _lang)),
+            _safe(_pdf_localize_text(r.get('Tip / Šifra', ''), _lang)),
             str(r.get('Kol.', '')),
-            _safe(str(r.get('Napomena', ''))),
+            _safe(_pdf_localize_text(r.get('Napomena', ''), _lang)),
         ] for r in _shop_df.to_dict('records')]
         _tt = Table(_hh + _rr,
                     colWidths=[PW*0.18, PW*0.22, PW*0.20, PW*0.07, PW*0.33],
@@ -2248,11 +2701,11 @@ def build_pdf_bytes(
         story.append(Paragraph(_t('Gotovi proizvodi - ne ulaze u sečenje', 'Ready-made products - not included in cutting'), H1))
         _rh = [[_t('Grupa', 'Group'), _t('Naziv', 'Name'), _t('Tip / Sifra', 'Type / Code'), _t('Kol.', 'Qty'), _t('Napomena', 'Note')]]
         _rr2 = [[
-            _safe(str(r.get('Grupa', ''))),
-            _safe(str(r.get('Naziv', ''))),
-            _safe(str(r.get('Tip / Šifra', ''))),
+            _safe(_pdf_localize_text(r.get('Grupa', ''), _lang)),
+            _safe(_pdf_localize_text(r.get('Naziv', ''), _lang)),
+            _safe(_pdf_localize_text(r.get('Tip / Šifra', ''), _lang)),
             str(r.get('Kol.', '')),
-            _safe(str(r.get('Napomena', ''))),
+            _safe(_pdf_localize_text(r.get('Napomena', ''), _lang)),
         ] for r in _ready_df.to_dict('records')]
         _rt = Table(_rh + _rr2,
                     colWidths=[PW*0.18, PW*0.22, PW*0.20, PW*0.07, PW*0.33],
@@ -2267,8 +2720,8 @@ def build_pdf_bytes(
         _gh = [[_t('Korak', 'Step'), _t('Šta radiš', 'What you do'), _t('Napomena', 'Note')]]
         _gr = [[
             str(r.get('Korak', '')),
-            _safe(str(r.get('Šta radiš', r.get('Sta radis', '')))),
-            _safe(str(r.get('Napomena', ''))),
+            _safe(_pdf_localize_text(r.get('Šta radiš', r.get('Sta radis', '')), _lang)),
+            _safe(_pdf_localize_text(r.get('Napomena', ''), _lang)),
         ] for r in _guide_df.to_dict('records')]
         _gt = Table(_gh + _gr,
                     colWidths=[PW*0.08, PW*0.30, PW*0.62],
@@ -2286,7 +2739,11 @@ def build_pdf_bytes(
             continue
         story.append(Paragraph(_title, H1))
         _ch = [['RB', _t('Stavka', 'Item'), _t('Status', 'Status')]]
-        _cr = [[str(r.get('RB', '')), _safe(str(r.get('Stavka', ''))), _safe(str(r.get('Status', '')))] for r in _cdf.to_dict('records')]
+        _cr = [[
+            str(r.get('RB', '')),
+            _safe(_pdf_localize_text(r.get('Stavka', ''), _lang)),
+            _safe(_pdf_localize_text(r.get('Status', ''), _lang)),
+        ] for r in _cdf.to_dict('records')]
         _ct = Table(_ch + _cr,
                     colWidths=[PW*0.06, PW*0.78, PW*0.16],
                     repeatRows=1)

@@ -13,6 +13,9 @@ def render_access_gate(
     build_checkout_start_message: Callable[[], tuple[bool, str]],
     build_customer_portal_message: Callable[[], tuple[bool, str]],
 ) -> None:
+    from state_logic import get_effective_access_context
+
+    effective_access = get_effective_access_context()
     with ui.column().classes('w-full max-w-2xl mx-auto py-12 px-4 gap-4 items-stretch'):
         with ui.card().classes('w-full p-8 border border-red-200 bg-white'):
             ui.label(tr_fn('gate.title')).classes('text-2xl font-bold text-gray-900')
@@ -22,11 +25,11 @@ def render_access_gate(
                 tr_fn(
                     'gate.status_fmt',
                     email=str(getattr(state, 'current_user_email', '') or '-'),
-                    access_tier=str(getattr(state, 'current_access_tier', '') or '-'),
-                    status=str(getattr(state, 'current_subscription_status', '') or '-'),
+                    access_tier=str(effective_access.get('access_tier', '') or '-'),
+                    status=str(effective_access.get('subscription_status', '') or '-'),
                 )
             ).classes('text-sm text-gray-700')
-            ui.label(str(getattr(state, 'current_gate_reason', '') or tr_fn('gate.default_reason'))).classes(
+            ui.label(str(effective_access.get('gate_reason', '') or tr_fn('gate.default_reason'))).classes(
                 'text-sm text-red-700 font-semibold'
             )
             ui.separator()

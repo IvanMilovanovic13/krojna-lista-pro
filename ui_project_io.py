@@ -13,12 +13,54 @@ def make_toolbar_actions(
     save_project_json: Callable[[], bytes],
     load_project_json: Callable[[bytes], tuple[bool, str]],
     main_content_refresh: Callable[[], None],
+    save_to_account: Callable[[str], tuple[bool, str]] | None = None,
 ):
     """Vrati save/load handlere za toolbar, bez promene business logike."""
 
     def _toolbar_save() -> None:
         from datetime import datetime as _dt
 
+        is_authenticated = int(getattr(state, 'current_user_id', 0) or 0) > 0
+
+        if is_authenticated and save_to_account is not None:
+            current_name = str(getattr(state, 'current_project_name', '') or '').strip()
+            if current_name:
+                # Projekat vec ima naziv — odmah sacuvaj bez dijaloga
+                ok, result = save_to_account(current_name)
+                if ok:
+                    ui.notify(tr_fn('project_io.account_save_ok', name=result), type='positive', timeout=3000)
+                else:
+                    ui.notify(tr_fn('project_io.account_save_fail', err=result), type='negative', timeout=5000)
+            else:
+                # Novi projekat — pitaj za naziv
+                with ui.dialog() as _dlg:
+                    _dlg.open()
+                    with ui.card().classes('p-6 min-w-80 gap-3'):
+                        ui.label(tr_fn('project_io.save_name_title')).classes('text-lg font-bold')
+                        _name_input = ui.input(
+                            label=tr_fn('project_io.save_name_label'),
+                            value=f"Kuhinja_{_dt.now().strftime('%d%m%Y')}",
+                        ).props('id=toolbar-save-name-input').classes('w-full')
+
+                        def _do_save() -> None:
+                            name_val = str(_name_input.value or '').strip() or f"Kuhinja_{_dt.now().strftime('%d%m%Y')}"
+                            ok, result = save_to_account(name_val)
+                            _dlg.close()
+                            if ok:
+                                ui.notify(tr_fn('project_io.account_save_ok', name=result), type='positive', timeout=3000)
+                            else:
+                                ui.notify(tr_fn('project_io.account_save_fail', err=result), type='negative', timeout=5000)
+
+                        with ui.row().classes('w-full gap-3 mt-2'):
+                            ui.button(tr_fn('project_io.save_confirm'), on_click=_do_save).classes(
+                                'flex-1 bg-[#111] text-white'
+                            )
+                            ui.button(tr_fn('project_io.cancel'), on_click=_dlg.close).classes(
+                                'flex-1 bg-white text-[#111] border border-[#111]'
+                            )
+            return
+
+        # Anoniman korisnik — download .json
         filename = f"kuhinja_{_dt.now().strftime('%Y%m%d_%H%M%S')}.json"
         data = save_project_json()
         ui.download(data, filename, "application/json")
