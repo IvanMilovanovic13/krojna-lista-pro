@@ -89,11 +89,11 @@ def make_toolbar_actions(
 
                                 def _do_load(project_id=pid) -> None:
                                     ok, err = load_from_account(project_id)
-                                    _dlg.close()
                                     if ok:
                                         state.room_setup_done = True
-                                        main_content_refresh()
                                         ui.notify(tr_fn('project_io.account_load_ok'), type='positive')
+                                        _dlg.close()
+                                        ui.timer(0.05, main_content_refresh, once=True)
                                     else:
                                         ui.notify(tr_fn('project_io.account_load_fail', err=err), type='negative', timeout=5000)
 
