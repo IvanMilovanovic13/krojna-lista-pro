@@ -72,9 +72,9 @@ def make_toolbar_actions(
         is_authenticated = int(getattr(state, 'current_user_id', 0) or 0) > 0
 
         if is_authenticated and list_account_projects is not None and load_from_account is not None:
-            with ui.dialog() as _dlg:
+            with ui.dialog().props('full-width') as _dlg:
                 _dlg.open()
-                with ui.card().classes('p-6 gap-4').style('min-width: 540px; max-width: 640px;'):
+                with ui.card().classes('p-6 gap-4').style('width: 600px; max-width: 96vw;'):
                     ui.label(tr_fn('project_io.account_load_title')).classes('text-xl font-bold text-gray-900')
                     projects = list_account_projects()
                     if not projects:

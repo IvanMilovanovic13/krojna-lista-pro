@@ -2813,7 +2813,11 @@ def get_project_payload(project_id: int, *, user_id: int | None = None) -> Optio
         row = conn.execute(query, params).fetchone()
     if row is None:
         return None
-    return str(row["payload_json"])
+    val = row["payload_json"]
+    # Postgres jsonb vraca Python dict — serialize nazad u JSON string
+    if isinstance(val, (dict, list)):
+        return json.dumps(val, ensure_ascii=False)
+    return str(val)
 
 
 def get_project_record(project_id: int, *, user_id: int | None = None) -> Optional[ProjectRecord]:
