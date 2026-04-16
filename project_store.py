@@ -41,6 +41,7 @@ _PRIVILEGED_SEED_LOCK = threading.Lock()
 _PRIVILEGED_SEED_DONE = False
 _PROJECT_STORE_INIT_LOCK = threading.Lock()
 _PROJECT_STORE_READY = False
+_PROJECT_STORE_RUNTIME_KEY = ""
 
 
 def _normalize_username_value(value: str) -> str:
@@ -394,13 +395,29 @@ def _get_backend_name() -> str:
     return str(get_store_backend_name())
 
 
+def _get_project_store_runtime_key() -> str:
+    info = get_store_runtime_info_dict()
+    return "|".join(
+        (
+            str(info.get("backend", "") or ""),
+            str(info.get("database_url", "") or ""),
+            str(info.get("sqlite_path", "") or ""),
+        )
+    )
+
+
 def init_project_store() -> None:
-    global _SEEDING_PRIVILEGED_ACCOUNTS, _PRIVILEGED_SEED_DONE, _PROJECT_STORE_READY
-    if _PROJECT_STORE_READY:
+    global _SEEDING_PRIVILEGED_ACCOUNTS, _PRIVILEGED_SEED_DONE, _PROJECT_STORE_READY, _PROJECT_STORE_RUNTIME_KEY
+    current_runtime_key = _get_project_store_runtime_key()
+    if _PROJECT_STORE_READY and _PROJECT_STORE_RUNTIME_KEY == current_runtime_key:
         return
     with _PROJECT_STORE_INIT_LOCK:
-        if _PROJECT_STORE_READY:
+        current_runtime_key = _get_project_store_runtime_key()
+        if _PROJECT_STORE_READY and _PROJECT_STORE_RUNTIME_KEY == current_runtime_key:
             return
+        if _PROJECT_STORE_RUNTIME_KEY != current_runtime_key:
+            _PROJECT_STORE_READY = False
+            _PRIVILEGED_SEED_DONE = False
         get_store_backend().assert_ready()
         with _connect() as conn:
             if _get_backend_name() == "postgres":
@@ -411,6 +428,7 @@ def init_project_store() -> None:
             _ensure_auth_runtime_schema(conn)
             _ensure_email_verification_schema(conn)
         _PROJECT_STORE_READY = True
+        _PROJECT_STORE_RUNTIME_KEY = current_runtime_key
         if not _SEEDING_PRIVILEGED_ACCOUNTS and not _PRIVILEGED_SEED_DONE:
             ensure_privileged_seed_accounts()
 

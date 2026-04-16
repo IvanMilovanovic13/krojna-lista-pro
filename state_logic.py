@@ -1719,7 +1719,7 @@ def account_save_current_project(name: str | None = None) -> tuple[bool, str]:
     Vraca (True, naziv) ili (False, poruka_greske).
     """
     try:
-        from project_store import save_payload_from_bytes, update_payload_from_bytes
+        from project_store import get_project_record, save_payload_from_bytes, update_payload_from_bytes
         _user = _get_active_user_record()
         if _user is None:
             return False, "Korisnik nije prijavljen."
@@ -1728,15 +1728,26 @@ def account_save_current_project(name: str | None = None) -> tuple[bool, str]:
         if not project_name:
             project_name = "Moj projekat"
         current_project_id = int(getattr(state, "current_project_id", 0) or 0)
-        if current_project_id > 0:
-            _record = update_payload_from_bytes(
-                project_id=current_project_id,
-                user_id=_user.id,
-                name=project_name,
-                payload_bytes=payload_bytes,
-                source="account_saved",
-            )
-            if _record is None:
+        current_project_source = str(getattr(state, "current_project_source", "") or "").strip().lower()
+        can_update_existing = current_project_id > 0 and current_project_source == "account_saved"
+        if can_update_existing:
+            _existing = get_project_record(current_project_id, user_id=_user.id)
+            if _existing is not None and str(_existing.source or "").strip().lower() == "account_saved":
+                _record = update_payload_from_bytes(
+                    project_id=current_project_id,
+                    user_id=_user.id,
+                    name=project_name,
+                    payload_bytes=payload_bytes,
+                    source="account_saved",
+                )
+                if _record is None:
+                    _record = save_payload_from_bytes(
+                        user_id=_user.id,
+                        name=project_name,
+                        payload_bytes=payload_bytes,
+                        source="account_saved",
+                    )
+            else:
                 _record = save_payload_from_bytes(
                     user_id=_user.id,
                     name=project_name,
@@ -1941,11 +1952,16 @@ def load_project_from_store(project_id: int) -> Tuple[bool, str]:
 
 def list_user_store_projects() -> List[Dict[str, Any]]:
     try:
-        from project_store import list_projects_for_user
+        from project_store import list_projects_for_user_by_source
         _user = _get_active_user_record()
         if _user is None:
             return []
-        _projects = list_projects_for_user(_user.id, include_autosave=False)
+        _projects = list_projects_for_user_by_source(
+            _user.id,
+            source="account_saved",
+            include_autosave=False,
+            limit=100,
+        )
         result: List[Dict[str, Any]] = []
         for _project in _projects:
             result.append(
@@ -2925,4 +2941,3 @@ def load_project_json(data: bytes) -> Tuple[bool, str]:
 
 def _set_language(lang: str) -> None:
     state.language = normalize_language_code(lang)
-

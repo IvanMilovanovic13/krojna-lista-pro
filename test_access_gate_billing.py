@@ -11,30 +11,36 @@ def run_access_gate_billing_check() -> tuple[bool, str]:
     inactive_user = UserRecord(
         id=1,
         email="inactive@example.com",
+        username="inactive-user",
         display_name="Inactive User",
         auth_mode="password",
         access_tier="blocked",
         status="inactive",
+        email_verified=True,
         created_at="2026-03-26T10:00:00+00:00",
         updated_at="2026-03-26T10:00:00+00:00",
     )
     trial_user = UserRecord(
         id=2,
         email="trial@example.com",
+        username="trial-user",
         display_name="Trial User",
         auth_mode="password",
         access_tier="trial",
         status="trial_active",
+        email_verified=True,
         created_at="2026-03-26T10:00:00+00:00",
         updated_at="2026-03-26T10:00:00+00:00",
     )
     paid_user = UserRecord(
         id=3,
         email="paid@example.com",
+        username="paid-user",
         display_name="Paid User",
         auth_mode="password",
         access_tier="paid",
         status="paid_active",
+        email_verified=True,
         created_at="2026-03-26T10:00:00+00:00",
         updated_at="2026-03-26T10:00:00+00:00",
     )

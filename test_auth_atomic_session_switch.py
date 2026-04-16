@@ -45,11 +45,13 @@ def run_auth_atomic_session_switch_check() -> tuple[bool, str]:
         ps.init_project_store()
         user = ps.create_user_record(
             email="atomic-login@example.com",
+            username="atomic-login",
             display_name="Atomic Login",
             password_hash=ps.hash_password("secret123"),
             auth_mode="password",
             access_tier="trial",
             status="trial_active",
+            email_verified=True,
         )
 
         sl.state.current_user_id = 777
@@ -80,11 +82,16 @@ def run_auth_atomic_session_switch_check() -> tuple[bool, str]:
             return False, f"FAIL_login_session_token_present:{sl.state.current_session_token}"
 
         ps.create_auth_session = _raise_create_auth_session
-        ok_reg, err_reg = sl.register_trial_user_session("atomic-register@example.com", "Atomic Register", "secret123")
-        if ok_reg:
-            return False, "FAIL_register_unexpected_success"
-        if "session storage unavailable" not in str(err_reg):
-            return False, f"FAIL_unexpected_register_error:{err_reg}"
+        ok_reg, err_reg = sl.register_trial_user_session(
+            "atomic-register@example.com",
+            "Atomic Register",
+            "secret123",
+            "atomic-register",
+        )
+        if not ok_reg:
+            return False, f"FAIL_register_unexpected_error:{err_reg}"
+        if "Potvrdi email" not in str(err_reg):
+            return False, f"FAIL_register_missing_verification_copy:{err_reg}"
         if str(getattr(sl.state, "current_user_email", "") or "") != "local@offline":
             return False, f"FAIL_register_state_switched_without_session:{sl.state.current_user_email}"
         if str(getattr(sl.state, "current_auth_mode", "") or "") != "local":

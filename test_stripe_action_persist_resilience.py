@@ -17,10 +17,12 @@ def run_stripe_action_persist_resilience_check() -> tuple[bool, str]:
     user = UserRecord(
         id=41,
         email="billing-user@example.com",
+        username="billing-user",
         display_name="Billing User",
         auth_mode="password",
         access_tier="trial",
         status="trial_active",
+        email_verified=True,
         created_at="2026-03-28T10:00:00+00:00",
         updated_at="2026-03-28T10:00:00+00:00",
     )

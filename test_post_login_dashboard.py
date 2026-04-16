@@ -13,7 +13,7 @@ def run_post_login_dashboard_contract_check() -> tuple[bool, str]:
         'if str(getattr(state, "active_tab", "") or "").strip() in ("wizard", "nalog", ""):',
         'state.active_tab = "nova"',
         'event_type="auth.login_success"',
-        'event_type="auth.register_trial"',
+        'event_type="auth.register_trial_pending_verification"',
     ]
     missing_state_logic = [item for item in required_state_logic if item not in state_logic]
     if missing_state_logic:
@@ -23,8 +23,9 @@ def run_post_login_dashboard_contract_check() -> tuple[bool, str]:
         "is_authenticated = bool(str(getattr(state, 'current_user_email', '') or '').strip())",
         "if not is_authenticated:",
         "if is_authenticated:",
-        "ui.label('krojna lista PRO')",
-        "ui.label('Dashboard / Projekti')",
+        "_brand_main, _brand_badge = _split_brand_title(tr_fn('wizard.title_app'))",
+        "ui.label(_brand_main).classes(",
+        "ui.label('DASHBOARD / PROJEKTI').classes(",
         "billing_title, billing_desc, show_checkout, show_portal = _dashboard_billing_copy(billing)",
         "primary_title, primary_desc, primary_btn, primary_mode = _dashboard_primary_action_copy(billing)",
         "if _show_paid_success_card(billing):",
@@ -35,8 +36,6 @@ def run_post_login_dashboard_contract_check() -> tuple[bool, str]:
         "tr_fn('nova.primary_action_start_title')",
         "tr_fn('nova.primary_action_upgrade_title')",
         "ui.label('Nastavi rad')",
-        "tr_fn('nova.dashboard_account_btn')",
-        "tr_fn('nova.auth_logout_btn')",
         "ui.button(primary_btn, on_click=_run_primary_action).classes(",
         "if autosave_info and not is_authenticated:",
         "with ui.card().classes('w-full p-6 bg-[#f8fafc] border border-gray-200'):",
