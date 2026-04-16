@@ -14,6 +14,8 @@ def make_toolbar_actions(
     load_project_json: Callable[[bytes], tuple[bool, str]],
     main_content_refresh: Callable[[], None],
     save_to_account: Callable[[str], tuple[bool, str]] | None = None,
+    list_account_projects: Callable[[], list[dict]] | None = None,
+    load_from_account: Callable[[int], tuple[bool, str]] | None = None,
 ):
     """Vrati save/load handlere za toolbar, bez promene business logike."""
 
@@ -67,6 +69,48 @@ def make_toolbar_actions(
         ui.notify(tr_fn('project_io.save_ok', filename=filename), type='positive', timeout=3000)
 
     def _toolbar_load() -> None:
+        is_authenticated = int(getattr(state, 'current_user_id', 0) or 0) > 0
+
+        if is_authenticated and list_account_projects is not None and load_from_account is not None:
+            with ui.dialog() as _dlg:
+                _dlg.open()
+                with ui.card().classes('p-6 min-w-[420px] max-w-lg gap-3'):
+                    ui.label(tr_fn('project_io.account_load_title')).classes('text-lg font-bold')
+                    projects = list_account_projects()
+                    if not projects:
+                        ui.label(tr_fn('project_io.account_load_empty')).classes('text-sm text-gray-500')
+                    else:
+                        with ui.scroll_area().classes('w-full max-h-80'):
+                            for item in projects:
+                                pid = int(item.get('project_id', 0) or 0)
+                                name = str(item.get('name', '') or tr_fn('project_io.account_load_unknown'))
+                                updated = str(item.get('updated_at', '') or item.get('last_opened_at', '') or '')
+
+                                def _do_load(project_id=pid) -> None:
+                                    ok, err = load_from_account(project_id)
+                                    _dlg.close()
+                                    if ok:
+                                        state.room_setup_done = True
+                                        main_content_refresh()
+                                        ui.notify(tr_fn('project_io.account_load_ok'), type='positive')
+                                    else:
+                                        ui.notify(tr_fn('project_io.account_load_fail', err=err), type='negative', timeout=5000)
+
+                                with ui.card().classes('w-full p-3 mb-2 border border-gray-200 bg-white'):
+                                    with ui.row().classes('w-full items-center justify-between gap-3'):
+                                        with ui.column().classes('gap-0'):
+                                            ui.label(name).classes('text-sm font-bold text-gray-800')
+                                            if updated:
+                                                ui.label(updated[:16]).classes('text-xs text-gray-400')
+                                        ui.button(
+                                            tr_fn('project_io.account_load_open'),
+                                            on_click=_do_load,
+                                        ).classes('bg-[#111] text-white text-xs px-3 py-1')
+                    ui.button(tr_fn('project_io.cancel'), on_click=_dlg.close).classes(
+                        'w-full bg-white text-[#111] border border-[#111] mt-2'
+                    )
+            return
+
         with ui.dialog() as _dlg:
             _dlg.open()
             with ui.card().classes('p-6 min-w-96 gap-3'):
