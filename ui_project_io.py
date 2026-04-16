@@ -72,15 +72,16 @@ def make_toolbar_actions(
         is_authenticated = int(getattr(state, 'current_user_id', 0) or 0) > 0
 
         if is_authenticated and list_account_projects is not None and load_from_account is not None:
-            with ui.dialog().props('full-width') as _dlg:
+            with ui.dialog() as _dlg:
                 _dlg.open()
-                with ui.card().classes('p-6 gap-4').style('width: 600px; max-width: 96vw;'):
-                    ui.label(tr_fn('project_io.account_load_title')).classes('text-xl font-bold text-gray-900')
+                with ui.card().classes('p-5 gap-3').style('width: 480px; max-width: 95vw;'):
+                    # — Lista projekata iz naloga —
+                    ui.label(tr_fn('project_io.account_load_title')).classes('text-base font-bold text-gray-900')
                     projects = list_account_projects()
                     if not projects:
-                        ui.label(tr_fn('project_io.account_load_empty')).classes('text-sm text-gray-500')
+                        ui.label(tr_fn('project_io.account_load_empty')).classes('text-sm text-gray-400')
                     else:
-                        with ui.scroll_area().style('width: 100%; max-height: 400px;'):
+                        with ui.scroll_area().style('width: 100%; max-height: 220px;'):
                             for item in projects:
                                 pid = int(item.get('project_id', 0) or 0)
                                 name = str(item.get('name', '') or tr_fn('project_io.account_load_unknown'))
@@ -97,19 +98,78 @@ def make_toolbar_actions(
                                     else:
                                         ui.notify(tr_fn('project_io.account_load_fail', err=err), type='negative', timeout=5000)
 
-                                with ui.card().classes('w-full p-4 mb-2 border border-gray-200 bg-white shadow-sm'):
-                                    with ui.row().classes('w-full items-center justify-between gap-4'):
-                                        with ui.column().classes('gap-1 flex-1'):
-                                            ui.label(name).classes('text-base font-bold text-gray-900')
-                                            if updated_short:
-                                                ui.label(updated_short).classes('text-sm text-gray-500')
-                                        ui.button(
-                                            tr_fn('project_io.account_load_open'),
-                                            on_click=_do_load,
-                                        ).classes('bg-[#111] text-white px-5 py-2 text-sm font-medium')
-                    ui.button(tr_fn('project_io.cancel'), on_click=_dlg.close).classes(
-                        'w-full bg-white text-[#111] border border-[#111] mt-2'
-                    )
+                                with ui.row().classes('w-full items-center justify-between gap-3 py-2 border-b border-gray-100'):
+                                    with ui.column().classes('gap-0 flex-1'):
+                                        ui.label(name).classes('text-sm font-semibold text-gray-900')
+                                        if updated_short:
+                                            ui.label(updated_short).classes('text-xs text-gray-400')
+                                    ui.button(
+                                        tr_fn('project_io.account_load_open'),
+                                        on_click=_do_load,
+                                    ).classes('bg-[#111] text-white text-xs px-4 py-1')
+
+                    # — Upload JSON fajla —
+                    ui.separator().classes('my-1')
+                    ui.label(tr_fn('project_io.load_from_file')).classes('text-xs font-semibold text-gray-500 uppercase tracking-wide')
+                    _upload_status = ui.label('').classes('text-xs text-gray-500')
+                    _pending_raw2 = [b'']
+
+                    async def _extract_raw2(e) -> bytes:
+                        _raw = b''
+                        try:
+                            _file = getattr(e, 'file', None)
+                            if _file is not None and hasattr(_file, 'read'):
+                                _raw = await _file.read()
+                                if _raw:
+                                    return _raw
+                            _content = getattr(e, 'content', None)
+                            if hasattr(_content, 'read'):
+                                _raw = _content.read()
+                                if not _raw and hasattr(_content, 'seek'):
+                                    _content.seek(0)
+                                    _raw = _content.read()
+                            elif isinstance(_content, (bytes, bytearray)):
+                                _raw = bytes(_content)
+                            if not _raw:
+                                _data = getattr(e, 'data', None)
+                                if isinstance(_data, (bytes, bytearray)):
+                                    _raw = bytes(_data)
+                        except Exception as ex:
+                            logger.debug("Load upload read failed: %s", ex)
+                        return _raw
+
+                    async def _handle_upload2(e) -> None:
+                        _raw = await _extract_raw2(e)
+                        if not _raw:
+                            _upload_status.set_text(tr_fn('project_io.content_missing'))
+                            return
+                        _pending_raw2[0] = _raw
+                        _upload_status.set_text(tr_fn('project_io.file_selected'))
+
+                    def _do_load_file() -> None:
+                        _raw = _pending_raw2[0]
+                        if not _raw:
+                            _upload_status.set_text(tr_fn('project_io.content_missing'))
+                            return
+                        ok, err = load_project_json(_raw)
+                        if ok:
+                            state.room_setup_done = True
+                            ui.notify(tr_fn('project_io.project_loaded_ok'), type='positive')
+                            _dlg.close()
+                            ui.timer(0.05, main_content_refresh, once=True)
+                        else:
+                            ui.notify(tr_fn('project_io.load_error', err=err), type='negative', timeout=5000)
+
+                    ui.upload(on_upload=_handle_upload2, auto_upload=True).props(
+                        f'accept=".json" label="{tr_fn("project_io.upload_label")}"'
+                    ).classes('w-full')
+                    with ui.row().classes('w-full gap-2 mt-1'):
+                        ui.button(tr_fn('project_io.load_selected'), on_click=_do_load_file).classes(
+                            'flex-1 bg-white text-[#111] border border-[#111] text-xs'
+                        )
+                        ui.button(tr_fn('project_io.cancel'), on_click=_dlg.close).classes(
+                            'flex-1 text-xs'
+                        )
             return
 
         with ui.dialog() as _dlg:
