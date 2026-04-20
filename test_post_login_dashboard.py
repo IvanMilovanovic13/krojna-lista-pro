@@ -49,6 +49,8 @@ def run_post_login_dashboard_contract_check() -> tuple[bool, str]:
     required_main = [
         "render_toolbar_refresh,",
         "render_nova_panel()",
+        "is_authenticated = bool(str(getattr(state, 'current_user_email', '') or '').strip())",
+        "if is_authenticated and int(getattr(state, 'wizard_step', 1) or 1) == 1:",
     ]
     missing_main = [item for item in required_main if item not in main_content]
     if missing_main:

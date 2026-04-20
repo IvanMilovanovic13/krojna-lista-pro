@@ -219,6 +219,10 @@ def render_main_content_inner(
         render_help_tab(ui=ui, tr_fn=help_tr)
         return
     elif state.active_tab == "wizard":
+        is_authenticated = bool(str(getattr(state, 'current_user_email', '') or '').strip())
+        if is_authenticated and int(getattr(state, 'wizard_step', 1) or 1) == 1:
+            render_nova_panel()
+            return
         render_wizard_tab(
             ui=ui,
             state=state,

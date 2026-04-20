@@ -194,6 +194,9 @@ def _render_wizard_step1(
             state.active_tab = 'elementi'
         main_content_refresh()
 
+    is_authenticated = bool(str(getattr(state, 'current_user_email', '') or '').strip())
+    current_user_email = str(getattr(state, 'current_user_email', '') or '').strip()
+
     with ui.column().classes('w-full h-full overflow-auto bg-gray-50 items-center justify-center p-8 gap-6'):
         _render_center_brand(ui, tr_fn, 'Dashboard / Projekti')
         ui.label(tr_fn('wizard.title_pick_type')).classes('text-lg text-gray-500 mb-2')
@@ -229,23 +232,38 @@ def _render_wizard_step1(
                     'mt-auto bg-white text-[#111] border border-[#111]'
                 ).props('flat')
 
-            with ui.card().classes(
-                'w-[320px] border border-[#d4a017] flex flex-col gap-3 p-6 bg-[#fff7d6]'
-            ):
-                ui.label(tr_fn('wizard.type_account')).classes('text-2xl font-bold text-gray-800')
-                ui.label(tr_fn('wizard.account_title')).classes('text-xl font-bold text-gray-800')
-                ui.label(tr_fn('wizard.account_desc')).classes('text-sm text-gray-500')
-                ui.separator()
-                ui.label(tr_fn('wizard.account_hint')).classes('text-sm text-gray-400')
-                ui.button(tr_fn('wizard.account_open'), on_click=lambda: switch_tab('nalog')).classes(
-                    'mt-auto bg-[#111] text-white'
-                )
+            if is_authenticated:
+                with ui.card().classes(
+                    'w-[320px] border border-gray-200 flex flex-col gap-3 p-6 bg-[#f7f5ef]'
+                ):
+                    ui.label(tr_fn('nova.account_page_title')).classes('text-2xl font-bold text-gray-800')
+                    ui.label(tr_fn('nova.account_page_desc')).classes('text-sm text-gray-500')
+                    ui.separator()
+                    if current_user_email:
+                        ui.label(current_user_email).classes('text-sm text-gray-400 break-all')
+                    ui.button(
+                        tr_fn('nova.dashboard_account_btn'),
+                        on_click=lambda: switch_tab('nalog'),
+                    ).classes('mt-auto bg-[#111] text-white')
+            else:
+                with ui.card().classes(
+                    'w-[320px] border border-[#d4a017] flex flex-col gap-3 p-6 bg-[#fff7d6]'
+                ):
+                    ui.label(tr_fn('wizard.type_account')).classes('text-2xl font-bold text-gray-800')
+                    ui.label(tr_fn('wizard.account_title')).classes('text-xl font-bold text-gray-800')
+                    ui.label(tr_fn('wizard.account_desc')).classes('text-sm text-gray-500')
+                    ui.separator()
+                    ui.label(tr_fn('wizard.account_hint')).classes('text-sm text-gray-400')
+                    ui.button(tr_fn('wizard.account_open'), on_click=lambda: switch_tab('nalog')).classes(
+                        'mt-auto bg-[#111] text-white'
+                    )
 
-            with ui.card().classes('w-[320px] border border-gray-200 flex flex-col gap-3 p-6 bg-[#f7f5ef]'):
-                ui.label(tr_fn('wizard.start_next_title')).classes('text-xl font-bold text-gray-800')
-                ui.label(tr_fn('wizard.start_next_1')).classes('text-sm text-gray-600')
-                ui.label(tr_fn('wizard.start_next_2')).classes('text-sm text-gray-600')
-                ui.label(tr_fn('wizard.start_next_3')).classes('text-sm text-gray-600')
+        with ui.card().classes('w-full max-w-[980px] border border-gray-200 p-4 bg-[#f7f5ef] shadow-none'):
+            ui.label(tr_fn('wizard.start_next_title')).classes('text-base font-bold text-gray-800')
+            with ui.column().classes('w-full gap-1'):
+                ui.label(f'1. {tr_fn("wizard.start_next_1")}').classes('text-sm text-gray-600')
+                ui.label(f'2. {tr_fn("wizard.start_next_2")}').classes('text-sm text-gray-600')
+                ui.label(f'3. {tr_fn("wizard.start_next_3")}').classes('text-sm text-gray-600')
 
 
 def _render_wizard_step2_measurement(
