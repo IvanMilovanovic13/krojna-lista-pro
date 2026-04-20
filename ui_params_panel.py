@@ -45,6 +45,7 @@ from module_rules import (
     module_supports_adjustable_shelves,
 )
 from drawer_logic import rebalance_drawers_proportional, redistribute_drawers_proportional
+from layout_engine import available_space_in_zone
 
 _FREESTANDING_TIDS = {
     "BASE_DISHWASHER_FREESTANDING",
@@ -146,10 +147,30 @@ def render_params_panel(
             'h': int(min(_h_val, _max_h)),
             'd': int(_d_val),
         }
+        # Holder za inline validacioni label (definisan posle ulaza — koristimo listu)
+        _avail_lbl_ref: list = [None]
+
+        def _refresh_avail_label(new_w: int | None = None) -> None:
+            """Ažurira inline hint o slobodnom prostoru na zidu."""
+            try:
+                lbl = _avail_lbl_ref[0]
+                if lbl is None:
+                    return
+                _avail = available_space_in_zone(state.kitchen, zone, wall_key=_active_wall)
+                _cur_w = new_w if new_w is not None else _dim['w']
+                if _cur_w > _avail:
+                    lbl.set_text(_t('params.width_too_large_fmt', w=_cur_w, avail=_avail))
+                    lbl.style('color: #dc2626; font-weight: 600;')
+                else:
+                    lbl.set_text(_t('params.available_space_fmt', avail=_avail))
+                    lbl.style('color: #6b7280; font-weight: normal;')
+            except Exception:
+                pass
 
         def _on_w_change(e):
             try:
                 _dim['w'] = max(100, min(3000, int(float(e.value))))
+                _refresh_avail_label(_dim['w'])
             except Exception:
                 pass
 
@@ -188,6 +209,16 @@ def render_params_panel(
             d.on('update:model-value', _on_d_change)
             ui.label(_t("params.max_height_fmt", h=_max_h)).classes(
                 'text-[10px] text-gray-500'
+            )
+            # ── Inline hint: slobodan prostor na zidu (live) ──────────────────
+            _avail_init = available_space_in_zone(state.kitchen, zone, wall_key=_active_wall)
+            _w_init_fits = _dim['w'] <= _avail_init
+            _avail_lbl_ref[0] = ui.label(
+                _t('params.available_space_fmt', avail=_avail_init)
+                if _w_init_fits else
+                _t('params.width_too_large_fmt', w=_dim['w'], avail=_avail_init)
+            ).classes('text-[10px]').style(
+                'color: #6b7280;' if _w_init_fits else 'color: #dc2626; font-weight: 600;'
             )
 
         # ── Depth status badge ────────────────────────────────────────────────

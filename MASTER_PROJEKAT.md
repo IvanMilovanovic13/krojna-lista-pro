@@ -80,6 +80,17 @@ Prakticni zakljucak:
 - sama regex ili format validacija nije dovoljna za produkcioni pojam "validan email"
 - bez token verification koraka korisnik i dalje moze uneti tehnicki ispravan, ali nepostojeci email
 
+## STATUS UPDATE - 20. april 2026. - Povratak Settings taba
+
+- `Podešavanja` tab je vraćen u glavni toolbar
+- razlog:
+  - to je globalni projektni ekran za materijale, debljine, boju fronta, dubine zona i pravila radne ploče
+  - nije bio obrisan iz koda, nego samo sakriven iz navigacije i preusmeren na `wizard`
+- trenutno važi:
+  - `ui_settings_tab.py` ostaje aktivan ekran
+  - korisnik ponovo može direktno da otvori `Podešavanja`
+  - `Podešavanja` se tretiraju kao bitan deo glavnog app toka, ne samo kao interni/dev ostatak
+
 Admin pregled koji treba dodati:
 
 - lista svih korisnika

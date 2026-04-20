@@ -108,6 +108,7 @@ def _change_language(lang: str) -> None:
     if str(getattr(state, "active_tab", "") or "") == "elementi":
         canvas_toolbar_panel.refresh()
         sidebar_content.refresh()
+        nacrt.refresh()          # Canvas labele moraju pratiti promenu jezika
         return
     if str(getattr(state, "active_tab", "") or "") == "nova":
         nova_panel.refresh()
@@ -155,6 +156,7 @@ def render_toolbar() -> None:
     _effective_access = get_effective_access_context()
     tabs = [
         ("wizard",    _tr("tab.wizard"),    "home"),
+        ("podesavanja", _tr("tab.settings"), "settings"),
         ("elementi",  _tr("tab.elements"),  "grid_view"),
         ("krojna", _tr("tab.cutlist"), "table_rows"),
         ("pomoc",     _tr("tab.help"),      "help"),

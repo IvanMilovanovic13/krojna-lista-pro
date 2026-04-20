@@ -10,6 +10,7 @@ from module_rules import (
     module_supports_adjustable_shelves,
 )
 from drawer_logic import rebalance_drawers_proportional, redistribute_drawers_proportional
+from layout_engine import available_space_in_zone
 
 from ui_color_picker import render_color_picker
 from ui_catalog_config import _FRONT_COLOR_PRESETS, translate_template_label
@@ -137,6 +138,10 @@ def render_edit_panel(
         def _col():
             return ui.column().classes('flex-1 gap-0 min-w-0')
 
+        # Holder za inline validacioni labeli u edit modu
+        _edit_error_lbl: list = [None]
+        _edit_avail_lbl: list = [None]
+
         with ui.row().classes('w-full gap-1'):
             with _col():
                 _lbl(_t('edit.x_mm'))
@@ -146,6 +151,15 @@ def render_edit_panel(
                 _lbl(_t('params.width_mm'))
                 w = ui.number(value=int(m.get('w_mm', 0)), min=100, max=3000, step=10).props(
                     'dense outlined').classes('w-full')
+
+        # ── Inline hint: slobodan prostor (samo za standardne zone) ──────────
+        _avail_edit = available_space_in_zone(state.kitchen, zone_m, wall_key=_active_wk)
+        _w_edit_val = int(m.get('w_mm', 0))
+        # Slobodan prostor uključuje i samu širinu elementa (koji se edituje)
+        _total_edit_budget = _avail_edit + _w_edit_val
+        _edit_avail_lbl[0] = ui.label(
+            _t('params.available_space_fmt', avail=_avail_edit + _w_edit_val)
+        ).classes('text-[10px]').style('color: #6b7280;')
 
         with ui.row().classes('w-full gap-1'):
             with _col():
@@ -170,6 +184,8 @@ def render_edit_panel(
             _dm_txt = _t('edit.depth_standard_fmt', std=_dm_zone_std)
             _dm_cls = 'text-xs px-2 py-0.5 rounded bg-gray-50 text-gray-700 border border-gray-300 mb-1'
         ui.label(_dm_txt).classes(_dm_cls)
+        # Inline error/status label — inicijalno prazan
+        _edit_error_lbl[0] = ui.label('').classes('text-[10px] text-red-500 font-semibold hidden')
 
         with ui.row().classes('w-full gap-1'):
             with _col():
@@ -682,19 +698,39 @@ def render_edit_panel(
         _frozen_zone = zone_m
         _frozen_tid = cur_tid
         _frozen_wk = str(m.get("wall_key", "A") or "A").upper()
+        def _show_edit_error(msg: str) -> None:
+            """Prikaži grešku inline i kao notify."""
+            try:
+                lbl = _edit_error_lbl[0]
+                if lbl is not None:
+                    lbl.set_text(msg)
+                    lbl.classes(remove='hidden')
+            except Exception:
+                pass
+            ui.notify(msg, type='negative')
+
+        def _clear_edit_error() -> None:
+            try:
+                lbl = _edit_error_lbl[0]
+                if lbl is not None:
+                    lbl.set_text('')
+                    lbl.classes(add='hidden')
+            except Exception:
+                pass
+
         def _apply():
+            _clear_edit_error()
             try:
                 # Uzmi svež m po frozen ID
                 fresh_mods = state.kitchen.get("modules", []) or []
                 fresh_m = next((mm for mm in fresh_mods if int(mm.get('id', -1)) == _frozen_id), None)
                 if not fresh_m:
-                    ui.notify(_t('edit.element_not_found'), type='negative')
+                    _show_edit_error(_t('edit.element_not_found'))
                     return
                 new_h = int(h.value)
                 if new_h > max_h:
-                    ui.notify(
-                        f'⚠️ {_t("edit.height_limit_exceeded_fmt", value=new_h, max_h=max_h)}',
-                        type='negative'
+                    _show_edit_error(
+                        f'⚠️ {_t("edit.height_limit_exceeded_fmt", value=new_h, max_h=max_h)}'
                     )
                     return
 
@@ -847,7 +883,7 @@ def render_edit_panel(
                 # Nema promene u depth_mode → standardan put (koristi _apply_inner)
                 _apply_inner(fresh_m, new_d)
             except Exception as e:
-                ui.notify(format_user_error(e, getattr(state, 'language', 'sr')), type='negative')
+                _show_edit_error(format_user_error(e, getattr(state, 'language', 'sr')))
 
         def _delete():
             delete_module_local(_frozen_id)

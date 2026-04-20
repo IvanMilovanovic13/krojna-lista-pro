@@ -267,52 +267,43 @@ def _render_wizard_step2_measurement(
         ui.label(tr_fn('wizard.title_pick_mode')).classes('text-3xl font-bold text-gray-800')
         ui.label(tr_fn('wizard.sub_pick_mode')).classes('text-gray-400 mb-2')
 
+        _cur_mode = str(getattr(state, 'measurement_mode', '') or '').strip().lower()
+        _std_border = 'border-2 border-[#111]' if _cur_mode == 'standard' else 'border-2 border-transparent'
+        _pro_border = 'border-2 border-[#111]' if _cur_mode == 'pro' else 'border-2 border-transparent'
+
+        def _go_standard() -> None:
+            setattr(state, 'measurement_mode', 'standard')
+            setattr(state, 'room', {**getattr(state, 'room', {}), 'active_wall': 'A', 'kitchen_wall': 'A', 'setup_panel_mode': 'walls'})
+            setattr(state, 'wizard_step', 4)
+            main_content_refresh()
+
+        def _go_pro() -> None:
+            setattr(state, 'measurement_mode', 'pro')
+            setattr(state, 'room', {**getattr(state, 'room', {}), 'active_wall': 'A', 'kitchen_wall': 'A', 'setup_panel_mode': 'walls'})
+            setattr(state, 'wizard_step', 4)
+            main_content_refresh()
+
         with ui.row().classes('flex-wrap justify-center gap-5 max-w-4xl'):
             with ui.card().classes(
-                'w-80 cursor-pointer hover:shadow-xl hover:border-gray-500 '
-                'border-2 border-transparent transition-all duration-200 p-5 gap-2'
-            ).on('click', lambda: (
-                setattr(state, 'measurement_mode', 'standard'),
-                setattr(
-                    state,
-                    'room',
-                    {
-                        **getattr(state, 'room', {}),
-                        'active_wall': 'A',
-                        'kitchen_wall': 'A',
-                        'setup_panel_mode': 'walls',
-                    },
-                ),
-                setattr(state, 'wizard_step', 4),
-                main_content_refresh()
-            )):
-                ui.label(tr_fn('wizard.mode_standard_badge')).classes(
-                    'self-start text-xs font-semibold uppercase tracking-wide text-green-700 '
-                    'bg-green-100 px-3 py-1 rounded-full mb-1'
-                )
+                f'w-80 cursor-pointer hover:shadow-xl hover:border-gray-500 '
+                f'{_std_border} transition-all duration-200 p-5 gap-2'
+            ).on('click', _go_standard):
+                with ui.row().classes('w-full items-center justify-between'):
+                    ui.label(tr_fn('wizard.mode_standard_badge')).classes(
+                        'text-xs font-semibold uppercase tracking-wide text-green-700 '
+                        'bg-green-100 px-3 py-1 rounded-full'
+                    )
+                    if _cur_mode == 'standard':
+                        ui.icon('check_circle').classes('text-[#111] text-[20px]')
                 ui.label(tr_fn('wizard.mode_standard')).classes('font-bold text-gray-800 text-lg')
                 ui.label(tr_fn('wizard.mode_standard_desc1')).classes('text-sm text-gray-500')
                 ui.label(tr_fn('wizard.mode_standard_desc2')).classes('text-xs text-gray-400')
                 ui.label(tr_fn('wizard.mode_standard_desc3')).classes('text-xs text-gray-500')
 
             with ui.card().classes(
-                'w-80 cursor-pointer hover:shadow-xl hover:border-gray-500 '
-                'border-2 border-transparent transition-all duration-200 p-5 gap-2'
-            ).on('click', lambda: (
-                setattr(state, 'measurement_mode', 'pro'),
-                setattr(
-                    state,
-                    'room',
-                    {
-                        **getattr(state, 'room', {}),
-                        'active_wall': 'A',
-                        'kitchen_wall': 'A',
-                        'setup_panel_mode': 'walls',
-                    },
-                ),
-                setattr(state, 'wizard_step', 4),
-                main_content_refresh()
-            )):
+                f'w-80 cursor-pointer hover:shadow-xl hover:border-gray-500 '
+                f'{_pro_border} transition-all duration-200 p-5 gap-2'
+            ).on('click', _go_pro):
                 ui.label(tr_fn('wizard.mode_pro_badge')).classes(
                     'self-start text-xs font-semibold uppercase tracking-wide text-amber-700 '
                     'bg-amber-100 px-3 py-1 rounded-full mb-1'

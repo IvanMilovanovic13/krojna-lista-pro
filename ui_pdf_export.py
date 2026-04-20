@@ -2277,6 +2277,11 @@ def build_pdf_bytes(
     service_packet = build_service_packet(kitchen, sections, lang=_lang)
     mods     = kitchen.get('modules', []) or []
     _summary_frames = []
+    # Sve sekcije sa ID kolonom — koristi se za prikaz po elementima (sekcija 5)
+    all_dfs: list = [
+        df for df in (sections or {}).values()
+        if df is not None and not df.empty and 'ID' in df.columns
+    ]
     for _sec_key, _sec_df in (sections or {}).items():
         if _sec_df is None or _sec_df.empty:
             continue
@@ -2402,11 +2407,13 @@ def build_pdf_bytes(
 
     # ── 4. Detalji po sekcijama ────────────────────────────────────────────────
     _SEC_TITLES = {
-        'carcass': _t('Korpus (stranice, dno, plafon)', 'Carcass (sides, bottom, top)'),
-        'backs': _t('Leđne ploče', 'Back panels'),
-        'fronts': _t('Frontovi', 'Fronts'),
-        'worktop': _t('Radna ploča i nosači', 'Worktop and supports'),
-        'plinth': _t('Sokla / Lajsna', 'Plinth / toe kick'),
+        'carcass':      _t('Korpus (stranice, dno, plafon)', 'Carcass (sides, bottom, top)'),
+        'backs':        _t('Leđne ploče', 'Back panels'),
+        'fronts':       _t('Frontovi', 'Fronts'),
+        'drawer_boxes': _t('Sanduk fioke (iverica)', 'Drawer box (chipboard)'),
+        'worktop':      _t('Radna ploča i nosači', 'Worktop and supports'),
+        'plinth':       _t('Sokla / Lajsna', 'Plinth / toe kick'),
+        'hardware':     _t('Okovi (šarke, klizači, mehanizmi)', 'Hardware (hinges, slides, mechanisms)'),
     }
     for _sk, _df in sections.items():
         if _df is None or _df.empty:
@@ -2453,7 +2460,7 @@ def build_pdf_bytes(
                     _safe(_pdf_localize_text(str(r.get('Modul', ''))[:22], _lang)),
                     _safe(_friendly_part_name(r.get('Deo', ''), _lang)),
                     _safe_val(_len_v), _safe_val(_wid_v),
-                    str(r.get('Deb.', '')), str(int(r.get('Kol.', 0))),
+                    _safe_val(r.get('Deb.', ''), '-'), str(int(float(r.get('Kol.', 0) or 0))),
                     _safe_val(r.get('Kant', ''), '-'), _safe(_pdf_localize_text(r.get('Napomena', ''), _lang))
                 ])
             _sdh = [[_t('Modul', 'Module'), _t('Deo', 'Part'), _t('Duž.', 'Length'), _t('Šir.', 'Width'), _t('Deb.', 'Thk.'), _t('Kol.', 'Qty'), _t('Kant', 'Edge'), _t('Napomena', 'Note')]]
@@ -2530,7 +2537,7 @@ def build_pdf_bytes(
                 _mhdr = [[_t('Oznaka', 'Label'), _t('Deo', 'Part'), _t('Gde ide', 'Where it goes'), _t('Korak', 'Step'), _t('Kom.', 'Qty')]]
                 _mrows = [[
                     _safe(str(r.get('Oznaka', ''))),
-                    _safe(_friendly_part_name(r.get('Deo', ''), _lang)),
+                    _safe(str(r.get('Deo', ''))),   # već prevedeno u _map_parts
                     _safe(str(r.get('Pozicija', ''))),
                     str(r.get('SklopKorak', '')),
                     str(r.get('Kol.', '')),
@@ -2547,7 +2554,7 @@ def build_pdf_bytes(
                      _safe(_friendly_part_name(r.get('Deo', ''), _lang)),
                      _safe_val((r.get('Dužina [mm]', '') if str(r.get('Dužina [mm]', '')).strip().lower() not in {'', 'nan', 'none', 'null'} else r.get('CUT_W [mm]', ''))),
                      _safe_val((r.get('Širina [mm]', '') if str(r.get('Širina [mm]', '')).strip().lower() not in {'', 'nan', 'none', 'null'} else r.get('CUT_H [mm]', ''))),
-                     str(r.get('Deb.', '')), str(int(r.get('Kol.', 0))),
+                     _safe_val(r.get('Deb.', ''), '-'), str(int(float(r.get('Kol.', 0) or 0))),
                      _safe_val(r.get('Kant', ''), '-')]
                     for r in _mparts.to_dict('records')
                 ]

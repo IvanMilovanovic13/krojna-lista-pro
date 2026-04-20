@@ -13,6 +13,7 @@ import matplotlib.patches as mpatches
 import numpy as np
 
 from cutlist import MANUFACTURING_PROFILES
+from i18n import tr as _tr_i18n
 from module_rules import default_shelf_count, dishwasher_installation_metrics
 
 
@@ -133,7 +134,7 @@ ZONE_SIDE_WIDTH = 0.065       # ~6.5% širine elementa
 FONT_DIM  = 8.5
 FONT_ID   = 7
 FONT_WALL = 11
-FONT_LBL  = 7.5
+FONT_LBL  = 8.5   # povećano 7.5→8.5 za bolju čitljivost elemenata
 
 
 # ── Per-element front color helpers ──────────────────────────────────────────
@@ -213,8 +214,8 @@ def _draw_l_layout_inset(
         return
     try:
         _lang = str((kitchen or {}).get("language", "sr") or "sr").lower().strip()
-        _wall_a_lbl = "Wall A" if _lang == "en" else "Zid A"
-        _wall_b_lbl = "Wall B" if _lang == "en" else "Zid B"
+        _wall_a_lbl = _tr_i18n("room.wall_a", _lang)
+        _wall_b_lbl = _tr_i18n("room.wall_b", _lang)
         _walls = list((room.get("walls", []) or []))
         _wa = next((w for w in _walls if str(w.get("key", "")).upper() == "A"), None)
         _wb = next((w for w in _walls if str(w.get("key", "")).upper() == "B"), None)
@@ -2726,9 +2727,10 @@ def _draw_fillers(ax, kitchen: Dict[str, Any], technical: bool) -> None:
         cx = x + w / 2
         cy = y0 + zh / 2
         lbl = f.get("label", f"{w}mm")
+        _filler_lang = str((kitchen or {}).get("language", "sr") or "sr").lower().strip()
         ax.text(
             cx, cy,
-            f"← {w}mm →\nPRAZNO",
+            f"← {w}mm →\n{_tr_i18n('canvas.free_space', _filler_lang)}",
             fontsize=max(5, FONT_LBL),
             ha="center", va="center",
             color="#666666",
@@ -3111,7 +3113,7 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
     if show_bounds and _layout_viz == "l_oblik" and _wk != "A":
         try:
             _lang_viz = str((kitchen or {}).get("language", "sr") or "sr").lower().strip()
-            _corner_lbl = "Corner\nWall A" if _lang_viz == "en" else "Ugao\nZid A"
+            _corner_lbl = f"{_tr_i18n('canvas.corner_label', _lang_viz)}\n{_tr_i18n('room.wall_a', _lang_viz)}"
             from layout_engine import _l_corner_offsets_mm as _co_viz
             _lo_viz, _ro_viz = _co_viz(kitchen, _wk)
             _zone_h = float(foot_mm + int(kitchen.get("base_korpus_h_mm", 720)))

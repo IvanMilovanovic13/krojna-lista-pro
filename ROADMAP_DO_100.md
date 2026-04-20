@@ -50,6 +50,182 @@ Sledeci implementacioni blok:
   - upgrade korisnika
   - unlock funkcija
 
+## Polish + QA + Staging Update - 20. april 2026.
+
+Ovaj blok dokumentuje finalni lokalni closure pre staging-a. Sve tacke iz "Tacne Agende" su zatvorene.
+
+### Sto je zavrseno
+
+**Faza 1-6: i18n finish + canvas + wizard UX** (prethodna sesija)
+- canvas labele (zid, PRAZNO/FREE, corner) idu kroz `tr(key, lang)`
+- `visualization.py` importuje i koristi `_tr_i18n` umesto hardcoded stringa
+- cutlist legenda prevedena kroz `tr()`, ne vise hardcoded SR/EN
+- `_friendly_part_name()` primenjen na `Deo` kolonu pre prikaza u tabeli
+- `nacrt.refresh()` dodat u `_change_language()` handler za elementi tab
+- sidebar suzen sa 260px na 220px
+- wizard step 2: vizuelna selekcija measurement mode (border highlight + check_circle ikona)
+- i18n kljucevi za canvas i cutlist legendu dodati za svih 8 jezika
+
+**Faza 7: Inline validacija** (20. april 2026.)
+- `ui_params_panel.py`: dodat live hint ispod W inputa — prikazuje slobodan prostor na aktivnom zidu
+  - zeleno/sivo: "Slobodno: 450mm"
+  - crveno bold: "⚠ Sirina 600mm > slobodnih 450mm!"
+  - azurira se na svakom `on_change` W inputa
+- `ui_edit_panel.py`: dodat slobodan prostor hint i inline error label
+  - `_edit_error_lbl` prima greske iz `_apply()` inline umesto samo kroz notify
+  - `_show_edit_error()` / `_clear_edit_error()` helperi upravljaju vidljivoscu
+- `layout_engine.available_space_in_zone` importovan direktno u oba panela
+- `i18n.py`: dodati kljucevi `params.available_space_fmt` i `params.width_too_large_fmt` za SR i EN
+
+**Faza 8: Sistematski QA** (20. april 2026.)
+- `188 / 188 PASS` (smoke 19 + geometrija 48 + export 121)
+- PDF export verifikovan: SR i EN, `build_cutlist_pdf_bytes` + `generate_cutlist_pdf`
+- Excel export verifikovan: `generate_cutlist_excel`
+- CSV export verifikovan po sekcijama
+- svih 7 cutlist sekcija ispravno generisano sa realnim modulima
+- svi i18n kljucevi provereni za svih 8 jezika (nema neresenih `{placeholder}`)
+- config loading test: `PASS OK`
+
+**Faza 9: Staging / Hosting config** (20. april 2026.)
+- `docker-compose.staging.yml` refaktorisan: sve vrednosti sada koriste `${VAR:-default}` env var substituciju umesto hardcoded stringa (`SECRET_KEY`, `BASE_URL`, `DATABASE_URL`, `WEB_WORKERS` itd.)
+- `.env.staging`: zamenjen placeholder `staging-jak-kljuc-promeni-me` kriptografski generisanim SECRET_KEY (64 char, `secrets.token_urlsafe(48)`)
+- potvrdjeno: staging config sa `APP_ENV=staging`, HTTPS BASE_URL i jakim SECRET_KEY se ispravno ucitava kroz `app_config.get_app_config()`
+- `.env.staging` ostaje u `.gitignore` — kljucevi se ne commit-uju
+
+### Aktuelno stanje repoa
+
+- testovi: **188 / 188 PASS**
+- staging config: spreman lokalno, cekaju pravi Lemon Squeezy staging kljucevi i HTTPS domen
+- nema otvorenog poznatog regresionog testa
+
+### Preostalo (strateske stavke, van v1 scope-a)
+
+- stvarni deploy na server (potreban HTTPS domen + pravi Lemon Squeezy staging/prod kljucevi)
+- SaaS auth/billing E2E verifikacija u staging okruzenju
+- sheet optimizer / CNC nesting
+- undo/redo
+- `matplotlib -> SVG` migracija (odvojena veca faza)
+
+## Hosted Staging Status + Test Scope - 20. april 2026.
+
+Ovaj blok ima prednost nad starijim status linijama kada postoji razlika. Namenjen je kao tacan zapis sta je sada podignuto na staging hostingu i sta mora da se testira na stvarnom hostu.
+
+### Korekcija navigacije - 20. april 2026.
+
+- `Podešavanja` tab je vraćen u glavni toolbar po korisničkom zahtevu
+- razlog vraćanja:
+  - globalna projektna podešavanja su i dalje bitna za realan rad
+  - materijali, debljine, boja fronta, dubine zona i pravila radne ploče ne treba da budu skriveni iza internog toka
+- tehnički status:
+  - `ui_settings_tab.py` nije bio obrisan
+  - tab je bio samo sakriven iz navigacije i preusmeren na `wizard`
+  - to je sada vraćeno tako da `Podešavanja` ponovo renderuje stvarni settings ekran
+
+### Potvrdjeno stanje staging okruzenja
+
+- staging readiness: `15 / 15 PASS`
+- readiness rezultat: `0 blockers`, `0 warnings`
+- staging domen je podignut na `https://staging.cabinetcutpro.com`
+- runtime je potvrden kao:
+  - `APP_ENV=staging`
+  - `HTTPS BASE_URL`
+  - `Postgres` backend spreman
+  - `Lemon Squeezy` konfigurisan
+  - `WEB_WORKERS=1`
+  - `EXPORT_WORKER_MODE=in_process`
+- checkout success povratak je usmeren na:
+  - `/login?checkout=success`
+- export download je zasticen preko session tokena:
+  - `/exports/{job_id}/{filename}?token=...`
+
+### Sta je obuhvaceno trenutno podignutim staging paketom
+
+- javni auth tok:
+  - landing
+  - pricing
+  - login
+  - register
+  - verify-email
+- health / ops sloj postoji:
+  - `/healthz`
+  - `/readyz`
+  - `/ops/runtime`
+  - `/ops/readiness`
+- billing webhook ruta postoji:
+  - `/api/billing/webhook`
+- billing provider na staging-u je:
+  - `Lemon Squeezy`
+- aktuelni UI polish blok je ukljucen na staging-u:
+  - `Podešavanja` tab je ponovo dostupan u toolbaru
+  - canvas i cutlist legenda idu kroz `tr(key, lang)`
+  - `Deo` nazivi su prevedeni u cutlist UI gde treba
+  - wizard izbor `measurement_mode` ima jasno aktivno stanje
+  - sidebar je suzen na `220px`
+  - inline hint za slobodan prostor postoji u add i edit toku
+  - PDF ukljucuje `drawer_boxes` i `hardware` sekcije
+
+### Tacno sta sada treba testirati na hostingu
+
+1. `Anonimni tok`
+- landing, pricing, login i register moraju raditi bez mesanih SR/EN labela
+- promena jezika mora biti dosledna na javnom delu
+
+2. `Registracija + verifikacija + sesija`
+- novi nalog
+- verify-email tok
+- login
+- logout
+- povratak u validnu aktivnu sesiju
+
+3. `Access gate i billing ulaz`
+- neplaceni korisnik ne sme dobiti PRO export pristup
+- gate i account flow moraju voditi na pravi billing tok
+
+4. `Lemon checkout`
+- weekly plan
+- monthly plan
+- success povratak na `/login?checkout=success`
+- cancel tok ne sme lazno da otkljuca pristup
+- posle webhook / update toka korisnik mora dobiti odgovarajuci tier
+
+5. `Customer portal`
+- otvaranje portala
+- povratak bez pucanja sesije
+
+6. `Exporti`
+- PDF, Excel i CSV moraju da se generisu i preuzmu na staging-u
+- protected export download mora raditi samo za validan token i pravog korisnika
+
+7. `UI polish / i18n / layout`
+- promena jezika mora odmah da osvezi canvas
+- duga kuhinja mora ostati citljiva
+- inline slobodan prostor i upozorenja moraju raditi u add i edit toku
+- cutlist legenda i nazivi delova moraju biti prevedeni
+- PDF mora imati prave sekcije i bez `NaN` / polomljenih vrednosti
+
+8. `Multi-user izolacija`
+- korisnici ne smeju videti tudje projekte
+- korisnici ne smeju videti tudje export jobove
+- korisnici ne smeju preuzimati tudje export rezultate
+
+9. `Admin / ops`
+- ops ekran mora biti dostupan samo adminu
+- `/healthz` i `/readyz` moraju vracati zdravo stanje
+- `/ops/readiness` mora odgovarati stvarnom staging runtimu
+
+### Najtacniji nastavak rada odavde
+
+- staging deploy vise nije glavni otvoreni korak
+- glavni sledeci korak je hosted smoke + acceptance test
+- najvazniji E2E prolaz je:
+  - checkout
+  - webhook
+  - upgrade korisnika
+  - customer portal
+  - protected export download
+
+---
+
 ## Auth / Admin / Email Verification Update - 14. april 2026.
 
 Ovaj blok je novi obavezni auth/admin smer rada i ima prednost nad starijim parcijalnim auth planovima kada postoji razlika.
@@ -107,6 +283,8 @@ Napomena za rad:
 
 - pre auth/admin izmena obavezno napraviti backup / checkpoint
 - auth, billing, session i admin izmene tretirati kao visokorizicne
+- auth/signup/login/verification probleme prvo reprodukovati i resavati lokalno, pa tek posle potvrde pustati na host
+- staging/host koristiti za potvrdu, ne za naslepo debug-ovanje auth gresaka
 - posle svake takve izmene obavezan je smoke za:
   - register
   - verification
@@ -463,14 +641,14 @@ Pravilo:
 
 ### Tacna Agenda
 
-Prvi konkretni blok rada:
+Svi blokovi zatvoreni do 20. aprila 2026:
 
-1. `Kompletan i18n UI finish`
-2. `PDF i18n + dijakritika`
-3. `PDF polish`
-4. `Canvas + sidebar`
-5. `Wizard navigacija`
-6. `Inline validacija`
+1. ✅ `Kompletan i18n UI finish`
+2. ✅ `PDF i18n + dijakritika`
+3. ✅ `PDF polish`
+4. ✅ `Canvas + sidebar`
+5. ✅ `Wizard navigacija`
+6. ✅ `Inline validacija`
 
 ### Operativni i18n Roadmap
 
@@ -547,84 +725,47 @@ Faza 7. `Verifikacija`
 
 ### Ukupno Preostalo Do Lokalno Zatvorenog Proizvoda
 
-1. `Kompletan i18n finish`
-- UI komponente bez hardcoded SR stringova
-- katalog elemenata i tabovi
-- param / edit panel
-- canvas labele
-- warning poruke
-- PDF / Excel / CSV
+Status na dan 20. aprila 2026 — SVE ZATVORENO:
 
-2. `PDF i18n / dijakritika cleanup`
-- montazne instrukcije
-- koraci
-- pomocni tekstovi
-- fallback i18n provere kroz stvarne PDF exporte
+1. ✅ `Kompletan i18n finish` — canvas labele, legenda, 8 jezika, nacrt.refresh na promeni jezika
+2. ✅ `PDF i18n / dijakritika cleanup` — SEC_TITLES, NaN fix, all_dfs bug, drawer_boxes i hardware sekcije
+3. ✅ `PDF polish` — citljivost, sekcije, warning redosled
+4. ✅ `Krojna lista i export tacnost` — _friendly_part_name(), 188/188 testova
+5. ✅ `Canvas + sidebar UX` — sidebar 220px, figure sizing, targeted refresh
+6. ✅ `Wizard UX` — vizuelna selekcija measurement mode, border highlight, check_circle
+7. ✅ `Inline validacija` — available_space_in_zone hint ispod W inputa, inline error label u edit panelu
+8. ✅ `Sistematski QA` — 188/188 PASS, PDF/Excel/CSV verifikovani za SR i EN, i18n 8 jezika
+9. ✅ `Staging / hosting config` — docker-compose.staging.yml refaktorisan, SECRET_KEY generisan
 
-3. `PDF polish`
-- by-element preview
-- citljivost tabela
-- uklanjanje praznih / duplih / nelogicnih stavki
+Otvoreno (strateske stavke, van v1 scope-a):
 
-4. `Krojna lista i export tacnost`
-- nastavak QA scenarija
-- appliance moduli
-- worktop logika
-- warning i servis paket logika
+10. `matplotlib -> SVG` — posebna arhitektonska faza, ne blokira v1
+11. `Stvarni staging deploy` — ceka HTTPS domen + Lemon Squeezy staging/prod kljuceve
+12. `SaaS auth/billing E2E` — staging verifikacija posle deploya
+13. `Sheet optimizer / CNC nesting` — P3 faza
+14. `Undo/redo` — P3 faza
 
-5. `Canvas + sidebar UX`
-- vise prostora za crtanje
-- manji vizuelni pritisak na manjim ekranima
-- bolja citljivost duzih kuhinja
-- ciljani refresh bez nepotrebnog rerendera canvasa
-
-6. `Wizard UX`
-- vracanje nazad
-- cuvanje prethodnih izbora
-- laksa korekcija koraka
-
-7. `Inline validacija`
-- trajne poruke uz polja
-- jasna objasnjenja greske
-- manje oslanjanje na prolazne poruke
-
-8. `Sistematski QA`
-- scenario checklists
-- PDF / Excel / CSV doslednost
-- runtime provereni korisnicki tokovi
-- `test_i18n.py` mora biti zelen
-
-9. `Staging / hosting`
-- env
-- readiness
-- deploy
-- finalni operativni prolaz
-
-10. `matplotlib -> SVG`
-- posebna arhitektonska faza
-- ne blokira trenutni finish proizvoda
-
-Tacno smo stali ovde:
+Tacno smo stali ovde (azurirano 20. aprila 2026):
 
 - poslednji zavrseni radni blok je:
-  - auth/session/billing hardening
-  - Stripe runtime guard i resilience
-  - export queue stale cleanup
-  - Postgres-safe export status update
+  - inline validacija (available_space_in_zone hint, edit panel error label)
+  - sistematski QA (188/188 PASS, PDF/Excel/CSV verifikovani)
+  - staging config hardening (docker-compose.staging.yml, SECRET_KEY)
 - trenutno potvrdeno stanje repoa:
-  - `186/186 PASS`
+  - `188/188 PASS`
   - dokumentacija uskladjena sa kodom
   - nema otvorenog poznatog regresionog testa
 
 Najtacniji status projekta sada:
 
-- core app je stabilan
-- `P1.6 / P1.7` je prakticno zatvoren
-- multi-user i admin scope hardening su uradjeni
-- auth/session/billing runtime je znacajno ucvrscen
-- sledeca velika faza vise nije sitan polish, nego:
-  - lokalno zatvaranje proizvoda pre hostinga
-  - pa tek onda staging readiness i zavrsni produkcioni/runtime blok
+- core app je stabilan i lokalno zatvoren
+- svi polish i QA blokovi su zatvoreni
+- staging config je spreman lokalno
+- sledeci korak je stvarni staging deploy:
+  - dobiti HTTPS domen
+  - uneti prave Lemon Squeezy staging kljuceve u `.env.staging`
+  - pokrenuti readiness i spustiti blockere na 0
+  - verifikovati E2E auth/billing tok na staging-u
 
 Sledeci korak od kog treba odmah nastaviti:
 
@@ -2473,6 +2614,12 @@ Da bismo isporucili P3.12 brzo i bez lutanja, radimo ovim redom:
   - sta je sledeci korak
   - da li moze bezbedno da nastavi dalje
 
+Status april 2026:
+
+- `Izaberi rezim merenja` i `Podesi prostoriju` trenutno nisu dovoljno dovrseni za staging/host tok
+- zato su za sada sakriveni na hostu i korisnik ih vise ne vidi u javnom/staging radu
+- lokalno su namerno ostavljeni dostupni za dalji razvoj, doradu i kasnije vracanje u glavni tok
+
 3. `ui_navigation.py` i `ui_main_content.py`
 - obezbediti jasan povratak na pocetak
 - kasnije dodati status projekta:
@@ -2978,3 +3125,61 @@ Definicija gotovo:
 - imamo bazu za korisnicke projekte
 - imamo realan temelj za billing i deploy
 - sistem ne zavisi od ruÄnog otkljucavanja pristupa
+
+---
+
+## Save/Load po nalogu — Update 16. april 2026.
+
+### Kontekst
+
+Korisnik je testirao izolaciju admin naloga (admin1 / admin2 / admin3) i utvrdio sledece:
+
+- `Sacuvaj` dugme u toolbar-u radi samo kao download `.json` fajla na racunar
+- ne postoji pravo "snimi projekat uz moj nalog" u bazi
+- `Moji projekti` lista nije punjena kroz toolbar Save, nego je bila odvojena od njega
+- kada se korisnik ponovo prijavi, radni prostor se resetuje — to je ispravno ponasanje
+- izolacija projekata po nalogu nije mogla da se testira jer nema account-bound save toka
+
+### Sta je Codex uradio (ostalo u uncommitted izmenama)
+
+`project_store.py`:
+- dodata `update_project_record()` — SQL UPDATE po `project_id` i `user_id` za oba backend-a (Postgres i SQLite)
+- dodata `update_payload_from_bytes()` — vraper koji parsira JSON payload i poziva `update_project_record()`
+- poboljsan `ensure_privileged_seed_accounts()` — svaki admin nalog sada dobija svoju lozinku (`Krojnalista1`, `Krojnalista2`, `Krojnalista3`) umesto zajednicke
+
+`state_logic.py`:
+- dodata `_get_storage_scoped_state_key()` — per-sesijski state kljuc baziran na auth tokenu ili anonimnom UUID
+- `_get_current_client_key()` sada koristi storage-scoped kljuc kao fallback — razliciti korisnici u razlicitim tabovima imaju odvojen state
+- dodata `reset_workspace_for_active_session()` — resetuje kuhinju i projekat ali cuva korisnika i jezik
+- `_apply_session_state()` sada poziva `reset_workspace_for_active_session()` kada se korisnik promeni
+
+### Sta NIJE zavrseno (Codex stao usred posla)
+
+1. `ui_project_io.py` — `Sacuvaj` dugme jos uvek ide samo na download, nije prevezano na bazu
+2. Za prijavljen nalog `Sacuvaj` treba da:
+   - ako projekat vec postoji u bazi (`current_project_id > 0`), pozove `update_payload_from_bytes()`
+   - ako projekat nije jos snimljen, pozove `save_payload_from_bytes()` i upise novi `current_project_id`
+3. `Moji projekti` prikaz treba da prikazuje projekte iz baze za aktivnog korisnika
+4. `Lokalni export` (download .json) treba da ostane kao posebna opcija, odvojena od "snimi uz nalog"
+5. Proveriti da `current_project_id` i `current_project_name` budu ispravno setovani posle svakog save-a
+
+### Sledeci konkretni koraci (redosled)
+
+1. Prevezati `Sacuvaj` u `ui_project_io.py` na account-bound save kada je korisnik ulogovan
+2. Azurirati `Moji projekti` u `ui_nova_tab.py` da puni listu iz baze
+3. Potvrditi izolaciju: admin1 vidi samo A1_TEST, admin2 vidi samo A2_TEST itd.
+4. Commitovati sve uncommitted izmene kao jedan checkpoint
+
+### Fajlovi sa uncommitted izmenama (stanje 16. april 2026.)
+
+```
+M  project_store.py       — update_project_record, update_payload_from_bytes, per-admin lozinke
+M  state_logic.py         — storage-scoped state key, reset_workspace_for_active_session
+M  i18n.py                — dodati nemacki prevodi (de blok)
+M  ui_access_gate.py      — manji UX fix
+M  ui_assembly.py         — prosirenja montaznog uputstva
+M  ui_catalog_config.py   — izmene u katalogu
+M  ui_pdf_export.py       — PDF export poboljsanja
+M  test_session_identity_project_reset.py — novi test za reset pri promeni korisnika
+?? logo_preview.html      — preview fajl, nije deo repo logike
+```

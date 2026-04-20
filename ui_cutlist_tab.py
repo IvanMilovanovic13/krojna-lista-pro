@@ -684,34 +684,28 @@ def render_cutlist_tab(
             with ui.expansion(_titles.get(_sk, _sk.capitalize()), icon='table_rows').classes(
                 'w-full mb-2 border rounded'
             ):
+                # Prevedi nazive delova u "Deo" koloni pre prikaza
+                _display_df = _df.copy()
+                if 'Deo' in _display_df.columns and _sk != 'hardware':
+                    _display_df['Deo'] = _display_df['Deo'].map(
+                        lambda v: _friendly_part_name(v, _lang)
+                    )
                 ui.table(
                     columns=_hw_cols if _sk == 'hardware' else _sec_cols,
-                    rows=_df.to_dict('records')
+                    rows=_display_df.to_dict('records')
                 ).classes('w-full text-sm')
 
         ui.separator().classes('my-4')
         ui.label(tr_fn('cutlist.by_element')).classes('text-xl font-bold mb-3')
         with ui.card().classes('w-full mb-3 p-3 bg-gray-50'):
-            ui.label(
-                'Legenda za detalje po elementu' if _lang != 'en' else 'Legend for unit details'
-            ).classes('text-sm font-semibold text-gray-700 mb-1')
-            _by_unit_legend = (
-                [
-                    'PartCode = interna oznaka dela',
-                    'Pozicija = gde deo ide na elementu',
-                    'SklopKorak = kojim redom se sklapa',
-                    'Kant = kantovanje ivica',
-                    'Materijal = materijal i namena dela',
-                ]
-                if _lang != 'en'
-                else [
-                    'PartCode = internal part label',
-                    'Position = where the part goes on the unit',
-                    'Step = assembly order',
-                    'Edge = edge banding',
-                    'Material = material and part purpose',
-                ]
-            )
+            ui.label(tr_fn('cutlist.legend_title')).classes('text-sm font-semibold text-gray-700 mb-1')
+            _by_unit_legend = [
+                tr_fn('cutlist.legend_partcode'),
+                tr_fn('cutlist.legend_position'),
+                tr_fn('cutlist.legend_step'),
+                tr_fn('cutlist.legend_edge'),
+                tr_fn('cutlist.legend_material'),
+            ]
             for _line in _by_unit_legend:
                 ui.label(_line).classes('text-xs text-gray-600 leading-snug')
         _elem_cols = [

@@ -48,7 +48,7 @@ def render_elements_tab(
                 )
         else:
             with ui.column().classes(
-                'left-panel-compact w-[260px] border-r border-gray-200 h-full min-h-0 flex flex-col '
+                'left-panel-compact w-[220px] border-r border-gray-200 h-full min-h-0 flex flex-col '
                 'overflow-hidden bg-white shrink-0'
             ):
                 with ui.row().classes(

@@ -9,9 +9,14 @@ services:
       - "8080:8080"
     environment:
       APP_ENV: staging
-      BASE_URL: http://localhost:8080
-      SECRET_KEY: change-me-in-staging
-      DATABASE_URL: sqlite:////app/data/project_store.db
+      BASE_URL: ${BASE_URL:-http://localhost:8080}
+      HOST: 0.0.0.0
+      PORT: 8080
+      WEB_WORKERS: ${WEB_WORKERS:-1}
+      EXPORT_WORKER_MODE: ${EXPORT_WORKER_MODE:-in_process}
+      EXPORT_WORKER_POLL_SECONDS: ${EXPORT_WORKER_POLL_SECONDS:-2}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-env-staging}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////app/data/project_store.db}
       LEMON_SQUEEZY_API_KEY: ${LEMON_SQUEEZY_API_KEY:-}
       LEMON_SQUEEZY_WEBHOOK_SECRET: ${LEMON_SQUEEZY_WEBHOOK_SECRET:-}
       LEMON_SQUEEZY_STORE_ID: ${LEMON_SQUEEZY_STORE_ID:-}

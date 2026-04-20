@@ -32,15 +32,20 @@ def render_nacrt(*, ui, state, tr_fn, plt, render_fn, wall_len_h, zone_baseline_
         # Dodatni padding da natpisi/kote ne budu odsečeni pri gustoj mreži (npr. 5 mm)
         _margin_x = 380
         _margin_y = 380
-        # ── Adaptivne dimenzije figure — visina ograničena na ~5in (600px) ────
-        # Skala se računa prema visini, tako da se cela kuhinja vidi bez skrola
-        _TARGET_H = 5.0          # inches (= 600px @ 120dpi) — dobar fit za FullHD
+        # ── Adaptivne dimenzije figure ─────────────────────────────────────────
+        # Visina je fiksna osnova (5.5in); za duže kuhinje ograničavamo minimalni
+        # piksel-scale da labele ostanu čitljive čak i na 6-7m kuhinjama.
+        _TARGET_H = 5.5          # inches (= 660px @ 120dpi) — malo više za čitljivost
         _scale = _TARGET_H / max(_wh + _margin_y, 1)
-        # Širina po sadržaju; ali uvek pravimo "landscape" format (aspect ≥ 1.6)
-        # da bi slika sa width:100% imala odgovarajuću visinu na ekranu
+        # Za veoma duge kuhinje: ako bi scale bio previše mali, blago povećamo figuru
+        # u visinu da labele ostanu čitljive (max 7.0 in da ne bude presporo).
+        _MIN_SCALE = 0.0015      # ispod ovoga labele postaju nečitljive
+        if _scale < _MIN_SCALE:
+            _TARGET_H = min(7.0, _MIN_SCALE * max(_wh + _margin_y, 1))
+            _scale = _TARGET_H / max(_wh + _margin_y, 1)
         _content_w = (_wl + _margin_x) * _scale
         _fig_h = max(3.0, _TARGET_H)
-        _fig_w = max(_content_w, _fig_h * 2.25)   # širi canvas da desna ivica/kote uvek stanu
+        _fig_w = max(_content_w, _fig_h * 2.0)   # aspect ≥ 2:1 (blago manje od 2.25)
         fig = plt.figure(figsize=(_fig_w, _fig_h))
         ax = fig.add_subplot(111)
         _is_catalog = str(state.view_mode).lower().strip() != "tehnički"

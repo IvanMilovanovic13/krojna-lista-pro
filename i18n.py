@@ -1161,6 +1161,8 @@ _TRANSLATIONS = {
         "params.handle_side": "Strana ručke",
         "params.above_which_wall": "Iznad kog gornjeg elementa?",
         "params.max_height_fmt": "Maksimalna visina za ovu zonu: {h} mm",
+        "params.available_space_fmt": "Slobodno na zidu: {avail} mm",
+        "params.width_too_large_fmt": "⚠ Širina {w} mm > slobodnih {avail} mm!",
         "params.depth_independent_fmt": "Nezavisna dubina {d} mm",
         "params.depth_standard_fmt": "Zonski standard: {d} mm",
         "params.grain_vertical": "Vertikalno (V)",
@@ -1228,6 +1230,15 @@ _TRANSLATIONS = {
         "canvas.label_filler": "Popuna pri plafonu",
         "canvas.reset_view": "Reset prikaza",
         "canvas.label_canvas": "Platno",
+        "canvas.wall": "Zid",
+        "canvas.free_space": "PRAZNO",
+        "canvas.corner_label": "Ugao",
+        "cutlist.legend_title": "Legenda za detalje po elementu",
+        "cutlist.legend_partcode": "PartCode = interna oznaka dela",
+        "cutlist.legend_position": "Pozicija = gde deo ide na elementu",
+        "cutlist.legend_step": "SklopKorak = kojim redom se sklapa",
+        "cutlist.legend_edge": "Kant = kantovanje ivica",
+        "cutlist.legend_material": "Materijal = materijal i namena dela",
         "room.floorplan_title": "Dodavanje i pomeranje na jednom mestu",
         "room.floorplan_hint": "Izaberi alat, klikni na zid za dodavanje, pa prevuci element ako treba pomeranje.",
         "room.floorplan_3d": "3D prikaz",
@@ -1885,6 +1896,14 @@ _TRANSLATIONS = {
         "canvas.notify_overlap_drag": "This unit overlaps the unit below while moving (not a direct drag).",
         "canvas.notify_added": "Added: {label}",
         "canvas.err_draw": "Drawing error: {err}",
+        "canvas.free_space": "FREE",
+        "canvas.corner_label": "Corner",
+        "cutlist.legend_title": "Legend for unit details",
+        "cutlist.legend_partcode": "PartCode = internal part label",
+        "cutlist.legend_position": "Position = where the part goes on the unit",
+        "cutlist.legend_step": "Step = assembly order",
+        "cutlist.legend_edge": "Edge = edge banding",
+        "cutlist.legend_material": "Material = material and part purpose",
         "room.floorplan_title": "Add and move in one place",
         "room.floorplan_hint": "Choose a tool, click the wall to add it, then drag the item if it needs repositioning.",
         "room.floorplan_3d": "3D view",
@@ -1977,6 +1996,8 @@ _TRANSLATIONS = {
         "params.handle_side": "Handle side",
         "params.above_which_wall": "Above which wall unit?",
         "params.max_height_fmt": "Maximum height for this zone: {h} mm",
+        "params.available_space_fmt": "Available on wall: {avail} mm",
+        "params.width_too_large_fmt": "⚠ Width {w} mm > available {avail} mm!",
         "params.depth_independent_fmt": "Independent depth {d} mm",
         "params.depth_standard_fmt": "Zone standard: {d} mm",
         "params.grain_vertical": "Vertical (V)",
@@ -9341,6 +9362,63 @@ _TRANSLATIONS.setdefault("zh-cn", {}).update({
 
 _TRANSLATIONS.setdefault("hi", {}).update({
     "toolbar.pro_redirect": "इस विकल्प का उपयोग करने के लिए अकाउंट खोलें और PRO सक्रिय करें।",
+})
+
+# ── Canvas i18n — slobodan prostor i ugaona labela ──────────────────────────
+_TRANSLATIONS.setdefault("de", {}).update({
+    "canvas.free_space": "FREI",
+    "canvas.corner_label": "Ecke",
+    "cutlist.legend_title": "Legende für Elementdetails",
+    "cutlist.legend_partcode": "PartCode = interne Teilbezeichnung",
+    "cutlist.legend_position": "Position = wo das Teil am Element sitzt",
+    "cutlist.legend_step": "Schritt = Montagereihenfolge",
+    "cutlist.legend_edge": "Kante = Kantenanleimung",
+    "cutlist.legend_material": "Material = Material und Teilzweck",
+})
+
+_TRANSLATIONS.setdefault("es", {}).update({
+    "canvas.free_space": "VACÍO",
+    "canvas.corner_label": "Esquina",
+    "cutlist.legend_title": "Leyenda de detalles del elemento",
+    "cutlist.legend_partcode": "PartCode = etiqueta interna de la pieza",
+    "cutlist.legend_position": "Posición = dónde va la pieza en el elemento",
+    "cutlist.legend_step": "Paso = orden de montaje",
+    "cutlist.legend_edge": "Canto = canteado",
+    "cutlist.legend_material": "Material = material y propósito de la pieza",
+})
+
+_TRANSLATIONS.setdefault("pt-br", {}).update({
+    "canvas.free_space": "VAZIO",
+    "canvas.corner_label": "Canto",
+    "cutlist.legend_title": "Legenda de detalhes do elemento",
+    "cutlist.legend_partcode": "PartCode = etiqueta interna da peça",
+    "cutlist.legend_position": "Posição = onde a peça vai no elemento",
+    "cutlist.legend_step": "Etapa = ordem de montagem",
+    "cutlist.legend_edge": "Fita = fita de borda",
+    "cutlist.legend_material": "Material = material e finalidade da peça",
+})
+
+_TRANSLATIONS.setdefault("ru", {}).update({
+    "canvas.free_space": "ПУСТО",
+    "canvas.corner_label": "Угол",
+    "cutlist.legend_title": "Легенда деталей элемента",
+    "cutlist.legend_partcode": "PartCode = внутреннее обозначение детали",
+    "cutlist.legend_position": "Позиция = где деталь находится на элементе",
+    "cutlist.legend_step": "Шаг = порядок сборки",
+    "cutlist.legend_edge": "Кромка = кромкование",
+    "cutlist.legend_material": "Материал = материал и назначение детали",
+})
+
+_TRANSLATIONS.setdefault("zh-cn", {}).update({
+    "canvas.free_space": "空",
+    "canvas.corner_label": "角落",
+    "cutlist.legend_title": "元素详情图例",
+})
+
+_TRANSLATIONS.setdefault("hi", {}).update({
+    "canvas.free_space": "खाली",
+    "canvas.corner_label": "कोना",
+    "cutlist.legend_title": "तत्व विवरण किंवदंती",
 })
 
 def get_language_options() -> dict[str, str]:
