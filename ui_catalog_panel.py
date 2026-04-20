@@ -44,11 +44,41 @@ _PALETTE_IMAGE_PRIORITY_TIDS = {
     "BASE_DISHWASHER_FREESTANDING",
 }
 
+_SIDEBAR_SCROLL_AREA_ID = "sidebar-add-scroll"
 
-def select_template(*, state, tid: str, render_variants_refresh, params_panel_refresh) -> None:
+async def select_template(*, ui, state, tid: str, render_variants_refresh, params_panel_refresh) -> None:
+    try:
+        scroll_top = await ui.run_javascript(
+            f"""
+            (() => {{
+                const root = document.getElementById('{_SIDEBAR_SCROLL_AREA_ID}');
+                const container = root ? root.querySelector('.q-scrollarea__container') : null;
+                return container ? Math.round(container.scrollTop || 0) : 0;
+            }})()
+            """
+        )
+    except Exception:
+        scroll_top = 0
+
     state.selected_tid = tid
     render_variants_refresh()
     params_panel_refresh()
+    _target_top = max(0, int(scroll_top or 0))
+    ui.timer(
+        0.05,
+        lambda top=_target_top: ui.run_javascript(
+            f"""
+            (() => {{
+                const root = document.getElementById('{_SIDEBAR_SCROLL_AREA_ID}');
+                const container = root ? root.querySelector('.q-scrollarea__container') : null;
+                if (container) {{
+                    container.scrollTop = {top};
+                }}
+            }})()
+            """
+        ),
+        once=True,
+    )
 
 
 def render_palette(*, ui, render_variants_fn) -> None:

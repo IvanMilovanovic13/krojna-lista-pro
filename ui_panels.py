@@ -302,8 +302,9 @@ def render_variants(container=None) -> None:
     )
 
 
-def select_template(tid: str) -> None:
-    _select_template(
+async def select_template(tid: str) -> None:
+    await _select_template(
+        ui=ui,
         state=state,
         tid=tid,
         render_variants_refresh=render_variants.refresh,

@@ -58,7 +58,7 @@ def render_sidebar_content_layout(
                 on_click=lambda k=_k: on_select_tab(k)
             ).classes(f'left-tab-btn flex-1 {_state_cls}').props(_props)
 
-    with ui.scroll_area().classes('left-panel-body flex-1 min-h-0 w-full'):
+    with ui.scroll_area().classes('left-panel-body flex-1 min-h-0 w-full').props('id=sidebar-add-scroll'):
         with ui.column().classes('w-full gap-1 px-1 pb-1'):
             add_body()
 

@@ -49,6 +49,8 @@
 - `.python-version` - preporucena Python verzija za lokalni rad/deploy.
 - `SETUP_VENV.ps1` - automatsko pravljenje `venv` i instalacija paketa.
 - `SETUP_OKRUZENJE.md` - kratko uputstvo za setup i pokretanje.
+- `DEPLOY_RENDER_OD_LOKALA_DO_HOSTA.md` - korak-po-korak vodic za push na GitHub i deploy na Render host.
+- `QA_STAGING_SMOKE_ACCEPTANCE.md` - staging smoke + acceptance checklista za hostovanu proveru.
 - `MASTER_PROJEKAT.md` - projektna bele?nica.
 
 ## 8) Testiranje
