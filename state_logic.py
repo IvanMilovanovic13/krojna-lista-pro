@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import quote
 
 from i18n import normalize_language_code
 from layout_engine import find_first_free_x, available_space_in_zone, solve_layout, _profile_clearance_mm, _l_corner_offsets_mm
@@ -63,7 +64,28 @@ def _build_email_verification_url(token: str) -> str:
         base_url = ""
     if not base_url:
         base_url = "http://localhost:8080"
-    return f"{base_url}/verify-email?token={str(token or '').strip()}"
+    return f"{base_url}/verify-email?token={quote(str(token or '').strip(), safe='')}"
+
+
+def _build_password_reset_url(token: str) -> str:
+    try:
+        from app_config import get_public_runtime_config
+
+        base_url = str((get_public_runtime_config() or {}).get("base_url", "") or "").rstrip("/")
+    except Exception:
+        base_url = ""
+    if not base_url:
+        base_url = "http://localhost:8080"
+    return f"{base_url}/reset-password?token={quote(str(token or '').strip(), safe='')}"
+
+
+def _allow_auth_dev_link_fallback() -> bool:
+    try:
+        from app_config import get_app_config
+
+        return str(get_app_config().app_env or "").strip().lower() in {"development", "test"}
+    except Exception:
+        return True
 
 
 def _normalize_project_type(value: Any) -> str:
@@ -2179,7 +2201,27 @@ def login_user_session(identifier: str, password: str) -> Tuple[bool, str]:
                 _LOG.debug("login_user_session unverified audit failed: %s", audit_ex)
             verification_url = _build_email_verification_url(str(verification.verification_token)) if verification else ""
             if verification_url:
-                return False, f"Email jos nije potvrdjen. Otvori verifikacioni link: {verification_url}"
+                from email_service import send_verification_email
+
+                sent, detail = send_verification_email(
+                    to_email=effective_email,
+                    verification_url=verification_url,
+                    display_name=str(getattr(user, "display_name", "") or ""),
+                )
+                try:
+                    append_audit_log(
+                        event_type="auth.verification_email_resent" if sent else "auth.verification_email_resend_failed",
+                        status="success" if sent else "warning",
+                        detail=f"email={effective_email} | detail={detail}",
+                        user_id=int(user.id),
+                    )
+                except Exception as audit_ex:
+                    _LOG.debug("login_user_session verification resend audit failed: %s", audit_ex)
+                if sent:
+                    return False, "Email jos nije potvrdjen. Poslali smo novi verifikacioni email."
+                if _allow_auth_dev_link_fallback():
+                    return False, f"Email jos nije potvrdjen. Otvori verifikacioni link: {verification_url}"
+                return False, "Email jos nije potvrdjen. Slanje verifikacionog emaila trenutno nije dostupno."
             return False, "Email jos nije potvrdjen. Zatrazi novi verifikacioni link."
         record_login_attempt(email=effective_email, success=True)
         clear_failed_login_attempts(effective_email)
@@ -2266,7 +2308,27 @@ def register_trial_user_session(email: str, display_name: str = "", password: st
             _LOG.debug("register_trial_user_session audit failed: %s", audit_ex)
         state.active_tab = "nalog"
         if verification_url:
-            return True, f"Nalog je napravljen. Potvrdi email preko linka: {verification_url}"
+            from email_service import send_verification_email
+
+            sent, detail = send_verification_email(
+                to_email=clean_email,
+                verification_url=verification_url,
+                display_name=str(user.display_name or ""),
+            )
+            try:
+                append_audit_log(
+                    event_type="auth.verification_email_sent" if sent else "auth.verification_email_send_failed",
+                    status="success" if sent else "warning",
+                    detail=f"email={clean_email} | detail={detail}",
+                    user_id=int(user.id),
+                )
+            except Exception as audit_ex:
+                _LOG.debug("register verification email audit failed: %s", audit_ex)
+            if sent:
+                return True, "Nalog je napravljen. Proveri email i potvrdi adresu preko poslatog linka."
+            if _allow_auth_dev_link_fallback():
+                return True, f"Nalog je napravljen. Potvrdi email preko linka: {verification_url}"
+            return True, "Nalog je napravljen, ali slanje verifikacionog emaila trenutno nije dostupno."
         return True, "Nalog je napravljen. Potvrdi email preko verifikacionog linka."
     except Exception as ex:
         return False, f"Ne mogu da napravim probni nalog: {ex}"
@@ -2341,7 +2403,7 @@ def build_forgot_password_message(email: str) -> Tuple[bool, str]:
     if email_err:
         return False, email_err
     try:
-        from project_store import append_audit_log, create_password_reset_token
+        from project_store import append_audit_log, create_password_reset_token, get_user_by_email
         reset_token = create_password_reset_token(email=clean_email, expires_in_minutes=30)
         if reset_token is None:
             append_audit_log(
@@ -2356,12 +2418,31 @@ def build_forgot_password_message(email: str) -> Tuple[bool, str]:
             detail=f"email={clean_email}",
             user_id=int(reset_token.user_id),
         )
-        return (
-            True,
-            "Reset token je napravljen. Email servis jos nije povezan, "
-            f"pa za sada razvojni token glasi: {reset_token.reset_token} "
-            f"(vazi do {reset_token.expires_at})."
+        user = get_user_by_email(clean_email)
+        reset_url = _build_password_reset_url(str(reset_token.reset_token))
+        from email_service import send_password_reset_email
+
+        sent, detail = send_password_reset_email(
+            to_email=clean_email,
+            reset_url=reset_url,
+            display_name=str(getattr(user, "display_name", "") or ""),
         )
+        append_audit_log(
+            event_type="auth.password_reset_email_sent" if sent else "auth.password_reset_email_failed",
+            status="success" if sent else "warning",
+            detail=f"email={clean_email} | detail={detail}",
+            user_id=int(reset_token.user_id),
+        )
+        if sent:
+            return True, "Poslali smo email sa linkom za reset lozinke."
+        if _allow_auth_dev_link_fallback():
+            return (
+                True,
+                "Reset token je napravljen. Email servis jos nije povezan, "
+                f"pa za sada razvojni token glasi: {reset_token.reset_token} "
+                f"(vazi do {reset_token.expires_at})."
+            )
+        return False, "Reset lozinke trenutno nije dostupan. Pokusaj ponovo malo kasnije."
     except Exception as ex:
         return False, f"Ne mogu da pripremim reset lozinke: {ex}"
 

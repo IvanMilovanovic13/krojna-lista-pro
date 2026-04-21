@@ -38,6 +38,12 @@ class AppConfig:
     lemon_squeezy_variant_id_weekly: str
     lemon_squeezy_variant_id_monthly: str
     lemon_squeezy_checkout_success_url: str
+    email_provider: str
+    email_enabled: bool
+    email_api_key: str
+    email_from: str
+    email_from_name: str
+    email_reply_to: str
     debug: bool
 
 
@@ -154,6 +160,13 @@ def _env_int(name: str, default: int) -> int:
         return int(default)
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = str(os.getenv(name, "") or "").strip().lower()
+    if not raw:
+        return bool(default)
+    return raw in {"1", "true", "yes", "on"}
+
+
 def _is_placeholder_like(value: str, *, kind: str = "") -> bool:
     raw = str(value or "").strip()
     if not raw:
@@ -182,6 +195,10 @@ def _is_placeholder_like(value: str, *, kind: str = "") -> bool:
         return lowered in {"your-store", "store-subdomain"}
     if kind == "variant_id":
         return lowered in {"variant_id", "123456"} or lowered.endswith("...")
+    if kind == "email_api_key":
+        return lowered in {"email_api_key", "re_xxxxxxxxx", "resend_api_key"} or "xxxxxxxxx" in lowered
+    if kind == "email_from":
+        return "tvoj-domen" in lowered or lowered in {"noreply@example.com", "sender@example.com"}
     return False
 
 
@@ -218,6 +235,12 @@ def get_app_config() -> AppConfig:
         lemon_squeezy_variant_id_weekly=_env("LEMON_SQUEEZY_VARIANT_ID_WEEKLY"),
         lemon_squeezy_variant_id_monthly=_env("LEMON_SQUEEZY_VARIANT_ID_MONTHLY"),
         lemon_squeezy_checkout_success_url=_env("LEMON_SQUEEZY_CHECKOUT_SUCCESS_URL", f"{_env('BASE_URL', base_url_default)}/login?checkout=success"),
+        email_provider=_env("EMAIL_PROVIDER", "resend").lower(),
+        email_enabled=_env_bool("EMAIL_ENABLED", default=False),
+        email_api_key=_env("EMAIL_API_KEY") or _env("RESEND_API_KEY"),
+        email_from=_env("EMAIL_FROM"),
+        email_from_name=_env("EMAIL_FROM_NAME", "Krojna Lista PRO"),
+        email_reply_to=_env("EMAIL_REPLY_TO"),
         debug=app_env in ("development", "test"),
     )
 
@@ -242,4 +265,8 @@ def get_public_runtime_config() -> dict[str, str]:
         "has_billing_store_subdomain": "true" if not _is_placeholder_like(cfg.lemon_squeezy_store_subdomain, kind="store_subdomain") else "false",
         "has_billing_variant_id_weekly": "true" if not _is_placeholder_like(cfg.lemon_squeezy_variant_id_weekly, kind="variant_id") else "false",
         "has_billing_variant_id_monthly": "true" if not _is_placeholder_like(cfg.lemon_squeezy_variant_id_monthly, kind="variant_id") else "false",
+        "email_provider": str(cfg.email_provider),
+        "email_enabled": "true" if bool(cfg.email_enabled) else "false",
+        "has_email_api_key": "true" if not _is_placeholder_like(cfg.email_api_key, kind="email_api_key") else "false",
+        "has_email_from": "true" if not _is_placeholder_like(cfg.email_from, kind="email_from") else "false",
     }

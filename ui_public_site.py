@@ -14,6 +14,7 @@ from state_logic import (
     refresh_current_session_access,
     login_user_session,
     register_trial_user_session,
+    reset_password_with_token,
 )
 
 
@@ -389,9 +390,88 @@ def render_verify_email_page(request: Request | None = None) -> None:
             with ui.column().classes("public-card auth-card items-center gap-4"):
                 with ui.element("div").classes("public-auth-icon"):
                     ui.icon("verified" if ok else "warning", size="20px").classes("text-[#111827]")
-                ui.label("Verifikacija emaila").classes("public-auth-title")
+                ui.label(_tr("public.verify_email_title")).classes("public-auth-title")
                 ui.label(str(msg or "")).classes("text-sm text-slate-700 text-center")
                 ui.button(_tr("public.login_btn"), on_click=lambda: ui.navigate.to("/login")).classes(
                     "w-full bg-[#111827] text-white"
                 )
+                _auth_footer()
+
+
+def render_reset_password_page(request: Request | None = None) -> None:
+    token = ""
+    if request is not None:
+        try:
+            token = str(request.query_params.get("token", "") or "").strip()
+        except Exception:
+            token = ""
+
+    _public_shell()
+    with ui.column().classes("public-shell w-full"):
+        _topbar(action_label=_tr("public.login_btn"), action_target="/login", current_path="/reset-password")
+        with ui.column().classes("w-full items-center justify-center px-6 py-14 gap-6"):
+            with ui.column().classes("w-full items-center gap-3"):
+                _hero_brand("Dashboard / Projekti")
+                ui.label(_tr("public.reset_password_title")).classes("public-hero-title")
+                ui.label(_tr("public.reset_password_desc")).classes("public-hero-text max-w-xl")
+
+            with ui.column().classes("public-card auth-card items-center gap-4"):
+                with ui.element("div").classes("public-auth-icon"):
+                    ui.icon("lock_reset", size="20px").classes("text-[#111827]")
+                if not token:
+                    ui.label(_tr("public.reset_password_missing_token")).classes("public-auth-title")
+                    ui.button(_tr("public.login_btn"), on_click=lambda: ui.navigate.to("/login")).classes(
+                        "w-full bg-[#111827] text-white"
+                    )
+                    _auth_footer()
+                    return
+
+                ui.label(_tr("public.reset_password_card_title")).classes("public-auth-title")
+                new_password = ui.input(
+                    label=_tr("public.new_password_label"),
+                    password=True,
+                    password_toggle_button=True,
+                ).props("id=public-reset-password autocomplete=new-password").classes("w-full")
+                confirm_password = ui.input(
+                    label=_tr("public.confirm_password_label"),
+                    password=True,
+                    password_toggle_button=True,
+                ).props("id=public-reset-confirm-password autocomplete=new-password").classes("w-full")
+
+                async def _resolve_input_value(element_id: str, fallback: str = "") -> str:
+                    try:
+                        value = await ui.run_javascript(
+                            f"""
+                            (() => {{
+                                const root = document.getElementById('{element_id}');
+                                const input = root ? root.querySelector('input') : null;
+                                return input ? (input.value || '') : '';
+                            }})()
+                            """
+                        )
+                        clean = str(value or "").strip()
+                        return clean if clean else str(fallback or "").strip()
+                    except Exception:
+                        return str(fallback or "").strip()
+
+                async def _reset() -> None:
+                    new_password_value = await _resolve_input_value(
+                        "public-reset-password",
+                        str(new_password.value or ""),
+                    )
+                    confirm_password_value = await _resolve_input_value(
+                        "public-reset-confirm-password",
+                        str(confirm_password.value or ""),
+                    )
+                    if new_password_value != confirm_password_value:
+                        ui.notify(_tr("public.password_mismatch"), type="negative", timeout=5000)
+                        return
+                    ok, msg = await asyncio.to_thread(reset_password_with_token, token, new_password_value)
+                    if ok:
+                        ui.notify(_tr("public.reset_password_success"), type="positive", timeout=6000)
+                        ui.navigate.to("/login")
+                    else:
+                        ui.notify(str(msg or ""), type="negative", timeout=6000)
+
+                ui.button(_tr("public.reset_password_btn"), on_click=_reset).classes("w-full bg-[#111827] text-white")
                 _auth_footer()

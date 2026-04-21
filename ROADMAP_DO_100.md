@@ -224,6 +224,83 @@ Ovaj blok ima prednost nad starijim status linijama kada postoji razlika. Namenj
   - customer portal
   - protected export download
 
+### Email Delivery Follow-up - 21. april 2026.
+
+Ovaj blok dopunjava hosted test scope i ima prednost nad starijim nepreciznim status linijama kada je tema email verifikacija.
+
+Posle hosted smoke + acceptance testa, prvi sledeci auth prioritet treba da bude povezivanje stvarnog email delivery sloja za:
+
+- verification email
+- resend verification email
+- forgot password email
+
+Tacno potvrdjeno trenutno stanje koda:
+
+- verification token flow vec postoji
+- `/verify-email?token=...` ruta vec postoji i aktivira nalog kada je token vazeci
+- registracija trenutno generise verification token i verification URL
+- login vec blokira neproveren nalog
+- ali email servis jos nije povezan, pa se verification link trenutno samo prikazuje kroz poruku / development flow umesto da se stvarno posalje emailom
+
+Sta treba da se uradi odmah posle hosted testiranja:
+
+1. izabrati transactional email provider
+- preporucene opcije za evaluaciju:
+  - `Resend`
+  - `Postmark`
+  - `Amazon SES`
+
+2. obezbediti domen ili poddomen za slanje
+- preporucen smer:
+  - `auth.cabinetcutpro.com`
+  - sender adresa npr. `noreply@auth.cabinetcutpro.com`
+
+3. obezbediti DNS pristup za domain verification
+- potrebno je dodati provider zapise za:
+  - SPF
+  - DKIM
+  - po preporuci i DMARC
+
+4. dodati app konfiguraciju za mail servis
+- novi env/config sloj treba da pokrije najmanje:
+  - `EMAIL_PROVIDER`
+  - `EMAIL_API_KEY` ili SMTP kredencijale
+  - `EMAIL_FROM`
+  - `EMAIL_FROM_NAME`
+  - `EMAIL_REPLY_TO`
+  - `EMAIL_ENABLED`
+
+5. uvesti poseban `email_service.py`
+- taj sloj treba da salje:
+  - verification email
+  - resend verification email
+  - password reset email
+
+6. zameniti development poruke stvarnim email delivery tokom
+- registracija vise ne sme vracati sirov verification URL korisniku kroz poruku
+- login za `pending_verification` korisnika treba da vrati ljudsku poruku tipa:
+  - `Email jos nije potvrdjen. Poslali smo novi verifikacioni email.`
+- forgot password vise ne sme vracati razvojni token kroz UI poruku
+
+7. staging acceptance posle implementacije
+- novi nalog dobija stvarni email
+- klik na verification link aktivira nalog
+- login ne prolazi pre verifikacije
+- login prolazi posle verifikacije
+- forgot password stize emailom i reset radi end-to-end
+
+Operativna odluka:
+
+- ovo nije blok za "jednog dana"
+- ovo treba planirati kao prvi naredni auth sprint odmah nakon zavrsenog hosted smoke + acceptance testa
+- cilj je da staging predje sa development token/link modela na stvarni email verification model
+
+Praktican rezultat koji zelimo:
+
+- korisnik vise ne vidi verification URL u aplikaciji
+- korisnik dobija pravi email
+- email verification i password reset postaju stvarni SaaS tokovi, ne razvojni workaround
+
 ---
 
 ## Auth / Admin / Email Verification Update - 14. april 2026.
