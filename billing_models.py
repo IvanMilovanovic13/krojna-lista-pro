@@ -11,6 +11,7 @@ from project_store import (
     get_user_subscription,
     record_billing_event,
     set_user_access_status,
+    set_trial_started_at,
     update_billing_event_status,
     upsert_user_subscription,
 )
@@ -27,6 +28,7 @@ class BillingSummary:
     plan_code: str
     provider: str
     current_period_end: str
+    trial_started_at: str
     has_checkout: bool
     has_portal: bool
     billing_ready: bool
@@ -37,7 +39,8 @@ def _default_billing_status_for_user(user: UserRecord) -> str:
     if status == "local_active":
         return "local"
     if status == "trial_active":
-        return "trial"
+        # Novi korisnici koji jos nisu aktivirali trial dobijaju "unactivated"
+        return "unactivated"
     if status == "paid_active":
         return "active"
     if status == "admin_active":
@@ -57,6 +60,49 @@ def ensure_billing_record_for_user(user: UserRecord) -> SubscriptionRecord:
     )
 
 
+def activate_free_trial_for_email(email: str) -> bool:
+    """Aktivira free trial za korisnika: postavi trial_started_at i billing_status='trial'."""
+    try:
+        user = get_user_by_email(str(email or "").strip().lower())
+        if user is None:
+            return False
+        return set_trial_started_at(int(user.id))
+    except Exception:
+        return False
+
+
+def get_trial_days_remaining_for_email(email: str) -> int:
+    """Vraca broj dana preostalog triala. -1 = nije na trialu, 0 = istekao, 1-7 = aktivan."""
+    from datetime import datetime, timezone, timedelta
+    try:
+        user = get_user_by_email(str(email or "").strip().lower())
+        if user is None:
+            return -1
+        sub = get_user_subscription(int(user.id))
+        if sub is None:
+            return -1
+        if str(sub.billing_status or "").strip().lower() != "trial":
+            return -1
+        trial_ts = str(sub.trial_started_at or "").strip()
+        if not trial_ts:
+            return -1
+        # Pokusaj parsiranja
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"):
+            try:
+                started = datetime.strptime(trial_ts[:19], fmt[:len(fmt)])
+                break
+            except ValueError:
+                continue
+        else:
+            return -1
+        trial_end = started + timedelta(days=7)
+        now = datetime.utcnow()
+        remaining = (trial_end - now).days
+        return max(0, remaining)
+    except Exception:
+        return -1
+
+
 def get_billing_summary_for_email(email: str) -> BillingSummary | None:
     user = get_user_by_email(email)
     if user is None:
@@ -71,6 +117,7 @@ def get_billing_summary_for_email(email: str) -> BillingSummary | None:
         plan_code=str(subscription.plan_code),
         provider=str(subscription.provider),
         current_period_end=str(subscription.current_period_end),
+        trial_started_at=str(subscription.trial_started_at),
         has_checkout=bool(str(subscription.checkout_url or "").strip()),
         has_portal=bool(str(subscription.portal_url or "").strip()),
         billing_ready=(

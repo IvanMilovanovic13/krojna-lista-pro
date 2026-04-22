@@ -145,6 +145,7 @@ class SubscriptionRecord:
     checkout_url: str
     portal_url: str
     current_period_end: str
+    trial_started_at: str
     created_at: str
     updated_at: str
 
@@ -267,12 +268,13 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     user_id INTEGER NOT NULL UNIQUE,
     provider TEXT NOT NULL DEFAULT 'lemon_squeezy',
     plan_code TEXT NOT NULL DEFAULT 'trial',
-    billing_status TEXT NOT NULL DEFAULT 'trial',
+    billing_status TEXT NOT NULL DEFAULT 'unactivated',
     customer_id TEXT NOT NULL DEFAULT '',
     subscription_id TEXT NOT NULL DEFAULT '',
     checkout_url TEXT NOT NULL DEFAULT '',
     portal_url TEXT NOT NULL DEFAULT '',
     current_period_end TEXT NOT NULL DEFAULT '',
+    trial_started_at TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -427,6 +429,7 @@ def init_project_store() -> None:
             _ensure_users_schema(conn)
             _ensure_auth_runtime_schema(conn)
             _ensure_email_verification_schema(conn)
+            _ensure_subscriptions_schema(conn)
         _PROJECT_STORE_READY = True
         _PROJECT_STORE_RUNTIME_KEY = current_runtime_key
         if not _SEEDING_PRIVILEGED_ACCOUNTS and not _PRIVILEGED_SEED_DONE:
@@ -544,6 +547,26 @@ def _ensure_users_schema(conn) -> None:
     )
     _backfill_usernames(conn)
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)")
+
+
+def _ensure_subscriptions_schema(conn) -> None:
+    """Migracija za subscriptions tabelu — dodaje nove kolone ako ne postoje."""
+    if _get_backend_name() == "postgres":
+        rows = conn.execute(
+            """
+            SELECT column_name AS name
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'subscriptions'
+            """
+        ).fetchall()
+        existing = {str(row["name"]) for row in rows}
+        if "trial_started_at" not in existing:
+            conn.execute("ALTER TABLE subscriptions ADD COLUMN trial_started_at TEXT NOT NULL DEFAULT ''")
+    else:
+        rows = conn.execute("PRAGMA table_info(subscriptions)").fetchall()
+        existing = {str(row["name"]) for row in rows}
+        if "trial_started_at" not in existing:
+            conn.execute("ALTER TABLE subscriptions ADD COLUMN trial_started_at TEXT NOT NULL DEFAULT ''")
 
 
 def _ensure_email_verification_schema(conn) -> None:
@@ -1204,7 +1227,7 @@ def get_user_subscription(user_id: int) -> Optional[SubscriptionRecord]:
             """
             SELECT id, user_id, provider, plan_code, billing_status, customer_id,
                    subscription_id, checkout_url, portal_url, current_period_end,
-                   created_at, updated_at
+                   trial_started_at, created_at, updated_at
             FROM subscriptions
             WHERE user_id = ?
             """,
@@ -1220,12 +1243,13 @@ def upsert_user_subscription(
     user_id: int,
     provider: str = "lemon_squeezy",
     plan_code: str = "trial",
-    billing_status: str = "trial",
+    billing_status: str = "unactivated",
     customer_id: str = "",
     subscription_id: str = "",
     checkout_url: str = "",
     portal_url: str = "",
     current_period_end: str = "",
+    trial_started_at: str = "",
 ) -> SubscriptionRecord:
     init_project_store()
     with _connect() as conn:
@@ -1233,9 +1257,9 @@ def upsert_user_subscription(
             """
             INSERT INTO subscriptions (
                 user_id, provider, plan_code, billing_status, customer_id, subscription_id,
-                checkout_url, portal_url, current_period_end, created_at, updated_at
+                checkout_url, portal_url, current_period_end, trial_started_at, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT(user_id) DO UPDATE SET
                 provider = excluded.provider,
                 plan_code = excluded.plan_code,
@@ -1260,6 +1284,10 @@ def upsert_user_subscription(
                     WHEN excluded.current_period_end <> '' THEN excluded.current_period_end
                     ELSE subscriptions.current_period_end
                 END,
+                trial_started_at = CASE
+                    WHEN excluded.trial_started_at <> '' THEN excluded.trial_started_at
+                    ELSE subscriptions.trial_started_at
+                END,
                 updated_at = CURRENT_TIMESTAMP
             """,
             (
@@ -1272,11 +1300,33 @@ def upsert_user_subscription(
                 str(checkout_url),
                 str(portal_url),
                 str(current_period_end),
+                str(trial_started_at),
             ),
         )
     record = get_user_subscription(int(user_id))
     assert record is not None
     return record
+
+
+def set_trial_started_at(user_id: int) -> bool:
+    """Postavi trial_started_at na trenutno vreme i promeni billing_status u 'trial'."""
+    init_project_store()
+    try:
+        with _connect() as conn:
+            conn.execute(
+                """
+                UPDATE subscriptions
+                SET trial_started_at = CURRENT_TIMESTAMP,
+                    billing_status = 'trial',
+                    plan_code = 'trial',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+                """,
+                (int(user_id),),
+            )
+        return True
+    except Exception:
+        return False
 
 
 def get_billing_event(provider_event_id: str) -> Optional[BillingEventRecord]:
@@ -1837,6 +1887,7 @@ def _subscription_record_from_row(row: Any) -> SubscriptionRecord:
         checkout_url=str(row["checkout_url"]),
         portal_url=str(row["portal_url"]),
         current_period_end=str(row["current_period_end"]),
+        trial_started_at=str(row["trial_started_at"] if "trial_started_at" in dict(row) else ""),
         created_at=str(row["created_at"]),
         updated_at=str(row["updated_at"]),
     )

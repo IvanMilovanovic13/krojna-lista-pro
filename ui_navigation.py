@@ -34,6 +34,27 @@ def switch_tab(
     render_toolbar_refresh,
     logger,
 ) -> None:
+    # Proveri onboarding stanje — blokira sve tabove za unactivated/expired korisnike
+    if key not in ("nova", "nalog", "pocetalk"):
+        try:
+            from state_logic import get_user_onboarding_state
+            onboarding = get_user_onboarding_state()
+            if onboarding == "unactivated":
+                state.active_tab = "nova"
+                ui.notify("Izaberi plan ili aktiviraj besplatni probni pristup da nastavis.", type="warning")
+                safe_refresh(main_content_refresh, logger)
+                ui.timer(0.05, lambda: safe_refresh(render_toolbar_refresh, logger), once=True)
+                return
+            if onboarding == "trial_expired":
+                state.active_tab = "nalog"
+                state.account_upgrade_focus = True
+                ui.notify("Probni pristup je istekao. Aktiviraj plan da nastavis.", type="warning")
+                safe_refresh(main_content_refresh, logger)
+                ui.timer(0.05, lambda: safe_refresh(render_toolbar_refresh, logger), once=True)
+                return
+        except Exception:
+            pass
+
     if key == "krojna":
         from state_logic import get_cutlist_access_state, refresh_current_session_access
 

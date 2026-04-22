@@ -483,7 +483,7 @@ async def protected_export_download(job_id: int, filename: str, token: str = "")
         summary_tier = str(billing_summary.access_tier or "").strip().lower()
         if summary_tier == "admin":
             tier = "admin"
-        elif billing_status in {"active", "paid", "on_trial"} and plan_code not in {"", "trial"}:
+        elif billing_status in {"active", "paid"} and plan_code not in {"", "trial"}:
             tier = "paid"
     if tier not in {"paid", "admin", "local_beta"}:
         raise HTTPException(status_code=403, detail="paid_access_required")

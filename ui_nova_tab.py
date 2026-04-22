@@ -8,7 +8,7 @@ from i18n import (
     ERR_LOAD_PREFIX,
     MSG_SAVE_OK,
 )
-from state_logic import get_effective_access_context
+from state_logic import get_effective_access_context, get_user_onboarding_state, activate_free_trial
 
 _LOG = logging.getLogger(__name__)
 
@@ -76,6 +76,9 @@ def render_nova_tab(
         billing_status = str(payload.get('billing_status', '') or '').strip().lower()
         access_tier = str(payload.get('access_tier', '') or '').strip().lower()
         stripe_ready = bool(payload.get('stripe_ready', False))
+        # Unactivated korisnici ne vide stari billing blok — imaju novi onboarding UI
+        if billing_status == 'unactivated':
+            return "", "", False, False
         if account_status == 'admin_active' or access_tier == 'admin':
             return (
                 tr_fn('nova.billing_state_admin_title'),
@@ -123,6 +126,9 @@ def render_nova_tab(
         billing_status = str(payload.get('billing_status', '') or '').strip().lower()
         access_tier = str(payload.get('access_tier', '') or '').strip().lower()
         stripe_ready = bool(payload.get('stripe_ready', False))
+        # Unactivated korisnici nemaju primary action — samo onboarding kartice
+        if billing_status == 'unactivated':
+            return "", "", "", 'none'
         if account_status == 'admin_active' or access_tier == 'admin':
             return (
                 tr_fn('nova.primary_action_start_title'),
@@ -284,9 +290,10 @@ def render_nova_tab(
             _current_tier = str(effective_access.get('access_tier', '') or '').strip().lower()
             billing_title, billing_desc, show_checkout, show_portal = _dashboard_billing_copy(billing)
             primary_title, primary_desc, primary_btn, primary_mode = _dashboard_primary_action_copy(billing)
-            _show_plan_cards = _current_tier in {'trial', 'local', 'local_beta', ''}
+            _show_plan_cards = _current_tier in {'trial', 'local', 'local_beta', '', 'unactivated'}
             _upgrade_focus = bool(getattr(state, 'account_upgrade_focus', False))
             _brand_main, _brand_badge = _split_brand_title(tr_fn('wizard.title_app'))
+            _onboarding = get_user_onboarding_state()
 
             with ui.column().classes('w-full items-center gap-2 pt-2 pb-1'):
                 with ui.row().classes('items-start justify-center gap-2'):
@@ -360,6 +367,11 @@ def render_nova_tab(
                     ui.label(tr_fn('nova.primary_action_upgrade_title')).classes('text-lg font-bold text-gray-900')
                     ui.label(tr_fn('nova.primary_action_upgrade_desc')).classes('text-sm text-gray-700')
 
+            if _onboarding == "trial_expired":
+                with ui.card().classes('w-full p-5 bg-[#fff0f0] border-2 border-[#e53e3e]'):
+                    ui.label('Probni pristup je istekao').classes('text-base font-bold text-[#c53030]')
+                    ui.label('Tvoj besplatni probni period od 7 dana je istekao. Aktiviraj plan da nastavis koristiti aplikaciju.').classes('text-sm text-[#c53030]')
+
             if _show_plan_cards:
                 with ui.row().classes('w-full gap-4 max-md:flex-col'):
                     with ui.card().classes('flex-1 p-5 bg-white border border-gray-200'):
@@ -380,7 +392,40 @@ def render_nova_tab(
                 if _upgrade_focus:
                     ui.timer(0.05, lambda: ui.run_javascript('window.scrollTo({top: 0, behavior: "auto"})'), once=True)
 
-            if billing_title or billing_desc:
+            # Free trial kartica — prikazuje se samo za unactivated korisnike
+            if _onboarding == "unactivated":
+                def _activate_trial() -> None:
+                    ok, msg = activate_free_trial()
+                    if ok:
+                        ui.notify('Besplatni probni pristup aktiviran! Imas 7 dana.', type='positive', timeout=5000)
+                        main_content_refresh()
+                    else:
+                        ui.notify(msg, type='negative', timeout=5000)
+
+                with ui.card().classes('w-full p-5 bg-[#f0f7ff] border border-[#3b82f6]'):
+                    ui.label('Isprobaj besplatno — 7 dana').classes('text-base font-bold text-gray-900')
+                    ui.label('Kreiraj kuhinju, slazi module i istrazuj aplikaciju bez placanja. Krojna lista i izvoz su dostupni uz plaćeni plan.').classes('text-sm text-gray-600')
+                    ui.button(
+                        'Aktiviraj besplatni probni pristup',
+                        on_click=_activate_trial,
+                    ).classes('w-full mt-4 bg-white text-[#111] border border-[#111]')
+
+            # Prikaz preostalog vremena triala
+            if _onboarding == "trial_active":
+                try:
+                    from billing_models import get_trial_days_remaining_for_email
+                    _email = str(getattr(state, 'current_user_email', '') or '')
+                    _days = get_trial_days_remaining_for_email(_email)
+                    if _days >= 0:
+                        with ui.card().classes('w-full p-4 bg-[#f0fff4] border border-[#68d391]'):
+                            ui.label(f'Probni pristup aktivan — jos {_days} dan(a)').classes('text-sm font-bold text-[#276749]')
+                            ui.label('Krojna lista i izvoz postaju dostupni uz plaćeni plan.').classes('text-xs text-[#276749]')
+                except Exception:
+                    pass
+
+            # Stari billing blok — skrivamo ga za unactivated i trial_active korisnike
+            # koji vec imaju plan kartice i novi trial UI iznad
+            if (billing_title or billing_desc) and _onboarding not in ('unactivated', 'trial_active'):
                 with ui.card().classes('w-full p-5 bg-[#f8fafc] border border-gray-200'):
                     ui.label(billing_title).classes('text-base font-bold text-gray-900')
                     ui.label(billing_desc).classes('text-sm text-gray-600')
@@ -402,14 +447,15 @@ def render_nova_tab(
                                 'flex-1 bg-white text-[#111] border border-[#111]'
                             )
 
-            with ui.card().classes('w-full p-5 bg-white border border-gray-200'):
-                ui.label(primary_title).classes('text-base font-bold text-gray-900')
-                ui.label(primary_desc).classes('text-sm text-gray-600')
-                ui.label('Nastavi rad').classes('text-xs font-semibold uppercase tracking-[0.18em] text-gray-400')
-                if primary_mode != 'none' and str(primary_btn or '').strip():
-                    ui.button(primary_btn, on_click=_run_primary_action).classes(
-                        'w-full bg-white text-[#111] border border-[#111] mt-3'
-                    )
+            if _onboarding not in ('unactivated', 'trial_expired'):
+                with ui.card().classes('w-full p-5 bg-white border border-gray-200'):
+                    ui.label(primary_title).classes('text-base font-bold text-gray-900')
+                    ui.label(primary_desc).classes('text-sm text-gray-600')
+                    ui.label('Nastavi rad').classes('text-xs font-semibold uppercase tracking-[0.18em] text-gray-400')
+                    if primary_mode != 'none' and str(primary_btn or '').strip():
+                        ui.button(primary_btn, on_click=_run_primary_action).classes(
+                            'w-full bg-white text-[#111] border border-[#111] mt-3'
+                        )
 
         if int(getattr(state, 'current_project_id', 0) or 0):
             with ui.card().classes('w-full p-4 bg-[#f7f5ef] border border-gray-200'):

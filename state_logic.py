@@ -2498,6 +2498,7 @@ def get_current_billing_summary() -> Dict[str, Any] | None:
             "plan_code": str(summary.plan_code),
             "provider": str(summary.provider),
             "current_period_end": str(summary.current_period_end),
+            "trial_started_at": str(summary.trial_started_at),
             "has_checkout": bool(summary.has_checkout),
             "has_portal": bool(summary.has_portal),
             "stripe_ready": bool(summary.billing_ready),
@@ -2545,10 +2546,23 @@ def get_effective_access_context() -> Dict[str, Any]:
         billing_status = str(billing.get("billing_status", "") or "").strip().lower()
         plan_code = str(billing.get("plan_code", "") or "").strip().lower()
         billing_access_tier = str(billing.get("access_tier", "") or "").strip().lower()
-        is_paid_billing = billing_status in {"active", "paid", "on_trial"} and plan_code not in {"", "trial"}
-        is_trial_billing = billing_status in {"trial", "trialing"} or (
-            billing_status in {"active", "paid", "on_trial"} and plan_code == "trial"
+        is_paid_billing = billing_status in {"active", "paid"} and plan_code not in {"", "trial"}
+        is_trial_billing = billing_status in {"trial", "trialing", "on_trial"} or (
+            billing_status in {"active", "paid"} and plan_code == "trial"
         )
+        is_unactivated = billing_status == "unactivated"
+
+        if is_unactivated:
+            context.update(
+                {
+                    "access_tier": "unactivated",
+                    "subscription_status": "unactivated",
+                    "gate_reason": "Izaberi plan ili aktiviraj besplatni probni pristup.",
+                    "can_access_app": False,
+                    "mode": "unactivated",
+                }
+            )
+            return context
 
         if is_paid_billing:
             context.update(
@@ -2640,6 +2654,58 @@ def get_cutlist_access_state() -> Dict[str, str]:
         "reason": gate_reason,
         "mode": "blocked",
     }
+
+
+def get_user_onboarding_state() -> str:
+    """
+    Vraca stanje onboardinga korisnika:
+    - 'unactivated'   : novi korisnik, nije izabrao nista
+    - 'trial_active'  : aktivan free trial (jos nije istekao)
+    - 'trial_expired' : trial je istekao
+    - 'paid'          : platio
+    - 'admin'         : admin
+    - 'local'         : lokalni mod
+    """
+    try:
+        from billing_models import get_trial_days_remaining_for_email
+        email = str(getattr(state, "current_user_email", "") or "").strip()
+        if not email:
+            return "local"
+        billing = get_current_billing_summary()
+        if billing is None:
+            return "local"
+        billing_status = str(billing.get("billing_status", "") or "").strip().lower()
+        plan_code = str(billing.get("plan_code", "") or "").strip().lower()
+        access_tier = str(billing.get("access_tier", "") or "").strip().lower()
+        if access_tier == "admin":
+            return "admin"
+        if billing_status in {"active", "paid"} and plan_code not in {"", "trial"}:
+            return "paid"
+        if billing_status == "unactivated":
+            return "unactivated"
+        if billing_status in {"trial", "trialing", "on_trial"}:
+            days = get_trial_days_remaining_for_email(email)
+            if days == 0:
+                return "trial_expired"
+            return "trial_active"
+        return "unactivated"
+    except Exception:
+        return "local"
+
+
+def activate_free_trial() -> tuple[bool, str]:
+    """Aktivira free trial za trenutno ulogovanog korisnika."""
+    try:
+        from billing_models import activate_free_trial_for_email
+        email = str(getattr(state, "current_user_email", "") or "").strip()
+        if not email:
+            return False, "Nema aktivnog korisnika."
+        ok = activate_free_trial_for_email(email)
+        if ok:
+            return True, "Besplatni probni pristup je aktiviran."
+        return False, "Greska pri aktivaciji probnog pristupa."
+    except Exception as ex:
+        return False, f"Greska: {ex}"
 
 
 def build_checkout_start_message(plan_code: str = "pro_monthly") -> Tuple[bool, str]:
