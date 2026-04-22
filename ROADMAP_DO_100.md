@@ -106,6 +106,65 @@ Ovaj blok dokumentuje finalni lokalni closure pre staging-a. Sve tacke iz "Tacne
 - undo/redo
 - `matplotlib -> SVG` migracija (odvojena veca faza)
 
+### Upravljanje korisnicima — Obavezno pre javnog lansiranja
+
+**Sta vec postoji:**
+- registracija i login sistem — postoji i radi
+- reset lozinke — postoji (token-based)
+- istorija projekata po korisniku — postoji
+
+**Sta nedostaje ili treba proveriti:**
+
+- **Email notifikacije** — automatski mejlovi korisnicima:
+  - potvrda registracije (email verification) — postoji ali email provajder nije konfigurisan
+  - potvrda placanja — treba implementirati (Lemon Squeezy webhook moze da okine mejl)
+  - obaveštenje o isteku pretplate — treba implementirati
+  - dobrodošlica nakon aktivacije naloga — treba implementirati
+- **Istorija transakcija** — korisnik treba da vidi u Nalog tabu kada je platio, koliko, za koji plan
+- **Email server** — konfigurišu Resend.com ili SendGrid kao email provajder (trenutno BLOCKED, ceka firmu)
+- **Notifikacije o narednim koracima** — opciono, mozemo dodati in-app notifikacije
+
+**Sledeci koraci:**
+1. Konfigurisati Resend.com kao email provajder cim se otvori firma
+2. Implementirati email templeje za: verifikaciju, placanje, istek, dobrodoslicu
+3. Dodati prikaz istorije transakcija u Nalog tab (podaci dolaze iz Lemon Squeezy webhookova)
+
+**Prioritet:** visok — email verifikacija je vec FAIL u QA (B2)
+
+---
+
+### GDPR — Obavezno pre javnog lansiranja
+
+Ovo mora biti uradjeno pre nego sto prvi pravi korisnici pocnu da koriste aplikaciju.
+
+**Sta treba:**
+
+- **Privacy Policy stranica** — jasno napisana politika privatnosti na srpskom i engleskom
+- **Cookie consent** — obavestan pristanak korisnika pre pracenja (ako koristimo analytics)
+- **Pravo na brisanje naloga** — korisnik mora moci da zatrazi brisanje svih svojih podataka
+- **Pravo na export podataka** — korisnik mora moci da preuzme sve svoje podatke
+- **Sigurno cuvanje lozinki** — proveriti da su lozinke hesirane (bcrypt ili argon2)
+- **HTTPS obavezan** — vec postoji na stagingu i produkciji
+- **Rok cuvanja podataka** — definisati koliko dugo cuvamo podatke neaktivnih korisnika
+
+**Sledeci koraci za istrazivanje:**
+
+1. Konsultovati se sa pravnikom ili koristiti gotov GDPR template za SaaS
+2. Implementirati `/privacy` i `/terms` stranice u aplikaciji
+3. Dodati "Obrisi nalog" opciju u Nalog tab
+4. Proveriti da li Render (hosting) i Lemon Squeezy imaju Data Processing Agreements (DPA)
+
+**Prioritet:** visok — mora biti gotovo pre prvog pravog korisnika
+
+---
+
+### Blokirano — ceka otvaranje firme
+
+- **Lemon Squeezy store aktivacija** — potrebna firma ili preduzetnicka radnja, PIB, bankovni racun za isplatu
+- **Customer portal (QA E1-E3)** — BLOCKED dok store nije aktiviran
+- **Email delivery (QA B2)** — BLOCKED dok se ne konfigurise Resend ili drugi email provajder
+- Preporuka: najpre zavrsi QA testiranje kompletnog app-a, potvrdi da sve radi ispravno, pa tek onda otvori firmu i aktiviraj Lemon Squeezy store za pravi placeni saobracaj
+
 ## Hosted Staging Status + Test Scope - 20. april 2026.
 
 Ovaj blok ima prednost nad starijim status linijama kada postoji razlika. Namenjen je kao tacan zapis sta je sada podignuto na staging hostingu i sta mora da se testira na stvarnom hostu.
@@ -300,6 +359,69 @@ Praktican rezultat koji zelimo:
 - korisnik vise ne vidi verification URL u aplikaciji
 - korisnik dobija pravi email
 - email verification i password reset postaju stvarni SaaS tokovi, ne razvojni workaround
+
+### Resend + Staging Email Delivery Update - 21. april 2026.
+
+Ovaj blok zatvara prethodni planerski deo iznad i ima prednost nad starijim neazuriranim status linijama kada je tema stvarni email delivery tok.
+
+Spoljni setup koji je zavrsen:
+
+- izabran je `Resend` kao transactional email provider za auth tok
+- poddomen za slanje je potvrdjen kao:
+  - `auth.cabinetcutpro.com`
+- domain verification je uspesno zavrsen preko `Cloudflare`
+- `Resend` API key za staging je napravljen i sacuvan van repozitorijuma
+- staging `Render` service je dopunjen email env varijablama:
+  - `EMAIL_PROVIDER`
+  - `EMAIL_ENABLED`
+  - `EMAIL_API_KEY`
+  - `EMAIL_FROM`
+  - `EMAIL_FROM_NAME`
+  - `EMAIL_REPLY_TO`
+
+Kod i lokalni projekat koji su zavrseni:
+
+- dodat je novi `email_service.py` sloj za slanje preko `Resend` API-ja
+- `app_config.py` je prosiren email config vrednostima i runtime signalima za email readiness
+- registracija sada pokusava da posalje stvarni verification email umesto da uvek vraca sirov verification URL kroz UI poruku
+- login za `pending_verification` korisnika sada pokusava resend verification email tok
+- `forgot password` sada pokusava stvarni reset email tok umesto development token poruke
+- dodata je javna `/reset-password` stranica za email reset link
+- dodati su regresioni testovi za:
+  - `Resend` email payload
+  - auth email delivery flow
+  - email placeholder runtime readiness
+
+Git stanje koje je zavrseno:
+
+- novi commit je napravljen i push-ovan na `master`
+- commit hash:
+  - `579e463`
+- commit poruka:
+  - `Add Resend email delivery flow for auth`
+
+Operativno trenutno stanje:
+
+- staging env je pripremljen za pravi email delivery
+- ako `Render` trenutno prikazuje stariji deploy hash, pre acceptance testa mora da povuce bas commit `579e463`
+- prethodni env-only redeploy moze i dalje da pokazuje stariji hash tipa `1aed80a`; to nije finalni email-delivery build
+
+Tacan sledeci acceptance korak:
+
+1. potvrditi da je staging live na commitu `579e463`
+2. odraditi `B1-B7` auth acceptance sa svezim test emailom
+3. proveriti da:
+  - registracija vise ne izbacuje raw verification URL kroz UI
+  - verification email stvarno stize
+  - verify link aktivira nalog
+  - login prolazi tek posle verifikacije
+  - forgot password stize emailom i otvara `/reset-password`
+
+Prakticna napomena za test:
+
+- ako isti email vec postoji kao `pending_verification`, prvo probati `login` da se okine novi verification email
+- potpuno brisanje korisnika, ako ikad bude potrebno za "cist" retest, radi se u bazi a ne kroz logove
+- logovi nisu izvor naloga; korisnik zivi u `users` tabeli i povezanim auth tabelama
 
 ---
 

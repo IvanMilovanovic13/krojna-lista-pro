@@ -83,33 +83,41 @@ Radi ovim redom:
 
 | # | Korak | Ocekivanje | Status | Napomena |
 |---|---|---|---|---|
-| A1 | Otvori landing stranu | Strana se ucita bez greske | | |
-| A2 | Promeni jezik na javnom delu | Label-e se dosledno promene | | |
-| A3 | Otvori pricing | Pricing strana radi i nema mesanih SR/EN labela | | |
-| A4 | Otvori login | Login forma radi i copy je smislen | | |
-| A5 | Otvori register | Register forma radi i nema polomljenog layout-a | | |
-| A6 | Proveri da nema lazno otkljucanog PRO pristupa bez logina | Bez sesije nema placenog pristupa | | |
+| A1 | Otvori landing stranu | Strana se ucita bez greske | PASS | |
+| A2 | Promeni jezik na javnom delu | Label-e se dosledno promene | PASS | |
+| A3 | Otvori pricing | Pricing strana radi i nema mesanih SR/EN labela | PASS | billing planovi i checkout se ne proveravaju u ovom bloku |
+| A4 | Otvori login | Login forma radi i copy je smislen | PASS | |
+| A5 | Otvori register | Register forma radi i nema polomljenog layout-a | PASS | |
+| A6 | Proveri da nema lazno otkljucanog PRO pristupa bez logina | Bez sesije nema placenog pristupa | PASS | |
 
 ### 6.2 Registracija + verifikacija + sesija
 
+Operativna napomena pre `B1-B7`:
+
+- prvo potvrdi da je staging deploy stvarno na commitu `579e463` ili novijem
+- za `B1` koristi potpuno svez test email kada hoces "cist" register tok
+- ako isti email vec postoji kao `pending_verification`, nemoj prvo brisati nalog; probaj `login` da se posalje novi verification email
+- ako ikad treba potpuno ciscenje korisnika za retest, to se radi u bazi, ne kroz logove
+- cilj je da proverimo stvarni email delivery tok, ne samo da vidimo development token poruku
+
 | # | Korak | Ocekivanje | Status | Napomena |
 |---|---|---|---|---|
-| B1 | Registruj potpuno nov nalog | Registracija prodje bez pucanja forme | | |
-| B2 | Proveri verify-email tok | Korisnik dobije ili vidi validan verification flow | | |
-| B3 | Pokusaj login pre verifikacije ako je primenljivo | Pristup je blokiran ili jasno ogranicen dok nalog nije verifikovan | | |
-| B4 | Zavrsena verifikacija | Nalog prelazi u validno aktivno stanje | | |
-| B5 | Login sa verifikovanim nalogom | Korisnik ulazi u validnu sesiju | | |
-| B6 | Logout | Sesija se gasi bez polomljenog redirect-a | | |
-| B7 | Ponovni login | Sesija se normalno obnavlja | | |
+| B1 | Registruj potpuno nov nalog | Registracija prodje bez pucanja forme | PASS | |
+| B2 | Proveri verify-email tok | Korisnik dobije ili vidi validan verification flow | FAIL | email provajder nije konfigurisan — korisnik vidi samo verifikacioni link, ne prima email |
+| B3 | Pokusaj login pre verifikacije ako je primenljivo | Pristup je blokiran ili jasno ogranicen dok nalog nije verifikovan | PASS | login pre verifikacije nije bio mogucan |
+| B4 | Zavrsena verifikacija | Nalog prelazi u validno aktivno stanje | PASS | ponovljeno sa novim emailom |
+| B5 | Login sa verifikovanim nalogom | Korisnik ulazi u validnu sesiju | PASS | ponovljeno sa novim emailom |
+| B6 | Logout | Sesija se gasi bez polomljenog redirect-a | PASS | ponovljeno sa novim emailom |
+| B7 | Ponovni login | Sesija se normalno obnavlja | PASS | ponovljeno sa novim emailom |
 
 ### 6.3 Access gate i billing ulaz
 
 | # | Korak | Ocekivanje | Status | Napomena |
 |---|---|---|---|---|
-| C1 | Uloguj se kao neplaceni korisnik | Aplikacija radi bez lazno otkljucanog PRO pristupa | | |
-| C2 | Klikni `Krojna lista` bez placenog pristupa | Korisnik ide ka `Nalog` / billing toku | | |
-| C3 | Probaj `Sacuvaj` i `Ucitaj` ako su zakljucani pravilom pristupa | Redirekcija ide na pravi account/billing tok | | |
-| C4 | Otvori `Nalog` | Jasno su vidljive plan opcije i status naloga | | |
+| C1 | Uloguj se kao neplaceni korisnik | Aplikacija radi bez lazno otkljucanog PRO pristupa | PASS | |
+| C2 | Klikni `Krojna lista` bez placenog pristupa | Korisnik ide ka `Nalog` / billing toku | PASS | redirect na "Aktiviraj PRO za nastavak" |
+| C3 | Probaj `Sacuvaj` i `Ucitaj` ako su zakljucani pravilom pristupa | Redirekcija ide na pravi account/billing tok | PASS | redirect na "Aktiviraj PRO za nastavak" |
+| C4 | Otvori `Nalog` | Jasno su vidljive plan opcije i status naloga | PASS | vidljive PRO 7 dana i PRO 1 mesec opcije |
 
 ### 6.4 Lemon checkout
 
@@ -150,9 +158,9 @@ Koristi nalog koji ima pravo pristupa exportu.
 
 | # | Korak | Ocekivanje | Status | Napomena |
 |---|---|---|---|---|
-| G1 | Promeni jezik u aplikaciji | UI odmah menja tekstove | | |
-| G2 | Proveri canvas posle promene jezika | Canvas labele se osveze odmah | | |
-| G3 | Proveri cutlist legendu i nazive delova | Tekstovi su prevedeni i smisleni | | |
+| G1 | Promeni jezik u aplikaciji | UI odmah menja tekstove | PASS | Verifikovano 22.04.2026 |
+| G2 | Proveri canvas posle promene jezika | Canvas labele se osveze odmah | PASS | Canvas prikazuje EN labele nakon promene |
+| G3 | Proveri cutlist legendu i nazive delova | Tekstovi su prevedeni i smisleni | FAIL | **Kriticni bug — mesanje jezika u PDF (EN rezim):** (1) `_polish_instruction_line_en()` u `ui_assembly.py` ima `sr_replacements` listu koja prevodi srpski → **portugalski** umesto srpski → engleski (npr. "bancada", "gabarito", "próximo módulo", "PASSO 4 - PORTAS"). (2) Neke STEP zaglavlja nisu u `_translate_instruction_line` exact mapi: `KORAK 5 - ZAVRSNA PROVERA` ostaje nepreveden → dobija se "STEP 5 - ZAVRSNA PROVERA" umesto "STEP 5 - FINAL CHECK". (3) Srpski nazivi delova ("Parcijalna leđna ploča") prolaze kroz PDF tabele bez prevoda. Fix primenjen 22.04.2026 u `ui_assembly.py`. |
 | G4 | Dodaj element sa sirinom blizu limita | Inline hint za slobodan prostor radi | | |
 | G5 | Edituj postojeci element sa prevelikom sirinom | Inline upozorenje radi i ne oslanja se samo na notify | | |
 | G6 | Skroluj duboko u listi elemenata i izaberi donji element | Skrol ne sme da skoci na vrh pri selekciji | | |
