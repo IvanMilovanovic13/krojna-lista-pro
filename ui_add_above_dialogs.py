@@ -19,6 +19,7 @@ from i18n import (
     MSG_NEMA_TEMPLATE_NADSTRESNI,
     NOTIFY_ADDED_ABOVE_FMT,
     NOTIFY_ERR_SHORT_FMT,
+    tr,
 )
 from ui_panels_helpers import format_user_error
 
