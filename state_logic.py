@@ -1997,9 +1997,15 @@ def init_local_session_state() -> None:
 
 
 def _get_user_storage() -> Any | None:
+    # Koristimo app.storage.client umesto app.storage.user.
+    # app.storage.user je na Render-u deljiv između browser sesija jer NiceGUI
+    # pada na zajednički in-memory dict kada filesystem nije dostupan za pisanje.
+    # app.storage.client je striktno per-WebSocket-konekcija i nikad nije deljiv.
+    # Tradeoff: token se gubi na refresh stranice (korisnik se ponovo loguje),
+    # ali nema cross-browser curenja sesije.
     try:
         from nicegui import app as nicegui_app
-        return nicegui_app.storage.user
+        return nicegui_app.storage.client
     except Exception:
         return None
 
