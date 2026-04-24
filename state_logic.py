@@ -357,8 +357,6 @@ def _get_current_client_key() -> str:
     """
     Vraca per-klijent kljuc za _STATE_REGISTRY.
     Iskljucivo koristi context.client.id — nikad zajednicki storage.
-    Fallback na storage je uklonjen jer uzrokuje cross-sesijsko curenje stanja
-    kada vise browsera ili workera deli isti app.storage.user bucket.
     """
     try:
         from nicegui import context
@@ -368,13 +366,14 @@ def _get_current_client_key() -> str:
             return str(client_id)
     except Exception:
         pass
-    # Pozivi bez klijentskog konteksta (background taskovi, timeri bez klijenta)
-    # dobijaju izolovani kljuc koji se nikad ne mesa sa pravim klijentima.
     return "_no_client_context_"
 
 
 def get_runtime_state() -> AppState:
     key = _get_current_client_key()
+    _LOG.info("[SESSION_DEBUG] get_runtime_state key=%s email=%s",
+              key,
+              _STATE_REGISTRY.get(key, AppState()).current_user_email or "(prazno)")
     current = _STATE_REGISTRY.get(key)
     if current is None:
         current = AppState()
@@ -2093,6 +2092,8 @@ def _apply_session_state(session: Any) -> None:
         previous_email = str(getattr(state, "current_user_email", "") or "").strip().lower()
         next_user_id = int(session.user.user_id)
         next_email = str(session.user.email)
+        _LOG.info("[SESSION_DEBUG] _apply_session_state key=%s prev=%s next=%s",
+                  _get_current_client_key(), previous_email or "(prazno)", next_email)
         user_changed = previous_user_id not in (0, next_user_id) or (
             previous_email and previous_email != str(next_email).strip().lower()
         )
