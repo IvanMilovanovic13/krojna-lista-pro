@@ -353,46 +353,24 @@ class AppState:
 _STATE_REGISTRY: Dict[str, AppState] = {"default": AppState()}
 
 
-def _get_storage_scoped_state_key() -> str:
-    try:
-        from nicegui import app as nicegui_app
-
-        storage = getattr(nicegui_app, "storage", None)
-        user_storage = getattr(storage, "user", None) if storage is not None else None
-        if user_storage is None:
-            return ""
-
-        auth_token = str(user_storage.get("auth_session_token", "") or "").strip()
-        if auth_token:
-            return f"session:{auth_token}"
-
-        anon_key = str(user_storage.get("_state_scope_key", "") or "").strip()
-        if anon_key:
-            return f"anon:{anon_key}"
-
-        anon_key = uuid.uuid4().hex
-        user_storage["_state_scope_key"] = anon_key
-        return f"anon:{anon_key}"
-    except Exception:
-        return ""
-
-
 def _get_current_client_key() -> str:
+    """
+    Vraca per-klijent kljuc za _STATE_REGISTRY.
+    Iskljucivo koristi context.client.id — nikad zajednicki storage.
+    Fallback na storage je uklonjen jer uzrokuje cross-sesijsko curenje stanja
+    kada vise browsera ili workera deli isti app.storage.user bucket.
+    """
     try:
         from nicegui import context
         client = getattr(context, "client", None)
         client_id = getattr(client, "id", None)
-        if client_id is None:
-            storage_key = _get_storage_scoped_state_key()
-            if storage_key:
-                return storage_key
-            return "default"
-        return str(client_id)
+        if client_id is not None:
+            return str(client_id)
     except Exception:
-        storage_key = _get_storage_scoped_state_key()
-        if storage_key:
-            return storage_key
-        return "default"
+        pass
+    # Pozivi bez klijentskog konteksta (background taskovi, timeri bez klijenta)
+    # dobijaju izolovani kljuc koji se nikad ne mesa sa pravim klijentima.
+    return "_no_client_context_"
 
 
 def get_runtime_state() -> AppState:
