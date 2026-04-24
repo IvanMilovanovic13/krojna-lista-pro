@@ -355,24 +355,20 @@ _STATE_REGISTRY: Dict[str, AppState] = {"default": AppState()}
 
 def _get_current_client_key() -> str:
     """
-    Vraca per-klijent kljuc za _STATE_REGISTRY.
-    context.client je ContextVar u NiceGUI — mora se koristiti .get()
-    da bi se dobila trenutna vrednost, a ne sam ContextVar objekat.
+    Vraca per-session kljuc za _STATE_REGISTRY.
+    Koristi request_contextvar iz nicegui.storage — isti mehanizam koji
+    koristi app.storage.user interno. request.session['id'] je per-browser-session
+    UUID kreiran od strane RequestTrackingMiddleware, razlicit za svaki browser/uredjaj.
+    ContextVar se propagira na sve asyncio task-ove koji nastanu u WebSocket handleru,
+    sto pokriva sve NiceGUI event callback-e i refreshable re-rendere.
     """
     try:
-        from nicegui import context as _nicegui_ctx
-        from contextvars import ContextVar
-        _client_attr = getattr(_nicegui_ctx, "client", None)
-        if _client_attr is None:
-            return "_no_client_context_"
-        # Ako je ContextVar, pozovi .get() da dobijemo stvarni Client objekat
-        if isinstance(_client_attr, ContextVar):
-            _client = _client_attr.get(None)
-        else:
-            _client = _client_attr
-        client_id = getattr(_client, "id", None)
-        if client_id is not None:
-            return str(client_id)
+        from nicegui.storage import request_contextvar
+        _req = request_contextvar.get()
+        if _req is not None:
+            _sid = _req.session.get("id")
+            if _sid:
+                return str(_sid)
     except Exception:
         pass
     return "_no_client_context_"
@@ -380,9 +376,6 @@ def _get_current_client_key() -> str:
 
 def get_runtime_state() -> AppState:
     key = _get_current_client_key()
-    _LOG.info("[SESSION_DEBUG] get_runtime_state key=%s email=%s",
-              key,
-              _STATE_REGISTRY.get(key, AppState()).current_user_email or "(prazno)")
     current = _STATE_REGISTRY.get(key)
     if current is None:
         current = AppState()
@@ -2005,15 +1998,13 @@ def init_local_session_state() -> None:
 
 
 def _get_user_storage() -> Any | None:
-    # Koristimo app.storage.client umesto app.storage.user.
-    # app.storage.user je na Render-u deljiv između browser sesija jer NiceGUI
-    # pada na zajednički in-memory dict kada filesystem nije dostupan za pisanje.
-    # app.storage.client je striktno per-WebSocket-konekcija i nikad nije deljiv.
-    # Tradeoff: token se gubi na refresh stranice (korisnik se ponovo loguje),
-    # ali nema cross-browser curenja sesije.
+    # app.storage.user je per-browser-session (kljuc je session cookie ID).
+    # Isti kljuc koristi _get_current_client_key() — nema cross-browser curenja.
+    # Na Render-u storage moze biti in-memory ako filesystem nije dostupan,
+    # ali izolacija po sesiji i dalje radi jer je kljuc session cookie.
     try:
         from nicegui import app as nicegui_app
-        return nicegui_app.storage.client
+        return nicegui_app.storage.user
     except Exception:
         return None
 
@@ -2101,8 +2092,6 @@ def _apply_session_state(session: Any) -> None:
         previous_email = str(getattr(state, "current_user_email", "") or "").strip().lower()
         next_user_id = int(session.user.user_id)
         next_email = str(session.user.email)
-        _LOG.info("[SESSION_DEBUG] _apply_session_state key=%s prev=%s next=%s",
-                  _get_current_client_key(), previous_email or "(prazno)", next_email)
         user_changed = previous_user_id not in (0, next_user_id) or (
             previous_email and previous_email != str(next_email).strip().lower()
         )
