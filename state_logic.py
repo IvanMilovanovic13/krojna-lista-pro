@@ -355,22 +355,58 @@ _STATE_REGISTRY: Dict[str, AppState] = {"default": AppState()}
 
 def _get_current_client_key() -> str:
     """
-    Vraca per-session kljuc za _STATE_REGISTRY.
-    Koristi request_contextvar iz nicegui.storage — isti mehanizam koji
-    koristi app.storage.user interno. request.session['id'] je per-browser-session
-    UUID kreiran od strane RequestTrackingMiddleware, razlicit za svaki browser/uredjaj.
-    ContextVar se propagira na sve asyncio task-ove koji nastanu u WebSocket handleru,
-    sto pokriva sve NiceGUI event callback-e i refreshable re-rendere.
+    Vraca per-klijent kljuc za _STATE_REGISTRY.
+
+    Mehanizam: client.handle_event() u NiceGUI uvek radi 'with self:' sto popunjava
+    slot stack za trenutni asyncio task. Traverse slot stack-a daje nam pravi Client
+    objekat — koji je jedinstven po browser sesiji (novi Client se kreira na svakom
+    page load-u).
+
+    Napomena: request_contextvar NE radi za socket.io WebSocket evente jer je
+    RequestTrackingMiddleware BaseHTTPMiddleware koji preskace WebSocket veze.
+    Zato koristimo slot stack pristup koji radi i za HTTP i za socket.io.
+
+    Kompatibilnost:
+    - NiceGUI 1.x: context.get_client() funkcija
+    - NiceGUI 3.x: context.client property na Context() instanci
     """
+    # Metod 1: NiceGUI 1.x — context.get_client() (radi u event handler-ima)
+    try:
+        from nicegui import context as _ctx
+        _get_fn = getattr(_ctx, 'get_client', None)
+        if callable(_get_fn):
+            _client = _get_fn()  # raises RuntimeError ako je slot stack prazan
+            _cid = str(getattr(_client, 'id', '') or '')
+            if _cid:
+                return _cid
+    except RuntimeError:
+        pass  # slot stack prazan — nismo u event handler kontekstu
+    except Exception:
+        pass
+
+    # Metod 2: NiceGUI 3.x — context.client property
+    try:
+        from nicegui import context as _ctx
+        _client = _ctx.client  # raises RuntimeError ako je slot stack prazan
+        _cid = str(getattr(_client, 'id', '') or '')
+        if _cid:
+            return _cid
+    except RuntimeError:
+        pass
+    except Exception:
+        pass
+
+    # Metod 3: request_contextvar — radi za HTTP zahteve (page load), ne za socket.io
     try:
         from nicegui.storage import request_contextvar
         _req = request_contextvar.get()
         if _req is not None:
-            _sid = _req.session.get("id")
+            _sid = _req.session.get('id')
             if _sid:
                 return str(_sid)
     except Exception:
         pass
+
     return "_no_client_context_"
 
 
