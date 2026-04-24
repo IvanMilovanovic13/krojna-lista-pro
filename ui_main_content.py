@@ -95,6 +95,8 @@ def render_main_content_inner(
     get_room_wall,
     room_opening_types,
     room_fixture_types,
+    reset_3d_camera_home=None,
+    set_3d_camera_preset=None,
 ) -> None:
     from state_logic import get_effective_access_context
 
@@ -132,6 +134,8 @@ def render_main_content_inner(
             wall_len_h=wall_len_h,
             zone_baseline_and_height=zone_baseline_and_height,
             get_zone_depth_standard=get_zone_depth_standard,
+            reset_3d_camera_home=reset_3d_camera_home,
+            set_3d_camera_preset=set_3d_camera_preset,
         )
     elif state.active_tab == "krojna":
         render_cutlist_tab(

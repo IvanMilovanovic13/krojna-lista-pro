@@ -12,7 +12,7 @@ from layout_engine import find_first_free_x, solve_layout
 from visualization import _render, _wall_len_h, _zone_baseline_and_height, render_element_preview
 from svg_icons import svg_for_tid
 from room_setup_wizard import render_room_setup_step3
-from render_3d import render_kitchen_elements_scene_3d
+from render_3d import render_kitchen_elements_scene_3d, reset_3d_camera_home as _reset_3d_camera_home, set_3d_camera_preset as _set_3d_camera_preset
 from ui_toolbar import render_toolbar_layout
 from ui_project_io import make_toolbar_actions
 from ui_navigation import switch_tab as _switch_tab
@@ -434,6 +434,7 @@ def canvas_toolbar_panel() -> None:
         set_grid_mm=_set_grid_mm,
         set_show_bounds=_set_show_bounds,
         set_ceiling_filler=_set_ceiling_filler,
+        reset_3d_camera_home=_reset_3d_camera_home,
     )
 
 
@@ -582,6 +583,8 @@ def _main_content_inner() -> None:
         get_ops_runtime_summary=get_ops_runtime_summary,
         get_visible_audit_logs=get_visible_audit_logs,
         get_visible_users=get_visible_users,
+        reset_3d_camera_home=_reset_3d_camera_home,
+        set_3d_camera_preset=_set_3d_camera_preset,
     )
 
 

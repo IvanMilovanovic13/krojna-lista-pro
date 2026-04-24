@@ -312,14 +312,24 @@ def render_settings_tab(
                         _bind_number_commit(_foot_inp, caster=int, apply_fn=_on_foot_change)
                         ui.label("mm").classes("text-sm text-gray-500 shrink-0")
                     with _field_row(tr_fn("settings.worktop_thk_cm"), 9.2):
-                        ui.label(tr_fn("settings.worktop_thk_cm")).classes("text-sm text-gray-700 shrink-0").style(
+                        ui.label(tr_fn("settings.worktop_thk_cm").replace(" (cm)", "")).classes("text-sm text-gray-700 shrink-0").style(
                             "width: var(--settings-label-width);"
                         )
+                        _cur_thk_mm = int(round(float(state.kitchen.get("worktop", {}).get("thickness", 3.8)) * 10))
+
+                        def _on_worktop_thk_mm_change(e: Any) -> None:
+                            try:
+                                _on_worktop_thk_change(float(e.value) / 10.0)
+                            except Exception:
+                                pass
+
                         ui.select(
-                            [2.5, 3.0, 3.5, 3.8, 4.0, 4.5, 5.0],
-                            value=state.kitchen.get("worktop", {}).get("thickness", 3.8),
-                            on_change=lambda e: _on_worktop_thk_change(e.value),
-                        ).props("dense borderless").classes("flex-1")
+                            [20, 28, 30, 38, 40, 60],
+                            value=_cur_thk_mm,
+                            on_change=_on_worktop_thk_mm_change,
+                            new_value_mode='add-unique',
+                        ).props('dense borderless use-input input-debounce=0').classes('flex-1')
+                        ui.label("mm").classes("text-sm text-gray-500 shrink-0")
                     with _field_row(tr_fn("settings.base_height"), 9.2):
                         ui.label(tr_fn("settings.base_height").replace(" [mm]", "")).classes("text-sm text-gray-700 shrink-0").style(
                             "width: var(--settings-label-width);"

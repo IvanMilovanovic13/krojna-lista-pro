@@ -19,6 +19,8 @@ def render_elements_tab(
     wall_len_h,
     zone_baseline_and_height,
     get_zone_depth_standard,
+    reset_3d_camera_home=None,
+    set_3d_camera_preset=None,
 ) -> None:
     """Renderuje ceo 'Elementi' tab (UI layout only)."""
     if not hasattr(state, 'element_canvas_mode'):
@@ -84,3 +86,47 @@ def render_elements_tab(
                         scene_kitchen_3d()
                     else:
                         nacrt_render()
+
+                # Kontrole kamere — vidljivo samo u 3D modu
+                if str(getattr(state, 'element_canvas_mode', '2D')).upper() == '3D':
+                    with ui.element('div').classes(
+                        'absolute bottom-4 right-4 z-10 flex flex-col gap-1 items-end'
+                    ):
+                        # Info o kontrolama — ikona sa tooltip-om
+                        ui.icon('info_outline').classes(
+                            'text-gray-400 text-lg cursor-help'
+                        ).tooltip(
+                            'Rotacija: levi klik + vuci\n'
+                            'Pan (pomeri pogled): desni klik + vuci  ili  Shift + levi klik\n'
+                            'Strelice ↑↓←→: pomeri centar pogleda\n'
+                            'Zum: skrol točkić'
+                        )
+                        # Preset pogledi
+                        with ui.element('div').classes('flex flex-col gap-1'):
+                            if set_3d_camera_preset is not None:
+                                ui.button(
+                                    icon='vertical_align_top',
+                                    on_click=lambda: set_3d_camera_preset(ui, 'top'),
+                                ).props('round dense').classes(
+                                    'bg-white text-gray-700 shadow border border-gray-200'
+                                ).tooltip('Odozgo')
+                                ui.button(
+                                    icon='chevron_left',
+                                    on_click=lambda: set_3d_camera_preset(ui, 'left'),
+                                ).props('round dense').classes(
+                                    'bg-white text-gray-700 shadow border border-gray-200'
+                                ).tooltip('Leva strana')
+                                ui.button(
+                                    icon='chevron_right',
+                                    on_click=lambda: set_3d_camera_preset(ui, 'right'),
+                                ).props('round dense').classes(
+                                    'bg-white text-gray-700 shadow border border-gray-200'
+                                ).tooltip('Desna strana')
+                        # Reset / Home dugme
+                        if reset_3d_camera_home is not None:
+                            ui.button(
+                                icon='home',
+                                on_click=lambda: reset_3d_camera_home(ui),
+                            ).props('round dense').classes(
+                                'bg-gray-800 text-white shadow-md border border-gray-700'
+                            ).tooltip('Početni pogled')

@@ -10,6 +10,13 @@ from module_rules import dishwasher_installation_metrics
 
 _LOG = logging.getLogger(__name__)
 
+# Poslednji home JS za reset kamere — overwrite svaki put kada se renderuje scena
+_LAST_HOME_JS: list[str] = [""]
+# Poslednja scena, kamera i target — za preset poglede (top/left/right)
+_LAST_SCENE: list[Any] = [None]
+_LAST_CAM: list = [[0.0, 2.0, 5.0]]   # [cx, cy, cz]
+_LAST_TGT: list = [[0.0, 1.0, 0.0]]   # [tx, ty, tz]
+
 TEMPLATE_OPEN = {
     'BASE_OPEN', 'WALL_OPEN', 'TALL_OPEN', 'TALL_TOP_OPEN', 'WALL_UPPER_OPEN',
 }
@@ -134,6 +141,122 @@ def to_scene_coords(
     return cx, cy, cz, bw, bh, bd
 
 
+def _get_scene_dom_id(scene: Any) -> str:
+    """Vrati trenutni DOM ID scene — uvek svež, ne keširan."""
+    try:
+        return f"c{int(getattr(scene, 'id', 0))}"
+    except Exception:
+        return ""
+
+
+def _make_orbit_js(
+    scene: Any,
+    cx: float,
+    cy: float,
+    cz: float,
+    tx: float,
+    ty: float,
+    tz: float,
+    *,
+    apply_settings: bool = False,
+) -> str:
+    """Generiši JS koji pozicionira kameru i opciono primenjuje OrbitControls podešavanja.
+
+    Strategija pronalaženja OrbitControls:
+    1. Počni od scene root elementa (i njegovih potomaka) — NiceGUI ih drži u children
+    2. Ako ne nađe, idi gore kroz parentElement
+    3. Kad pronađe, sačuvaj kao window.__k3d_ctrl za brzi pristup u reset/preset
+    """
+    dom_id = _get_scene_dom_id(scene)
+    if not dom_id:
+        return ""
+    settings_block = ""
+    if apply_settings:
+        settings_block = """
+            // Slobodan ugao — sve ose
+            ctrl.minPolarAngle = 0.0;
+            ctrl.maxPolarAngle = Math.PI;
+            // Pan: desni klik ili Shift+drag ili strelice
+            ctrl.enablePan = true;
+            ctrl.screenSpacePanning = true;
+            ctrl.enableZoom = true;
+            // Sprečiti kameru da uđe u mesh
+            ctrl.minDistance = 0.15;
+            ctrl.maxDistance = 80.0;
+            // Inercija
+            ctrl.enableDamping = true;
+            ctrl.dampingFactor = 0.08;
+            // Brzine
+            ctrl.rotateSpeed = 0.65;
+            ctrl.zoomSpeed = 1.4;
+            ctrl.panSpeed = 1.2;
+            ctrl.keyPanSpeed = 20.0;
+            // Strelice na tastaturi pomeraju target (pan)
+            try {{ ctrl.listenToKeyEvents(document.body); }} catch(e) {{}}"""
+    return rf"""(function(){{
+        const root = document.getElementById('{dom_id}');
+        if (!root) return;
+        function findCtrl(root) {{
+            // Traži u potomcima (NiceGUI OrbitControls su na child canvas)
+            const all = [root, ...root.querySelectorAll('*')];
+            for (const el of all) {{
+                const vc = el._vueParentComponent;
+                if (vc && vc.setupState) {{
+                    let c = vc.setupState.controls;
+                    if (c && c.value !== undefined) c = c.value;
+                    if (c && typeof c.getPolarAngle === 'function') return c;
+                }}
+            }}
+            // Fallback: idi gore
+            let el = root.parentElement;
+            for (let i = 0; i < 20 && el; i++) {{
+                const vc = el._vueParentComponent;
+                if (vc && vc.setupState) {{
+                    let c = vc.setupState.controls;
+                    if (c && c.value !== undefined) c = c.value;
+                    if (c && typeof c.getPolarAngle === 'function') return c;
+                }}
+                el = el.parentElement;
+            }}
+            return null;
+        }}
+        function applyView(tries) {{
+            const ctrl = findCtrl(root);
+            if (!ctrl) {{
+                if (tries > 0) setTimeout(() => applyView(tries - 1), 250);
+                return;
+            }}
+            // Sačuvaj globalnu referencu — reset/preset je koriste direktno
+            window.__k3d_ctrl = ctrl;
+            ctrl.target.set({tx}, {ty}, {tz});
+            const cam = ctrl.object;
+            cam.position.set({cx}, {cy}, {cz});
+            cam.up.set(0, 1, 0);
+            cam.lookAt({tx}, {ty}, {tz});
+            ctrl.update();{settings_block}
+            ctrl.update();
+        }}
+        applyView(22);
+    }})();"""
+
+
+def _make_ctrl_move_js(cx: float, cy: float, cz: float, tx: float, ty: float, tz: float) -> str:
+    """Generiši JS koji pomera kameru koristeći window.__k3d_ctrl (bez DOM pretrage).
+
+    Koristi se za reset i preset poglede — mnogo brže i pouzdanije od DOM traversala.
+    """
+    return rf"""(function(){{
+        const ctrl = window.__k3d_ctrl;
+        if (!ctrl) return;
+        ctrl.target.set({tx}, {ty}, {tz});
+        const cam = ctrl.object;
+        cam.position.set({cx}, {cy}, {cz});
+        cam.up.set(0, 1, 0);
+        cam.lookAt({tx}, {ty}, {tz});
+        ctrl.update();
+    }})();"""
+
+
 def _lock_scene_to_horizontal_orbit(
     ui: Any,
     scene: Any,
@@ -157,60 +280,72 @@ def _lock_scene_to_horizontal_orbit(
     5. Zaključa polar kut na izračunati opseg
     6. Onemogući pan
     """
-    try:
-        _dom_id = f"c{int(getattr(scene, 'id', 0))}"
-    except Exception:
-        _dom_id = ""
-    if not _dom_id:
-        return
     _cx  = round(float(cam_x), 5)
     _cy  = round(float(cam_y), 5)
     _cz  = round(float(cam_z), 5)
     _tx  = round(float(target_x), 5)
     _ty  = round(float(target_y), 5)
     _tz  = round(float(target_z), 5)
-    _pa  = round(float(polar_angle), 5)
-    _js = rf"""(function(){{
-        const root = document.getElementById('{_dom_id}');
-        if (!root) return;
-        function applyLock(tries) {{
-            let ctrl = null, el = root;
-            for (let i = 0; i < 28 && el; i++) {{
-                const vc = el._vueParentComponent;
-                if (vc && vc.setupState) {{
-                    ctrl = vc.setupState.controls;
-                    if (ctrl && ctrl.value !== undefined) ctrl = ctrl.value;
-                    if (ctrl && typeof ctrl.getPolarAngle === 'function') break;
-                    ctrl = null;
-                }}
-                el = el.parentElement;
-            }}
-            if (!ctrl) {{
-                if (tries > 0) setTimeout(() => applyLock(tries - 1), 250);
-                return;
-            }}
-            // 1) Postavi target (centar orbitanja = kuhinjski zid)
-            ctrl.target.set({_tx}, {_ty}, {_tz});
-            // 2) Direktno postavi poziciju kamere (zaobilazi NiceGUI async problem)
-            const cam = ctrl.object;
-            cam.position.set({_cx}, {_cy}, {_cz});
-            cam.up.set(0, 1, 0);
-            cam.lookAt({_tx}, {_ty}, {_tz});
-            // 3) Sinhronizuj OrbitControls interne sferne koordinate sa novom pozicijom
-            ctrl.update();
-            // 4) Zaključaj vertikalni kut — dozvoli ±18° oko željenog polar kuta
-            const margin = 0.30;
-            ctrl.minPolarAngle = Math.max(0.05, {_pa} - margin);
-            ctrl.maxPolarAngle = Math.min(Math.PI - 0.05, {_pa} + margin);
-            ctrl.enablePan = false;
-            ctrl.screenSpacePanning = false;
-            ctrl.enableZoom = true;
-            // 5) Još jedan update da primijeni nova ograničenja
-            ctrl.update();
-        }}
-        applyLock(22);
-    }})();"""
+
+    # Sačuvaj scenu i koordinate za preset poglede i reset
+    _LAST_SCENE[0] = scene
+    _LAST_CAM[0] = [_cx, _cy, _cz]
+    _LAST_TGT[0] = [_tx, _ty, _tz]
+
+    _js = _make_orbit_js(scene, _cx, _cy, _cz, _tx, _ty, _tz, apply_settings=True)
+    _LAST_HOME_JS[0] = _js  # sačuvaj za reset dugme
     ui.timer(delay_s, lambda: ui.run_javascript(_js), once=True)
+
+
+def reset_3d_camera_home(ui: Any) -> None:
+    """Resetuj kameru na početni (home) pogled koristeći scene.move_camera().
+
+    Čisto NiceGUI rešenje — bez JS traversala, bez DOM ID-ja.
+    """
+    scene = _LAST_SCENE[0]
+    if scene is None:
+        return
+    cx, cy, cz = _LAST_CAM[0]
+    tx, ty, tz = _LAST_TGT[0]
+    try:
+        scene.move_camera(
+            x=cx, y=cy, z=cz,
+            look_at_x=tx, look_at_y=ty, look_at_z=tz,
+            up_x=0.0, up_y=1.0, up_z=0.0,
+        )
+    except Exception as exc:
+        _LOG.debug("reset_3d_camera_home: move_camera failed: %s", exc)
+
+
+def set_3d_camera_preset(ui: Any, preset: str) -> None:
+    """Postavi kameru na zadati preset pogled: 'top', 'left', 'right'.
+
+    Koristi scene.move_camera() — pouzdan NiceGUI metod.
+    """
+    scene = _LAST_SCENE[0]
+    if scene is None:
+        return
+    hcx, hcy, hcz = _LAST_CAM[0]
+    tx, ty, tz = _LAST_TGT[0]
+    r = max(0.5, math.sqrt((hcx - tx) ** 2 + (hcy - ty) ** 2 + (hcz - tz) ** 2))
+
+    if preset == 'top':
+        cx, cy, cz = tx, ty + r * 1.5, tz + r * 0.15
+    elif preset == 'left':
+        cx, cy, cz = tx - r * 1.2, ty + r * 0.35, tz + r * 0.3
+    elif preset == 'right':
+        cx, cy, cz = tx + r * 1.2, ty + r * 0.35, tz + r * 0.3
+    else:
+        return
+
+    try:
+        scene.move_camera(
+            x=cx, y=cy, z=cz,
+            look_at_x=tx, look_at_y=ty, look_at_z=tz,
+            up_x=0.0, up_y=1.0, up_z=0.0,
+        )
+    except Exception as exc:
+        _LOG.debug("set_3d_camera_preset '%s': move_camera failed: %s", preset, exc)
 
 
 def _move_camera_y_up(
@@ -429,7 +564,7 @@ def render_kitchen_elements_scene_3d(
             _bx = (_x + _w / 2.0) * s
             _by = (float(_y0) + _h / 2.0) * s
             _bz = (_d_mm / 2.0) * s
-            _front_z = (_d_mm * s) - 0.002
+            _front_z = (_d_mm * s) + 0.008   # 8mm ispred prednje ploče korpusa — eliminiše z-fighting pri svim uglovima
 
             # Boja fronta: 1) per-modul params, 2) globalni front_color, 3) default bijela
             _global_front = str(
@@ -523,7 +658,7 @@ def render_kitchen_elements_scene_3d(
                 ).material(_bc, opacity=1.0)
             else:
                 # ── ZATVORENI ORMAR: solidan korpus boks ──
-                _carcass = sc.box(_w * s, _h * s, _d_mm * s).move(_bx, _by, _bz).material(_carcass_c, opacity=1.0)
+                _carcass = sc.box(_w * s, _h * s, (_d_mm - 2) * s).move(_bx, _by, _bz).material(_carcass_c, opacity=1.0)
                 # Gornja ploča korporusa (suptilna)
                 sc.box((_w - 6) * s, 0.005, (_d_mm - 8) * s).move(
                     _bx,

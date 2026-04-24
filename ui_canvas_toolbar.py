@@ -24,6 +24,7 @@ def render_canvas_toolbar(
     set_grid_mm,
     set_show_bounds,
     set_ceiling_filler,
+    reset_3d_camera_home=None,
 ) -> None:
     """Renderuje toolbar iznad 2D/3D canvasa (UI-only, bez promene logike)."""
     _layout_key = str(getattr(state, 'kitchen_layout', '') or '').lower().strip()
@@ -86,9 +87,17 @@ def render_canvas_toolbar(
             tr_fn('canvas.label_filler'), value=state.ceiling_filler,
             on_change=lambda e: (set_ceiling_filler(e.value), nacrt_refresh())
         ).classes('text-xs').props('color=dark')
+        _is_3d = str(getattr(state, 'element_canvas_mode', '2D')).upper() == '3D'
+
+        def _on_reset_click():
+            if _is_3d and reset_3d_camera_home is not None:
+                reset_3d_camera_home(ui)
+            else:
+                nacrt_refresh()
+
         ui.button(
             tr_fn('canvas.reset_view'),
-            on_click=nacrt_refresh
+            on_click=_on_reset_click,
         ).props('dense outline color=dark').classes('text-xs')
         ui.separator().props('vertical').classes('h-5 mx-1 bg-gray-200')
         ui.label(tr_fn('canvas.label_canvas')).classes('text-xs text-gray-500 font-medium shrink-0')
