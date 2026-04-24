@@ -356,12 +356,21 @@ _STATE_REGISTRY: Dict[str, AppState] = {"default": AppState()}
 def _get_current_client_key() -> str:
     """
     Vraca per-klijent kljuc za _STATE_REGISTRY.
-    Iskljucivo koristi context.client.id — nikad zajednicki storage.
+    context.client je ContextVar u NiceGUI — mora se koristiti .get()
+    da bi se dobila trenutna vrednost, a ne sam ContextVar objekat.
     """
     try:
-        from nicegui import context
-        client = getattr(context, "client", None)
-        client_id = getattr(client, "id", None)
+        from nicegui import context as _nicegui_ctx
+        from contextvars import ContextVar
+        _client_attr = getattr(_nicegui_ctx, "client", None)
+        if _client_attr is None:
+            return "_no_client_context_"
+        # Ako je ContextVar, pozovi .get() da dobijemo stvarni Client objekat
+        if isinstance(_client_attr, ContextVar):
+            _client = _client_attr.get(None)
+        else:
+            _client = _client_attr
+        client_id = getattr(_client, "id", None)
         if client_id is not None:
             return str(client_id)
     except Exception:
