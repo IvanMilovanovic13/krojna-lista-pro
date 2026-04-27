@@ -930,6 +930,15 @@ def render_params_panel(
         def _do_dodaj(use_d_mm: int, override_as_new_standard: bool = False) -> None:
             """Interni helper — stvarno dodaje element."""
             try:
+                # Odbrambena provera: closure je vezan za tid koji je bio selektovan
+                # u trenutku renderovanja params panela. Ako je korisnik u medjuvremenu
+                # promenio selekciju a params panel jos nije osvezen, odbij dodavanje.
+                _live_tid = str(state.selected_tid or "").upper()
+                if _live_tid != tid:
+                    ui.notify(_t("elements.select_from_list"), type="warning")
+                    params_panel_refresh()
+                    return
+
                 _h_for_add = int(_dim['h'])
                 if has_wardrobe and wardrobe_to_ceiling is not None and bool(wardrobe_to_ceiling.value):
                     _h_for_add = int(_max_h)

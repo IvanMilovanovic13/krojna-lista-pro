@@ -21,7 +21,7 @@ from lemon_squeezy_service import get_billing_runtime_status
 from export_jobs import EXPORTS_DIR
 from project_store import cleanup_auth_artifacts, get_export_job, get_project_store_runtime_info, init_project_store
 from release_readiness import get_release_readiness_report
-from state_logic import ensure_runtime_state_initialized, refresh_current_session_access, seed_demo_project_store, state
+from state_logic import ensure_runtime_state_initialized, refresh_current_session_access, seed_demo_project_store, state, load_autosave_project
 from ui_panels import render_toolbar, main_content
 from ui_public_site import (
     render_login_page,
@@ -238,9 +238,13 @@ GLOBAL_UI_STYLE = '''
   }
 
   .left-tabs-row .left-tab-active {
-    background: #ffffff !important;
+    background: #EFF6FF !important;
     color: #111111 !important;
     border: 2px solid #111111 !important;
+  }
+
+  .left-tabs-row .q-btn.left-tab-btn.left-tab-active {
+    background: #EFF6FF !important;
   }
 
   /* KL Cut: neutralize blue utility accents used in legacy classes */
@@ -397,6 +401,16 @@ GLOBAL_UI_STYLE = '''
 app.add_static_files('/assets', str(Path(__file__).resolve().parent / 'assets'))
 
 
+def _restore_autosave_if_empty() -> None:
+    """Tiho ucitaj autosave ako je stanje prazno (nov klijent / reload stranice)."""
+    try:
+        if list(state.kitchen.get("modules") or []):
+            return  # Projekat vec postoji u memoriji — ne prepisuj
+        load_autosave_project()
+    except Exception:
+        pass  # Tiho — ne ometaj pokretanje UI-a
+
+
 def _render_app_shell() -> None:
     ensure_runtime_state_initialized(allow_local_fallback=False)
     refresh_current_session_access()
@@ -406,6 +420,8 @@ def _render_app_shell() -> None:
     if str(getattr(state, "current_auth_mode", "") or "").strip().lower() == "local":
         ui.navigate.to("/login")
         return
+    # Tiho obnovi autosave za novi klijent (reload stranice ili novi tab)
+    _restore_autosave_if_empty()
     ui.query('body').style('margin: 0; padding: 0;')
     ui.add_head_html(GLOBAL_UI_STYLE)
     render_toolbar()

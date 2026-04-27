@@ -279,7 +279,12 @@ def render_palette() -> None:
 
 def select_palette_tab(key: str) -> None:
     _tab_map = _palette_tab_map_current()
-    state.active_group = key if key in _tab_map else (next(iter(_tab_map.keys()), "donji"))
+    _new_group = key if key in _tab_map else (next(iter(_tab_map.keys()), "donji"))
+    # Resetuj selekciju pri promeni taba — sprecava stale closure gde dodaj()
+    # hvata zonu starog template-a a state.selected_tid vec pokazuje na novi.
+    if state.active_group != _new_group:
+        state.selected_tid = ""
+    state.active_group = _new_group
     _changed_view = str(getattr(state, "view_mode", "") or "") != str(OPT_TEHNICKI)
     if _changed_view:
         _set_view_mode(OPT_TEHNICKI)
