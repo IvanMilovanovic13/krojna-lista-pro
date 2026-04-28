@@ -383,6 +383,53 @@ def _open_add_above_dialog(wall_module_id: int) -> None:
     )
 
 
+_EDIT_SCROLL_ID = "sidebar-edit-scroll"
+
+
+def _edit_panel_refresh_scroll_safe() -> None:
+    """edit_panel.refresh() uz ocuvanje scroll pozicije u edit panelu.
+
+    Koristi asyncio.ensure_future da izvrsi async JS bez promene svih
+    call-site-ova u ui_edit_panel.py. Klijent se hvata pre scheduliranja
+    da ostane vazan i u novom tasku.
+    """
+    import asyncio
+
+    try:
+        from nicegui import context as _ctx
+        _client = _ctx.get_client()
+    except Exception:
+        _client = None
+
+    if _client is None:
+        edit_panel.refresh()
+        return
+
+    async def _do() -> None:
+        try:
+            top = await _client.run_javascript(
+                f"(()=>{{const el=document.getElementById('{_EDIT_SCROLL_ID}');"
+                f"const c=el?el.querySelector('.q-scrollarea__container'):null;"
+                f"return c?Math.round(c.scrollTop||0):0;}})()"
+            )
+        except Exception:
+            top = 0
+        edit_panel.refresh()
+        _top = max(0, int(top or 0))
+        if _top > 0:
+            await asyncio.sleep(0.05)
+            try:
+                await _client.run_javascript(
+                    f"(()=>{{const el=document.getElementById('{_EDIT_SCROLL_ID}');"
+                    f"const c=el?el.querySelector('.q-scrollarea__container'):null;"
+                    f"if(c)c.scrollTop={_top};}})()"
+                )
+            except Exception:
+                pass
+
+    asyncio.ensure_future(_do())
+
+
 @ui.refreshable
 def edit_panel() -> None:
     render_edit_panel(
@@ -398,7 +445,7 @@ def edit_panel() -> None:
         set_zone_depth_standard=set_zone_depth_standard,
         delete_module_local=delete_module_local,
         nacrt_refresh=nacrt.refresh,
-        edit_panel_refresh=edit_panel.refresh,
+        edit_panel_refresh=_edit_panel_refresh_scroll_safe,
         open_add_above_dialog=_open_add_above_dialog,
         open_add_above_tall_dialog=_open_add_above_tall_dialog,
         duplicate_module_local=_add_module_with_room,

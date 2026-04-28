@@ -34,7 +34,7 @@ def render_sidebar_content_layout(
                 ).props('flat round dense').classes('text-gray-600')
 
     if is_edit_mode:
-        with ui.scroll_area().classes('left-panel-body flex-1 min-h-0 w-full'):
+        with ui.scroll_area().classes('left-panel-body flex-1 min-h-0 w-full').props('id=sidebar-edit-scroll'):
             with ui.column().classes('w-full gap-1 px-1 pb-1'):
                 edit_body()
         return
