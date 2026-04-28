@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -411,29 +412,49 @@ def render_cutlist_tab(
 
         with ui.card().classes('w-full mb-4 p-3'):
             ui.label(tr_fn('cutlist.kitchen_overview')).classes('font-bold text-base mb-2')
-            try:
-                _wl, _wh = wall_len_h(state.kitchen)
-                _sc = 5.0 / max(_wh + 280, 1)
-                _fw = max((_wl + 260) * _sc, 5.0 * 1.65)
-                _fig_k = plt.figure(figsize=(_fw, 5.0))
-                _fig_k.patch.set_facecolor('#BFBDBA')
-                _ax_k = _fig_k.add_subplot(111)
-                render_fn(
-                    ax=_ax_k,
-                    kitchen=state.kitchen,
-                    view_mode='Katalog',
-                    show_grid=False,
-                    grid_mm=10,
-                    show_bounds=False,
-                    kickboard=True,
-                    ceiling_filler=state.ceiling_filler,
-                )
-                _fig_k.tight_layout(pad=0.3)
-                _uri_k = fig_to_data_uri_exact(_fig_k)
-                plt.close(_fig_k)
-                ui.image(_uri_k).style('width:100%; height:auto;')
-            except Exception as _ek:
-                ui.label(CUTLIST_IMG_UNAVAILABLE_FMT.format(err=_ek)).classes('text-xs text-red-400')
+            _ov_container = ui.column().classes('w-full')
+            with _ov_container:
+                ui.spinner('dots').classes('text-gray-400 mx-auto my-4')
+
+            # Render kuhinjskog pregleda u background thread-u — ne blokira event loop
+            _kitchen_snap = dict(state.kitchen)
+            _ceil_snap = bool(getattr(state, 'ceiling_filler', False))
+
+            async def _render_overview_async(_cont=_ov_container, _ks=_kitchen_snap, _cs=_ceil_snap):
+                def _do():
+                    from matplotlib.figure import Figure
+                    from matplotlib.backends.backend_agg import FigureCanvasAgg
+                    _wl, _wh = wall_len_h(_ks)
+                    _sc = 5.0 / max(_wh + 280, 1)
+                    _fw = max((_wl + 260) * _sc, 5.0 * 1.65)
+                    _fig = Figure(figsize=(_fw, 5.0))
+                    FigureCanvasAgg(_fig)
+                    _fig.patch.set_facecolor('#BFBDBA')
+                    _ax = _fig.add_subplot(111)
+                    render_fn(
+                        ax=_ax,
+                        kitchen=_ks,
+                        view_mode='Katalog',
+                        show_grid=False,
+                        grid_mm=10,
+                        show_bounds=False,
+                        kickboard=True,
+                        ceiling_filler=_cs,
+                    )
+                    _fig.tight_layout(pad=0.3)
+                    return fig_to_data_uri_exact(_fig)
+
+                try:
+                    _uri = await asyncio.to_thread(_do)
+                    _cont.clear()
+                    with _cont:
+                        ui.image(_uri).style('width:100%; height:auto;')
+                except Exception as _ek:
+                    _cont.clear()
+                    with _cont:
+                        ui.label(CUTLIST_IMG_UNAVAILABLE_FMT.format(err=_ek)).classes('text-xs text-red-400')
+
+            asyncio.ensure_future(_render_overview_async())
 
         _summary_df = summary_packet.get('summary_all')
         if _summary_df is not None and not _summary_df.empty:
@@ -726,6 +747,40 @@ def render_cutlist_tab(
             and 'ID' in _combined_e.columns
         )
 
+        def _make_preview_loader(_col, _mm, _mp, _tid):
+            """Lazy loader za 2D/3D preview — poziva se tek pri prvom otvaranju accordion-a."""
+            _done = [False]
+
+            def _load(e):
+                _is_open = e.args if hasattr(e, 'args') else True
+                if not _is_open or _done[0]:
+                    return
+                _done[0] = True
+                _col.clear()
+                with _col:
+                    try:
+                        _pr = _mp.to_dict('records') if _mp is not None and not _mp.empty else None
+                        _u2, _u3 = render_element_preview(
+                            _mm, state.kitchen, label_mode='part_codes', part_rows=_pr
+                        )
+                        with ui.row().classes('gap-2 items-start'):
+                            with ui.column().classes('items-center gap-0.5'):
+                                ui.label(tr_fn('cutlist.preview_2d')).classes('text-[10px] text-gray-400 font-semibold')
+                                ui.image(_u2).style(
+                                    'width:110px; height:auto; border:1px solid #ddd; border-radius:4px;'
+                                )
+                                ui.label(tr_fn('cutlist.preview_note_short')).classes('text-[10px] text-amber-700')
+                            with ui.column().classes('items-center gap-0.5'):
+                                ui.label(tr_fn('cutlist.preview_3d')).classes('text-[10px] text-gray-400 font-semibold')
+                                ui.image(_u3).style(
+                                    'width:140px; height:auto; border:1px solid #ddd; border-radius:4px;'
+                                )
+                    except Exception as _ex:
+                        _LOG.debug('Cutlist lazy preview failed for template %s: %s', _tid, _ex)
+                        ui.html(svg_for_tid(_tid)).classes('w-32 h-32')
+
+            return _load
+
         for _m in mods:
             _mid = int(_m.get('id', 0))
             _mlbl_raw = str(_m.get('label', ''))
@@ -735,48 +790,31 @@ def render_cutlist_tab(
             _md = int(_m.get('d_mm', 0))
             _mtid = str(_m.get('template_id', ''))
             _mlbl = translate_template_label(_mlbl_raw, _lang)
-
             _hdr = f'#{_mid} - {_mlbl}  ({_mw}x{_mh}x{_md} mm)'
-            with ui.expansion(_hdr, icon='view_in_ar').classes('w-full mb-3 border border-gray-200 rounded'):
-                _mparts = None
-                if _combined_has_id:
-                    _mparts = _combined_e[_combined_e['ID'] == _mid]
-                    if _mparts is not None and not _mparts.empty and {'Deo', 'Materijal', 'Deb.'}.issubset(_mparts.columns):
-                        _mparts = _mparts.copy()
-                        _mparts['Materijal'] = _mparts.apply(
-                            lambda _r: _summary_material_label(
-                                _r.get('Deo', ''),
-                                _r.get('Materijal', ''),
-                                _r.get('Deb.', ''),
-                                _lang,
-                            ),
-                            axis=1,
-                        )
+
+            # Pripremi mparts pre expansion-a (samo brze DataFrame operacije)
+            _mparts = None
+            if _combined_has_id:
+                _mparts = _combined_e[_combined_e['ID'] == _mid]
+                if _mparts is not None and not _mparts.empty and {'Deo', 'Materijal', 'Deb.'}.issubset(_mparts.columns):
+                    _mparts = _mparts.copy()
+                    _mparts['Materijal'] = _mparts.apply(
+                        lambda _r: _summary_material_label(
+                            _r.get('Deo', ''),
+                            _r.get('Materijal', ''),
+                            _r.get('Deb.', ''),
+                            _lang,
+                        ),
+                        axis=1,
+                    )
+
+            _exp = ui.expansion(_hdr, icon='view_in_ar').classes('w-full mb-3 border border-gray-200 rounded')
+            with _exp:
                 with ui.row().classes('w-full gap-4 items-start p-2'):
-                    with ui.column().classes('shrink-0 gap-2'):
-                        try:
-                            _part_rows = _mparts.to_dict('records') if _mparts is not None and not _mparts.empty else None
-                            _uri_2d, _uri_3d = render_element_preview(
-                                _m,
-                                state.kitchen,
-                                label_mode='part_codes',
-                                part_rows=_part_rows,
-                            )
-                            with ui.row().classes('gap-2 items-start'):
-                                with ui.column().classes('items-center gap-0.5'):
-                                    ui.label(tr_fn('cutlist.preview_2d')).classes('text-[10px] text-gray-400 font-semibold')
-                                    ui.image(_uri_2d).style(
-                                        'width:110px; height:auto; border:1px solid #ddd; border-radius:4px;'
-                                    )
-                                    ui.label(tr_fn('cutlist.preview_note_short')).classes('text-[10px] text-amber-700')
-                                with ui.column().classes('items-center gap-0.5'):
-                                    ui.label(tr_fn('cutlist.preview_3d')).classes('text-[10px] text-gray-400 font-semibold')
-                                    ui.image(_uri_3d).style(
-                                        'width:140px; height:auto; border:1px solid #ddd; border-radius:4px;'
-                                    )
-                        except Exception as ex:
-                            _LOG.debug('Cutlist tab: fallback to SVG preview for template %s: %s', _mtid, ex)
-                            ui.html(svg_for_tid(_mtid)).classes('w-32 h-32')
+                    # Placeholder — puni se lazy pri prvom otvaranju
+                    _preview_col = ui.column().classes('shrink-0 gap-2')
+                    with _preview_col:
+                        ui.icon('photo', size='xl').classes('text-gray-300 mt-2')
 
                     with ui.column().classes('flex-1 gap-2'):
                         if _mparts is not None and not _mparts.empty:
@@ -827,5 +865,8 @@ def render_cutlist_tab(
                         with ui.column().classes('gap-0.5'):
                             for _step in _steps:
                                 ui.label(_step).classes('text-xs text-gray-600 leading-snug')
+
+            # Lazy preview: render_element_preview se poziva tek pri prvom klik-otvaranju
+            _exp.on('update:model-value', _make_preview_loader(_preview_col, dict(_m), _mparts, _mtid))
     except Exception as e:
         ui.label(tr_fn('cutlist.err_generic', err=e)).classes('text-red-500')
