@@ -463,8 +463,9 @@ def _sync_kitchen_wall_from_room(*, room: Optional[Dict[str, Any]] = None, wall_
         state.kitchen["wall_heights_mm"][_key] = int(_w.get("height_mm", 2600) or 2600)
 
 
-def reset_state() -> None:
-    """Resetuje state na podrazumevane vrednosti — poziva se na svakom novom page loadu."""
+def reset_project_state() -> None:
+    """Resetuje samo projekat/kuhinju — NE dira korisnicku sesiju ni nalog.
+    Poziva se pri kliku na Reset dugme u toolbaru dok je korisnik ulogovan."""
     state.active_tab        = "wizard"
     state.wizard_step       = 1
     state.project_type      = "kitchen"
@@ -476,17 +477,6 @@ def reset_state() -> None:
     state.wardrobe_to_ceiling = True
     state.wardrobe_door_mode = "hinged"
     state.wardrobe_target_wall = "A"
-    state.current_user_id   = 0
-    state.current_user_email = ""
-    state.current_user_display = ""
-    state.current_session_token = ""
-    state.current_session_expires_at = ""
-    state.current_auth_mode = ""
-    state.current_access_tier = ""
-    state.current_subscription_status = ""
-    state.current_gate_reason = ""
-    state.current_can_access_app = True
-    state.account_upgrade_focus = False
     state.current_project_id = 0
     state.current_project_name = ""
     state.current_project_source = ""
@@ -504,7 +494,6 @@ def reset_state() -> None:
     state.wall_upper_target_x = -1
     state.front_color       = "#FDFDFB"
     state.selected_edit_id  = 0
-    state.language          = "sr"
     state.mode              = "add"
     state.sidebar_tab       = 'dodaj'
     state.zone_defaults     = {
@@ -522,6 +511,25 @@ def reset_state() -> None:
         "tall_top":   560,
     }
     _sync_kitchen_wall_from_room(room=state.room, wall_key="A")
+
+
+def reset_state() -> None:
+    """Puni reset — koristi se samo pri novom page loadu (ne pri korisnickom Reset dugmetu)."""
+    # Resetuj sesiju/auth
+    state.current_user_id   = 0
+    state.current_user_email = ""
+    state.current_user_display = ""
+    state.current_session_token = ""
+    state.current_session_expires_at = ""
+    state.current_auth_mode = ""
+    state.current_access_tier = ""
+    state.current_subscription_status = ""
+    state.current_gate_reason = ""
+    state.current_can_access_app = True
+    state.account_upgrade_focus = False
+    state.language          = "sr"
+    # Resetuj projekat
+    reset_project_state()
 
 
 def reset_workspace_for_active_session() -> None:
