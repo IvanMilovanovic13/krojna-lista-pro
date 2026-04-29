@@ -2704,10 +2704,13 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
             kategorija="potrosni",
         ))
 
+    # Broji SAMO CLIP-top šarke — MZS šarke (Blum 79T9550) su drugačiji tip
+    # i ne koriste iste vijke, zato se isključuju iz ovog zbira.
     _total_hinge_units = sum(
         int(_r.get("Kol.", 0) or 0)
         for _r in rows_hardware
-        if "Šarka" in str(_r.get("Naziv", "")) or "Sarka" in str(_r.get("Naziv", ""))
+        if ("Šarka" in str(_r.get("Naziv", "")) or "Sarka" in str(_r.get("Naziv", "")))
+        and "MZS" not in str(_r.get("Naziv", ""))
     )
     if _total_hinge_units > 0:
         rows_hardware.append(_hw(
@@ -2769,10 +2772,13 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
     # Svaka šarka zahteva posebnu montažnu ploču (prodaje se odvojeno)
     _hinge_plate_brand = hwc.get("hinge_plate", "")
     if _hinge_plate_brand:
+        # Broji SAMO CLIP-top šarke — MZS šarke koriste drugačiju montažnu ploču
+        # i ne idu na CLIP-top sistem, zato se isključuju iz ovog zbira.
         _total_hinges_for_plate = sum(
             int(_r.get("Kol.", 0) or 0)
             for _r in rows_hardware
             if "arka" in str(_r.get("Naziv", ""))
+            and "MZS" not in str(_r.get("Naziv", ""))
             and str(_r.get("ID", 0)) != "0"   # preskoci projektne redove
         )
         if _total_hinges_for_plate > 0:
