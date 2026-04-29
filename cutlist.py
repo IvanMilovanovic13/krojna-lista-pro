@@ -1327,7 +1327,9 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
     # -------------------------------------------------------
     _DOOR_TIDS = {
         "BASE_1DOOR", "BASE_2DOOR", "BASE_DOORS",
-        "WALL_1DOOR", "WALL_2DOOR", "WALL_DOORS", "WALL_LIFTUP",
+        "WALL_1DOOR", "WALL_2DOOR", "WALL_DOORS",
+        # WALL_LIFTUP je ISKLJUČEN iz opšteg skupa — obrađuje se posebno ispod
+        # jer klapna uvek ide kao 1 panel (ili 2 za w>1000mm), bez dijeljenja po >500mm logici
         "WALL_UPPER_1DOOR", "WALL_UPPER_2DOOR",
         "TALL_DOORS", "TALL_TOP_DOORS",
     }
@@ -1619,9 +1621,30 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                               front_mat, front_thk, edge_thk, step, kol=kol_, napomena=nap_,
                               modul=modul_label, grain_dir=grain_dir)
 
+        # ── Lift-up klapna (WALL_LIFTUP) ───────────────────────────────────────
+        # Klapna se UVEK seca kao 1 panel pune širine (ne deli se po >500mm logici).
+        # Za w ≤ 1000mm: 1 kom, 1 lift-up mehanizam (AVENTOS HK-S ili ekvivalent).
+        # Za w > 1000mm: 2 panela (svaki pola), 2 mehanizma — usklađeno sa hw sekcijom.
+        # Hardware sekcija (faza F, _pair_cnt) je već ispravna i NE menja se.
+        if "LIFTUP" in tid:
+            if w <= 1000:
+                rows_fronts.append(fr(
+                    "Front klapne", fw, h - 2 * front_gap, kol_=1,
+                    nap_="Lift-up klapna — 1 panel pune širine; 1× lift-up mehanizam (AVENTOS HK-S ili ekviv.)"
+                ))
+            else:
+                _liftup_half_w = (fw - front_gap) / 2
+                rows_fronts.append(fr(
+                    "Front klapne (polovina)", _liftup_half_w, h - 2 * front_gap, kol_=2,
+                    nap_=(
+                        f"Lift-up klapna š={w:.0f} mm > 1000 mm — front podeljen na 2 panela; "
+                        "2× lift-up mehanizam (AVENTOS HK-S ili ekviv.)"
+                    )
+                ))
+
         # Vrata (1 ili 2 krila) — BASE, WALL, TALL_DOORS + ormarni ugaoni (CORNER)
         # WARDROBE+SLIDING i 2DOOR+SLIDING moraju biti isključeni — obrađuju se posebno ispod
-        if (tid in _DOOR_TIDS or "1DOOR" in tid
+        elif (tid in _DOOR_TIDS or "1DOOR" in tid
                 or ("2DOOR" in tid and "SLIDING" not in tid)
                 or ("WARDROBE" in tid and "CORNER" in tid and "DRAWERS" not in tid and "SLIDING" not in tid)):
             num_doors = 2 if (w > 500 and "1DOOR" not in tid) else 1
