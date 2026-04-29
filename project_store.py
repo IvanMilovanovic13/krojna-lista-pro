@@ -992,6 +992,32 @@ def ensure_privileged_seed_accounts() -> dict[str, list[str]]:
         }
 
 
+def promote_env_admins_to_admin() -> list[str]:
+    """
+    Čita APP_ADMIN_EMAILS env varijablu i promoviše sve navedene korisnike
+    na access_tier='admin' BEZ resetovanja njihove lozinke.
+    Sigurno za poziv na svakom startu — idempotentno.
+    Vraća listu promovisanih emailova.
+    """
+    raw = str(os.getenv("APP_ADMIN_EMAILS", "") or "").strip()
+    if not raw:
+        return []
+    emails = [e.strip().lower() for e in raw.replace(";", ",").split(",") if e.strip()]
+    promoted: list[str] = []
+    for email in emails:
+        try:
+            result = set_user_access_status(
+                email=email,
+                access_tier="admin",
+                status="admin_active",
+            )
+            if result is not None:
+                promoted.append(email)
+        except Exception:
+            pass
+    return promoted
+
+
 def get_password_hash_by_email(email: str) -> str:
     init_project_store()
     with _connect() as conn:

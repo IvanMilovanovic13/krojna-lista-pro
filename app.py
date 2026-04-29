@@ -19,7 +19,7 @@ from billing_models import get_billing_summary_for_email
 from billing_webhooks import process_billing_webhook_payload
 from lemon_squeezy_service import get_billing_runtime_status
 from export_jobs import EXPORTS_DIR
-from project_store import cleanup_auth_artifacts, get_export_job, get_project_store_runtime_info, init_project_store
+from project_store import cleanup_auth_artifacts, get_export_job, get_project_store_runtime_info, init_project_store, promote_env_admins_to_admin
 from release_readiness import get_release_readiness_report
 from state_logic import ensure_runtime_state_initialized, refresh_current_session_access, seed_demo_project_store, state, load_autosave_project
 from ui_panels import render_toolbar, main_content
@@ -584,6 +584,7 @@ def run_app() -> None:
     init_project_store()
     cleanup_auth_artifacts()
     seed_demo_project_store()
+    promote_env_admins_to_admin()  # Promoviše APP_ADMIN_EMAILS na admin tier bez resetovanja lozinke
     ui.run(
         title='krojna lista PRO',
         host=str(cfg.host or '127.0.0.1'),
