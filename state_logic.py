@@ -2042,15 +2042,22 @@ def init_local_session_state() -> None:
 
 
 def _get_user_storage() -> Any | None:
-    # app.storage.user je per-browser-session (kljuc je session cookie ID).
-    # Isti kljuc koristi _get_current_client_key() — nema cross-browser curenja.
-    # Na Render-u storage moze biti in-memory ako filesystem nije dostupan,
-    # ali izolacija po sesiji i dalje radi jer je kljuc session cookie.
+    # Koristimo app.storage.browser umesto app.storage.user:
+    # - app.storage.user: cuva se kao fajl NA SERVERU → gubi se pri restartu
+    #   (Render free tier restartuje server posle ~15min neaktivnosti)
+    # - app.storage.browser: cuva se u browser-u (localStorage) → prezivljava
+    #   restarte servera i deploy-eve, token ostaje u browseru
+    # Bezbednost: token je ionako u bazi i validira se server-side pri svakom
+    # koristenju, pa cuvanje u localStorage ne umanjuje bezbednost.
     try:
         from nicegui import app as nicegui_app
-        return nicegui_app.storage.user
+        return nicegui_app.storage.browser
     except Exception:
-        return None
+        try:
+            from nicegui import app as nicegui_app
+            return nicegui_app.storage.user
+        except Exception:
+            return None
 
 
 def _persist_session_token(session_token: str, *, expires_at: str = "") -> None:
