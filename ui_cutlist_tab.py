@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import asyncio
@@ -15,22 +15,22 @@ _LOG = logging.getLogger(__name__)
 
 
 _LABEL_NORMALIZATION = {
-    "Le\u0111a": "Ledja",
-    "Le\u0111na plo\u010da": "Ledjna ploca",
-    "Le\u0111na plo\u010da / prolaz": "Ledjna ploca / prolaz",
-    "Bo\u010dna plo\u010da": "Bocna ploca",
-    "Bo\u010dna stranica sanduka fioke": "Bocna stranica sanduka fioke",
-    "Zavr\u0161na bo\u010dna plo\u010da": "Zavrsna bocna ploca",
-    "plo\u010da": "ploca",
-    "Le\u00c4\u2018a": "Ledja",
-    "Le\u00c3\u201e\u20ac\u02dca": "Ledja",
-    "Le\u00c3\u0192\u00e2\u20ac\u017e\u00c3\u00a2\u00e2\u201a\u00ac\u00cb\u0153a": "Ledja",
-    "Bo\u00c4\u008dna plo\u00c4\u008da": "Bocna ploca",
-    "Bo\u00c3\u201e\u00c2\u008dna plo\u00c3\u201e\u00c2\u008da": "Bocna ploca",
-    "Bo\u00c3\u0192\u00e2\u20ac\u017e\u00c3\u201a\u00c2\u008dna plo\u00c3\u0192\u00e2\u20ac\u017e\u00c3\u201a\u00c2\u008da": "Bocna ploca",
-    "plo\u00c4\u008da": "ploca",
-    "plo\u00c3\u201e\u00c2\u008da": "ploca",
-    "plo\u00c3\u0192\u00e2\u20ac\u017e\u00c3\u201a\u00c2\u008da": "ploca",
+    "Leđa": "Ledja",
+    "Leđna ploča": "Ledjna ploca",
+    "Leđna ploča / prolaz": "Ledjna ploca / prolaz",
+    "Bočna ploča": "Bocna ploca",
+    "Bočna stranica sanduka fioke": "Bocna stranica sanduka fioke",
+    "Završna bočna ploča": "Zavrsna bocna ploca",
+    "ploča": "ploca",
+    "LeÄ‘a": "Ledja",
+    "LeÃ„€˜a": "Ledja",
+    "LeÃƒâ€žÃ¢â‚¬Ëœa": "Ledja",
+    "BoÄna ploÄa": "Bocna ploca",
+    "BoÃ„Âna ploÃ„Âa": "Bocna ploca",
+    "BoÃƒâ€žÃ‚Âna ploÃƒâ€žÃ‚Âa": "Bocna ploca",
+    "ploÄa": "ploca",
+    "ploÃ„Âa": "ploca",
+    "ploÃƒâ€žÃ‚Âa": "ploca",
 }
 
 
@@ -266,6 +266,7 @@ def render_cutlist_tab(
             _LOG.debug("Export auto-download watch failed: %s", _watch_ex)
             ui.notify(tr_fn('cutlist.export_watch_error', err=_watch_ex), type='negative', timeout=5000)
 
+    # ── Toolbar: PDF / Excel / CSV (renduje se odmah, bez čekanja) ────────
     with ui.row().classes('w-full items-center justify-between mb-2'):
         ui.label(tr_fn('cutlist.title')).classes('text-2xl font-bold')
 
@@ -307,44 +308,110 @@ def render_cutlist_tab(
                 'font-semibold px-4 py-2 rounded shadow'
             ).props('icon=description').tooltip(tr_fn('cutlist.csv_tooltip'))
 
-    try:
-        final_ds = get_final_cutlist_dataset(state.kitchen, lang=_lang)
-        sections = final_ds["sections"]
-        service_packet = final_ds["service_packet"]
-        summary_packet = final_ds["summary"]
-        display_sections = {
-            key: _translate_export_df(df, _lang)
-            for key, df in sections.items()
-        }
-        display_service_packet = {
-            key: _translate_export_df(df, _lang)
-            for key, df in service_packet.items()
-        }
-        mods = state.kitchen.get('modules', []) or []
-        all_dfs = [df for df in display_sections.values() if df is not None and not df.empty]
-        _hw_df = display_sections.get('hardware')
+    # ── Spinner placeholder — zamenjuje se kada thread završi ─────────────
+    _main_container = ui.column().classes('w-full')
+    with _main_container:
+        with ui.column().classes('w-full items-center py-12 gap-3'):
+            ui.spinner('dots', size='xl').classes('text-gray-400')
+            ui.label(
+                'Učitavanje krojna liste…' if _lang != 'en' else 'Loading cut list…'
+            ).classes('text-sm text-gray-500')
+
+    # Snimci koji se bezbedno prosleđuju u thread
+    _kitchen_snap = dict(state.kitchen)
+    _ceil_snap    = bool(getattr(state, 'ceiling_filler', False))
+    _email_snap   = str(getattr(state, 'current_user_email', '') or '').strip()
+    _token_snap   = str(getattr(state, 'current_session_token', '') or '').strip()
+
+    # Verzija _build_download_url koja ne čita state (za thread)
+    def _build_download_url_snap(result_ref: str) -> str:
+        _dl = str(result_ref or '')
+        if _dl and _token_snap:
+            _sep = '&' if '?' in _dl else '?'
+            _dl = f'{_dl}{_sep}token={_token_snap}'
+        return _dl
+
+    async def _load_cutlist_content(
+        _cont=_main_container,
+        _ks=_kitchen_snap,
+        _cs=_ceil_snap,
+        _em=_email_snap,
+    ):
+        # ── Sve teške operacije u pozadinskom thread-u ────────────────────
+        def _compute():
+            from cutlist import get_final_cutlist_dataset, _translate_export_df
+            from project_store import ensure_local_user, get_user_by_email, list_export_jobs_for_user
+
+            _ds = get_final_cutlist_dataset(_ks, lang=_lang)
+            _disp_sec = {k: _translate_export_df(df, _lang) for k, df in _ds['sections'].items()}
+            _disp_svc = {k: _translate_export_df(df, _lang) for k, df in _ds['service_packet'].items()}
+
+            # Export jobs (DB I/O — ide u thread)
+            _job_rows_out = []
+            try:
+                _u = get_user_by_email(_em) if _em else None
+                if _u is None:
+                    _u = ensure_local_user()
+                for _job in list_export_jobs_for_user(int(_u.id), limit=6):
+                    _result_ref = str(_job.result_ref or '')
+                    _jtype = str(_job.job_type).lower()
+                    _jstat = str(_job.status).lower()
+                    _job_rows_out.append({
+                        'type': (
+                            tr_fn(f'cutlist.export_job_type_{_jtype}')
+                            if _jtype in {'pdf', 'excel', 'csv'}
+                            else str(_job.job_type).upper()
+                        ),
+                        'status': (
+                            tr_fn(f'cutlist.export_job_status_{_jstat}')
+                            if _jstat in {'queued', 'running', 'done', 'failed', 'canceled'}
+                            else str(_job.status)
+                        ),
+                        'created_at': str(_job.created_at or ''),
+                        'result_ref': _result_ref,
+                        'download_url': _build_download_url_snap(_result_ref),
+                        'error_message': str(_job.error_message or ''),
+                    })
+            except Exception as _jex:
+                _LOG.debug('Export jobs load failed: %s', _jex)
+
+            return {
+                'sections': _ds['sections'],
+                'service_packet': _ds['service_packet'],
+                'summary_packet': _ds['summary'],
+                'display_sections': _disp_sec,
+                'display_service_packet': _disp_svc,
+                'job_rows': _job_rows_out,
+            }
+
+        # Pokretanje teškog računanja u thread-u
+        try:
+            _data = await asyncio.to_thread(_compute)
+        except Exception as _e:
+            _cont.clear()
+            with _cont:
+                ui.label(tr_fn('cutlist.err_generic', err=_e)).classes('text-red-500')
+            return
+
+        # ── UI rendering u event loopu (thread-safe) ─────────────────────
+        _display_sections       = _data['display_sections']
+        _display_service_packet = _data['display_service_packet']
+        _summary_packet         = _data['summary_packet']
+        _job_rows               = _data['job_rows']
+
+        _mods = _ks.get('modules', []) or []
+        _hw_df = _display_sections.get('hardware')
         _warnings_df = None
         if _hw_df is not None and not _hw_df.empty and 'Kategorija' in _hw_df.columns:
             _warnings_df = _hw_df[_hw_df['Kategorija'].astype(str).str.lower() == 'warning']
 
-        if not mods:
-            ui.label(tr_fn('cutlist.empty')).classes('text-gray-400 mt-4')
-            return
+        _cont.clear()
+        with _cont:
+            if not _mods:
+                ui.label(tr_fn('cutlist.empty')).classes('text-gray-400 mt-4')
+                return
 
-        try:
-            _job_rows = []
-            _user = _active_user()
-            for _job in list_export_jobs_for_user(int(_user.id), limit=6):
-                _result_ref = str(_job.result_ref or '')
-                _download_url = _build_download_url(_result_ref)
-                _job_rows.append({
-                    'type': tr_fn(f'cutlist.export_job_type_{str(_job.job_type).lower()}') if str(_job.job_type).lower() in {'pdf', 'excel', 'csv'} else str(_job.job_type).upper(),
-                    'status': tr_fn(f'cutlist.export_job_status_{str(_job.status).lower()}') if str(_job.status).lower() in {'queued', 'running', 'done', 'failed', 'canceled'} else str(_job.status),
-                    'created_at': str(_job.created_at or ''),
-                    'result_ref': _result_ref,
-                    'download_url': _download_url,
-                    'error_message': str(_job.error_message or ''),
-                })
+            # ── Export jobs panel ─────────────────────────────────────────
             with ui.card().classes('w-full mb-4 p-3 bg-[#f8fafc] border border-[#dbe3ec]'):
                 ui.label(tr_fn('cutlist.export_jobs_title')).classes('font-bold text-base mb-2')
                 if not _job_rows:
@@ -374,212 +441,230 @@ def render_cutlist_tab(
                                 ui.label(
                                     tr_fn('cutlist.export_jobs_error', error=str(_row['error_message']))
                                 ).classes('text-xs text-red-600')
-        except Exception as _jobs_ex:
-            _LOG.debug("Export jobs panel failed: %s", _jobs_ex)
 
-        with ui.card().classes('w-full mb-4 p-3 bg-gray-50'):
-            ui.label(tr_fn('cutlist.beginner_title')).classes('font-bold text-base mb-2')
-            ui.markdown(tr_fn('cutlist.beginner_items'))
+            # ── Beginner guide ────────────────────────────────────────────
+            with ui.card().classes('w-full mb-4 p-3 bg-gray-50'):
+                ui.label(tr_fn('cutlist.beginner_title')).classes('font-bold text-base mb-2')
+                ui.markdown(tr_fn('cutlist.beginner_items'))
 
-        if _warnings_df is not None and not _warnings_df.empty:
-            with ui.card().classes('w-full mb-4 p-3 border border-yellow-500 bg-yellow-50'):
-                ui.label(tr_fn('cutlist.mfg_warnings', count=len(_warnings_df))).classes('font-bold text-base mb-2')
-                for _, _wr in _warnings_df.head(10).iterrows():
-                    _wline = f"{_wr.get('Modul', '')}: {_wr.get('Napomena', '')}"
-                    ui.label(_wline).classes('text-xs text-yellow-900 leading-snug')
+            # ── Upozorenja ────────────────────────────────────────────────
+            if _warnings_df is not None and not _warnings_df.empty:
+                with ui.card().classes('w-full mb-4 p-3 border border-yellow-500 bg-yellow-50'):
+                    ui.label(tr_fn('cutlist.mfg_warnings', count=len(_warnings_df))).classes('font-bold text-base mb-2')
+                    for _, _wr in _warnings_df.head(10).iterrows():
+                        _wline = f"{_wr.get('Modul', '')}: {_wr.get('Napomena', '')}"
+                        ui.label(_wline).classes('text-xs text-yellow-900 leading-snug')
 
-        _worktop_df = display_sections.get('worktop')
-        if _worktop_df is not None and not _worktop_df.empty:
-            with ui.card().classes('w-full mb-4 p-3 bg-[#f8fafc] border border-[#dbe3ec]'):
-                ui.label(tr_fn('cutlist.worktop_spec_title')).classes('font-bold text-base mb-1')
-                ui.label(tr_fn('cutlist.worktop_spec_desc')).classes('text-xs text-gray-600 mb-2')
-                _worktop_cols = [
-                    {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
-                    {'name': 'modul', 'label': tr_fn('cutlist.col_module'), 'field': 'Modul'},
-                    {'name': 'req', 'label': tr_fn('cutlist.worktop_required_len'), 'field': 'Required length [mm]'},
-                    {'name': 'buy', 'label': tr_fn('cutlist.worktop_purchase_len'), 'field': 'Purchase length [mm]'},
-                    {'name': 'depth', 'label': tr_fn('cutlist.worktop_depth'), 'field': 'Širina [mm]'},
-                    {'name': 'field', 'label': tr_fn('cutlist.worktop_field_cut'), 'field': 'Field cut'},
-                    {'name': 'joint', 'label': tr_fn('cutlist.worktop_joint'), 'field': 'Joint type'},
-                    {'name': 'protect', 'label': tr_fn('cutlist.worktop_protection'), 'field': 'Edge protection type'},
-                    {'name': 'cutouts', 'label': tr_fn('cutlist.worktop_cutouts'), 'field': 'Cutouts'},
-                    {'name': 'note', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
-                ]
-                ui.table(
-                    columns=_worktop_cols,
-                    rows=_worktop_df.to_dict('records'),
-                ).classes('w-full text-sm')
+            # ── Radna ploča ───────────────────────────────────────────────
+            _worktop_df = _display_sections.get('worktop')
+            if _worktop_df is not None and not _worktop_df.empty:
+                with ui.card().classes('w-full mb-4 p-3 bg-[#f8fafc] border border-[#dbe3ec]'):
+                    ui.label(tr_fn('cutlist.worktop_spec_title')).classes('font-bold text-base mb-1')
+                    ui.label(tr_fn('cutlist.worktop_spec_desc')).classes('text-xs text-gray-600 mb-2')
+                    _worktop_cols = [
+                        {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
+                        {'name': 'modul', 'label': tr_fn('cutlist.col_module'), 'field': 'Modul'},
+                        {'name': 'req', 'label': tr_fn('cutlist.worktop_required_len'), 'field': 'Required length [mm]'},
+                        {'name': 'buy', 'label': tr_fn('cutlist.worktop_purchase_len'), 'field': 'Purchase length [mm]'},
+                        {'name': 'depth', 'label': tr_fn('cutlist.worktop_depth'), 'field': 'Širina [mm]'},
+                        {'name': 'field', 'label': tr_fn('cutlist.worktop_field_cut'), 'field': 'Field cut'},
+                        {'name': 'joint', 'label': tr_fn('cutlist.worktop_joint'), 'field': 'Joint type'},
+                        {'name': 'protect', 'label': tr_fn('cutlist.worktop_protection'), 'field': 'Edge protection type'},
+                        {'name': 'cutouts', 'label': tr_fn('cutlist.worktop_cutouts'), 'field': 'Cutouts'},
+                        {'name': 'note', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
+                    ]
+                    ui.table(
+                        columns=_worktop_cols,
+                        rows=_worktop_df.to_dict('records'),
+                    ).classes('w-full text-sm')
 
-        with ui.card().classes('w-full mb-4 p-3'):
-            ui.label(tr_fn('cutlist.kitchen_overview')).classes('font-bold text-base mb-2')
-            _ov_container = ui.column().classes('w-full')
-            with _ov_container:
-                ui.spinner('dots').classes('text-gray-400 mx-auto my-4')
-
-            # Render kuhinjskog pregleda u background thread-u — ne blokira event loop
-            _kitchen_snap = dict(state.kitchen)
-            _ceil_snap = bool(getattr(state, 'ceiling_filler', False))
-
-            async def _render_overview_async(_cont=_ov_container, _ks=_kitchen_snap, _cs=_ceil_snap):
-                def _do():
-                    from matplotlib.figure import Figure
-                    from matplotlib.backends.backend_agg import FigureCanvasAgg
-                    _wl, _wh = wall_len_h(_ks)
-                    _sc = 5.0 / max(_wh + 280, 1)
-                    _fw = max((_wl + 260) * _sc, 5.0 * 1.65)
-                    _fig = Figure(figsize=(_fw, 5.0))
-                    FigureCanvasAgg(_fig)
-                    _fig.patch.set_facecolor('#BFBDBA')
-                    _ax = _fig.add_subplot(111)
-                    render_fn(
-                        ax=_ax,
-                        kitchen=_ks,
-                        view_mode='Katalog',
-                        show_grid=False,
-                        grid_mm=10,
-                        show_bounds=False,
-                        kickboard=True,
-                        ceiling_filler=_cs,
-                    )
-                    _fig.tight_layout(pad=0.3)
-                    return fig_to_data_uri_exact(_fig)
-
-                try:
-                    _uri = await asyncio.to_thread(_do)
-                    _cont.clear()
-                    with _cont:
-                        ui.image(_uri).style('width:100%; height:auto;')
-                except Exception as _ek:
-                    _cont.clear()
-                    with _cont:
-                        ui.label(CUTLIST_IMG_UNAVAILABLE_FMT.format(err=_ek)).classes('text-xs text-red-400')
-
-            asyncio.ensure_future(_render_overview_async())
-
-        _summary_df = summary_packet.get('summary_all')
-        if _summary_df is not None and not _summary_df.empty:
+            # ── Pregled kuhinje (async matplotlib u thread-u) ─────────────
             with ui.card().classes('w-full mb-4 p-3'):
-                ui.label(tr_fn('cutlist.summary')).classes('font-bold text-base mb-2')
-                with ui.column().classes('w-full gap-1 mb-2'):
-                    ui.label(
-                        'Legenda za početnika' if _lang != 'en' else 'Beginner legend'
-                    ).classes('text-sm font-semibold text-gray-700')
-                    _legend_lines = (
-                        [
-                            'Deo = naziv ploče ili dela elementa',
-                            'Kom = koliko komada tog dela treba',
-                            'Deb. = debljina ploče u milimetrima',
-                            'Dužina / Širina = gotove mere dela',
-                            'Materijal = od čega se deo izrađuje',
-                            'Orijentacija = smer ploče ili dezena',
-                            'Kant = koje ivice se kantuju',
-                            'L1/L2 = duže ivice, K1/K2 = kraće ivice',
-                            '1 = kantuje se, 0 = ne kantuje se',
-                        ]
-                        if _lang != 'en'
-                        else [
-                            'Part = the name of the panel or unit part',
-                            'Qty = how many pieces are needed',
-                            'Thk. = panel thickness in millimeters',
-                            'Length / Width = finished part dimensions',
-                            'Material = what the part is made of',
-                            'Orientation = board or grain direction',
-                            'Edge = which edges get edge banding',
-                            'L1/L2 = long edges, K1/K2 = short edges',
-                            '1 = edged, 0 = not edged',
-                        ]
-                    )
-                    for _line in _legend_lines:
-                        ui.label(_line).classes('text-xs text-gray-600 leading-snug')
-                _summary_rows = _summary_df.copy()
-                if {'Deo', 'Materijal', 'Deb.'}.issubset(_summary_rows.columns):
-                    _summary_rows['Materijal'] = _summary_rows.apply(
-                        lambda _r: _summary_material_label(
-                            _r.get('Deo', ''),
-                            _r.get('Materijal', ''),
-                            _r.get('Deb.', ''),
-                            _lang,
-                        ),
-                        axis=1,
-                    )
-                if 'Kol.' in _summary_rows.columns and 'Kom' not in _summary_rows.columns:
-                    _summary_rows['Kom'] = _summary_rows['Kol.']
-                _sum_cols = [
-                    {'name': 'rb', 'label': 'RB', 'field': 'RB', 'style': 'width: 38px; text-align:right;'},
-                    {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo', 'style': 'width: 150px; white-space: normal;'},
-                    {'name': 'kom', 'label': 'Kom', 'field': 'Kom', 'style': 'width: 48px; text-align:right;'},
-                    {'name': 'cw', 'label': tr_fn('cutlist.col_length_mm'), 'field': 'Dužina [mm]', 'style': 'width: 82px; text-align:right;'},
-                    {'name': 'ch', 'label': tr_fn('cutlist.col_width_mm'), 'field': 'Širina [mm]', 'style': 'width: 82px; text-align:right;'},
-                    {'name': 'deb', 'label': tr_fn('cutlist.col_thickness'), 'field': 'Deb.', 'style': 'width: 54px; text-align:right;'},
-                    {'name': 'mat', 'label': tr_fn('cutlist.col_material'), 'field': 'Materijal', 'style': 'width: 170px; white-space: normal;'},
-                    {'name': 'ori', 'label': ('Orientation' if _lang == 'en' else 'Orijentacija'), 'field': 'Orijentacija', 'style': 'width: 92px; white-space: normal;'},
-                    {'name': 'l1', 'label': 'L1', 'field': 'L1', 'style': 'width: 34px; text-align:center;'},
-                    {'name': 'l2', 'label': 'L2', 'field': 'L2', 'style': 'width: 34px; text-align:center;'},
-                    {'name': 'k1', 'label': 'K1', 'field': 'K1', 'style': 'width: 34px; text-align:center;'},
-                    {'name': 'k2', 'label': 'K2', 'field': 'K2', 'style': 'width: 34px; text-align:center;'},
-                ]
-                ui.table(columns=_sum_cols, rows=_summary_rows.to_dict('records')).classes('w-full text-xs').props('dense wrap-cells flat square separator=cell')
+                ui.label(tr_fn('cutlist.kitchen_overview')).classes('font-bold text-base mb-2')
+                _ov_container = ui.column().classes('w-full')
+                with _ov_container:
+                    ui.spinner('dots').classes('text-gray-400 mx-auto my-4')
 
-        _hdr_df = display_service_packet.get('project_header')
-        if _hdr_df is not None and not _hdr_df.empty:
-            with ui.card().classes('w-full mb-4 p-3'):
-                ui.label(tr_fn('cutlist.project_data')).classes('font-bold text-base mb-2')
-                ui.table(
-                    columns=[
-                        {'name': 'polje', 'label': tr_fn('cutlist.col_field'), 'field': 'Polje'},
-                        {'name': 'vrednost', 'label': tr_fn('cutlist.col_value'), 'field': 'Vrednost'},
-                    ],
-                    rows=_hdr_df.to_dict('records'),
-                ).classes('w-full')
+                async def _render_overview_async(_ov=_ov_container, _ks2=_ks, _cs2=_cs):
+                    def _do():
+                        from matplotlib.figure import Figure
+                        from matplotlib.backends.backend_agg import FigureCanvasAgg
+                        _wl, _wh = wall_len_h(_ks2)
+                        _sc = 5.0 / max(_wh + 280, 1)
+                        _fw = max((_wl + 260) * _sc, 5.0 * 1.65)
+                        _fig = Figure(figsize=(_fw, 5.0))
+                        FigureCanvasAgg(_fig)
+                        _fig.patch.set_facecolor('#BFBDBA')
+                        _ax = _fig.add_subplot(111)
+                        render_fn(
+                            ax=_ax,
+                            kitchen=_ks2,
+                            view_mode='Katalog',
+                            show_grid=False,
+                            grid_mm=10,
+                            show_bounds=False,
+                            kickboard=True,
+                            ceiling_filler=_cs2,
+                        )
+                        _fig.tight_layout(pad=0.3)
+                        return fig_to_data_uri_exact(_fig)
 
-        _guide_df = display_service_packet.get('user_guide')
-        if _guide_df is not None and not _guide_df.empty:
-            with ui.card().classes('w-full mb-4 p-3 bg-blue-50'):
-                ui.label(tr_fn('cutlist.workflow')).classes('font-bold text-base mb-2')
-                ui.table(
-                    columns=[
-                        {'name': 'korak', 'label': tr_fn('cutlist.col_step'), 'field': 'Korak'},
-                        {'name': 'sta', 'label': tr_fn('cutlist.col_what'), 'field': 'Sta radis'},
-                        {'name': 'nap', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
-                    ],
-                    rows=_guide_df.to_dict('records'),
-                ).classes('w-full')
+                    try:
+                        _uri = await asyncio.to_thread(_do)
+                        _ov.clear()
+                        with _ov:
+                            ui.image(_uri).style('width:100%; height:auto;')
+                    except Exception as _ek:
+                        _ov.clear()
+                        with _ov:
+                            ui.label(CUTLIST_IMG_UNAVAILABLE_FMT.format(err=_ek)).classes('text-xs text-red-400')
 
-        _svc_instr = display_service_packet.get('service_instructions')
-        if _svc_instr is not None and not _svc_instr.empty:
-            with ui.card().classes('w-full mb-4 p-3 bg-amber-50'):
-                ui.label(tr_fn('cutlist.service_instructions')).classes('font-bold text-base mb-2')
-                ui.table(
-                    columns=[
-                        {'name': 'rb', 'label': 'RB', 'field': 'RB'},
-                        {'name': 'stavka', 'label': tr_fn('cutlist.col_item'), 'field': 'Stavka'},
-                        {'name': 'instr', 'label': tr_fn('cutlist.col_instruction'), 'field': 'Instrukcija'},
-                    ],
-                    rows=_svc_instr.to_dict('records'),
-                ).classes('w-full text-sm')
+                asyncio.ensure_future(_render_overview_async())
 
-        with ui.row().classes('w-full gap-4 items-start mb-4'):
-            _svc_cuts = display_service_packet.get('service_cuts')
-            if _svc_cuts is not None and not _svc_cuts.empty:
-                with ui.card().classes('flex-1 p-3'):
-                    ui.label(tr_fn('cutlist.service_cutting')).classes('font-bold text-base mb-2')
+            # ── Sumarni pregled svih delova ───────────────────────────────
+            _summary_df = _summary_packet.get('summary_all')
+            if _summary_df is not None and not _summary_df.empty:
+                with ui.card().classes('w-full mb-4 p-3'):
+                    ui.label(tr_fn('cutlist.summary')).classes('font-bold text-base mb-2')
+                    with ui.column().classes('w-full gap-1 mb-2'):
+                        ui.label(
+                            'Legenda za početnika' if _lang != 'en' else 'Beginner legend'
+                        ).classes('text-sm font-semibold text-gray-700')
+                        _legend_lines = (
+                            [
+                                'Deo = naziv ploče ili dela elementa',
+                                'Kom = koliko komada tog dela treba',
+                                'Deb. = debljina ploče u milimetrima',
+                                'Dužina / Širina = gotove mere dela',
+                                'Materijal = od čega se deo izrađuje',
+                                'Orijentacija = smer ploče ili dezena',
+                                'Kant = koje ivice se kantuju',
+                                'L1/L2 = duže ivice, K1/K2 = kraće ivice',
+                                '1 = kantuje se, 0 = ne kantuje se',
+                            ]
+                            if _lang != 'en'
+                            else [
+                                'Part = the name of the panel or unit part',
+                                'Qty = how many pieces are needed',
+                                'Thk. = panel thickness in millimeters',
+                                'Length / Width = finished part dimensions',
+                                'Material = what the part is made of',
+                                'Orientation = board or grain direction',
+                                'Edge = which edges get edge banding',
+                                'L1/L2 = long edges, K1/K2 = short edges',
+                                '1 = edged, 0 = not edged',
+                            ]
+                        )
+                        for _line in _legend_lines:
+                            ui.label(_line).classes('text-xs text-gray-600 leading-snug')
+                    _summary_rows = _summary_df.copy()
+                    if {'Deo', 'Materijal', 'Deb.'}.issubset(_summary_rows.columns):
+                        _summary_rows['Materijal'] = _summary_rows.apply(
+                            lambda _r: _summary_material_label(
+                                _r.get('Deo', ''),
+                                _r.get('Materijal', ''),
+                                _r.get('Deb.', ''),
+                                _lang,
+                            ),
+                            axis=1,
+                        )
+                    if 'Kol.' in _summary_rows.columns and 'Kom' not in _summary_rows.columns:
+                        _summary_rows['Kom'] = _summary_rows['Kol.']
+                    _sum_cols = [
+                        {'name': 'rb', 'label': 'RB', 'field': 'RB', 'style': 'width: 38px; text-align:right;'},
+                        {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo', 'style': 'width: 150px; white-space: normal;'},
+                        {'name': 'kom', 'label': 'Kom', 'field': 'Kom', 'style': 'width: 48px; text-align:right;'},
+                        {'name': 'cw', 'label': tr_fn('cutlist.col_length_mm'), 'field': 'Dužina [mm]', 'style': 'width: 82px; text-align:right;'},
+                        {'name': 'ch', 'label': tr_fn('cutlist.col_width_mm'), 'field': 'Širina [mm]', 'style': 'width: 82px; text-align:right;'},
+                        {'name': 'deb', 'label': tr_fn('cutlist.col_thickness'), 'field': 'Deb.', 'style': 'width: 54px; text-align:right;'},
+                        {'name': 'mat', 'label': tr_fn('cutlist.col_material'), 'field': 'Materijal', 'style': 'width: 170px; white-space: normal;'},
+                        {'name': 'ori', 'label': ('Orientation' if _lang == 'en' else 'Orijentacija'), 'field': 'Orijentacija', 'style': 'width: 92px; white-space: normal;'},
+                        {'name': 'l1', 'label': 'L1', 'field': 'L1', 'style': 'width: 34px; text-align:center;'},
+                        {'name': 'l2', 'label': 'L2', 'field': 'L2', 'style': 'width: 34px; text-align:center;'},
+                        {'name': 'k1', 'label': 'K1', 'field': 'K1', 'style': 'width: 34px; text-align:center;'},
+                        {'name': 'k2', 'label': 'K2', 'field': 'K2', 'style': 'width: 34px; text-align:center;'},
+                    ]
+                    ui.table(columns=_sum_cols, rows=_summary_rows.to_dict('records')).classes('w-full text-xs').props('dense wrap-cells flat square separator=cell')
+
+            # ── Podaci o projektu ─────────────────────────────────────────
+            _hdr_df = _display_service_packet.get('project_header')
+            if _hdr_df is not None and not _hdr_df.empty:
+                with ui.card().classes('w-full mb-4 p-3'):
+                    ui.label(tr_fn('cutlist.project_data')).classes('font-bold text-base mb-2')
+                    ui.table(
+                        columns=[
+                            {'name': 'polje', 'label': tr_fn('cutlist.col_field'), 'field': 'Polje'},
+                            {'name': 'vrednost', 'label': tr_fn('cutlist.col_value'), 'field': 'Vrednost'},
+                        ],
+                        rows=_hdr_df.to_dict('records'),
+                    ).classes('w-full')
+
+            # ── Redosled radnih koraka ────────────────────────────────────
+            _guide_df = _display_service_packet.get('user_guide')
+            if _guide_df is not None and not _guide_df.empty:
+                with ui.card().classes('w-full mb-4 p-3 bg-blue-50'):
+                    ui.label(tr_fn('cutlist.workflow')).classes('font-bold text-base mb-2')
+                    ui.table(
+                        columns=[
+                            {'name': 'korak', 'label': tr_fn('cutlist.col_step'), 'field': 'Korak'},
+                            {'name': 'sta', 'label': tr_fn('cutlist.col_what'), 'field': 'Sta radis'},
+                            {'name': 'nap', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
+                        ],
+                        rows=_guide_df.to_dict('records'),
+                    ).classes('w-full')
+
+            # ── Servisne instrukcije ──────────────────────────────────────
+            _svc_instr = _display_service_packet.get('service_instructions')
+            if _svc_instr is not None and not _svc_instr.empty:
+                with ui.card().classes('w-full mb-4 p-3 bg-amber-50'):
+                    ui.label(tr_fn('cutlist.service_instructions')).classes('font-bold text-base mb-2')
                     ui.table(
                         columns=[
                             {'name': 'rb', 'label': 'RB', 'field': 'RB'},
-                            {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
-                            {'name': 'mat', 'label': tr_fn('cutlist.col_material'), 'field': 'Materijal'},
-                            {'name': 'deb', 'label': tr_fn('cutlist.col_thickness'), 'field': 'Deb.'},
-                            {'name': 'cw', 'label': tr_fn('cutlist.col_cut_length'), 'field': 'CUT_W [mm]'},
-                            {'name': 'ch', 'label': tr_fn('cutlist.col_cut_width'), 'field': 'CUT_H [mm]'},
-                            {'name': 'kant', 'label': tr_fn('cutlist.col_edge'), 'field': 'Kant'},
-                            {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
+                            {'name': 'stavka', 'label': tr_fn('cutlist.col_item'), 'field': 'Stavka'},
+                            {'name': 'instr', 'label': tr_fn('cutlist.col_instruction'), 'field': 'Instrukcija'},
                         ],
-                        rows=_svc_cuts.to_dict('records'),
+                        rows=_svc_instr.to_dict('records'),
                     ).classes('w-full text-sm')
-            _shop_df = display_service_packet.get('shopping_list')
-            if _shop_df is not None and not _shop_df.empty:
-                with ui.card().classes('flex-1 p-3'):
-                    ui.label(tr_fn('cutlist.shopping_extra')).classes('font-bold text-base mb-2')
+
+            # ── Sečenje i kupovina ────────────────────────────────────────
+            with ui.row().classes('w-full gap-4 items-start mb-4'):
+                _svc_cuts = _display_service_packet.get('service_cuts')
+                if _svc_cuts is not None and not _svc_cuts.empty:
+                    with ui.card().classes('flex-1 p-3'):
+                        ui.label(tr_fn('cutlist.service_cutting')).classes('font-bold text-base mb-2')
+                        ui.table(
+                            columns=[
+                                {'name': 'rb', 'label': 'RB', 'field': 'RB'},
+                                {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
+                                {'name': 'mat', 'label': tr_fn('cutlist.col_material'), 'field': 'Materijal'},
+                                {'name': 'deb', 'label': tr_fn('cutlist.col_thickness'), 'field': 'Deb.'},
+                                {'name': 'cw', 'label': tr_fn('cutlist.col_cut_length'), 'field': 'CUT_W [mm]'},
+                                {'name': 'ch', 'label': tr_fn('cutlist.col_cut_width'), 'field': 'CUT_H [mm]'},
+                                {'name': 'kant', 'label': tr_fn('cutlist.col_edge'), 'field': 'Kant'},
+                                {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
+                            ],
+                            rows=_svc_cuts.to_dict('records'),
+                        ).classes('w-full text-sm')
+                _shop_df = _display_service_packet.get('shopping_list')
+                if _shop_df is not None and not _shop_df.empty:
+                    with ui.card().classes('flex-1 p-3'):
+                        ui.label(tr_fn('cutlist.shopping_extra')).classes('font-bold text-base mb-2')
+                        ui.table(
+                            columns=[
+                                {'name': 'grupa', 'label': tr_fn('cutlist.col_group'), 'field': 'Grupa'},
+                                {'name': 'naziv', 'label': tr_fn('cutlist.col_name'), 'field': 'Naziv'},
+                                {'name': 'sifra', 'label': tr_fn('cutlist.col_type_code'), 'field': 'Tip / Šifra'},
+                                {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
+                                {'name': 'nap', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
+                            ],
+                            rows=_shop_df.to_dict('records'),
+                        ).classes('w-full text-sm')
+
+            # ── Gotovi elementi ───────────────────────────────────────────
+            _ready_df = _display_service_packet.get('ready_made_items')
+            if _ready_df is not None and not _ready_df.empty:
+                with ui.expansion(tr_fn('cutlist.ready_made'), icon='shopping_bag').classes('w-full mb-2 border rounded'):
                     ui.table(
                         columns=[
                             {'name': 'grupa', 'label': tr_fn('cutlist.col_group'), 'field': 'Grupa'},
@@ -588,285 +673,277 @@ def render_cutlist_tab(
                             {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
                             {'name': 'nap', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
                         ],
-                        rows=_shop_df.to_dict('records'),
+                        rows=_ready_df.to_dict('records'),
                     ).classes('w-full text-sm')
 
-        _ready_df = display_service_packet.get('ready_made_items')
-        if _ready_df is not None and not _ready_df.empty:
-            with ui.expansion(tr_fn('cutlist.ready_made'), icon='shopping_bag').classes('w-full mb-2 border rounded'):
-                ui.table(
-                    columns=[
-                        {'name': 'grupa', 'label': tr_fn('cutlist.col_group'), 'field': 'Grupa'},
-                        {'name': 'naziv', 'label': tr_fn('cutlist.col_name'), 'field': 'Naziv'},
-                        {'name': 'sifra', 'label': tr_fn('cutlist.col_type_code'), 'field': 'Tip / Šifra'},
-                        {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
-                        {'name': 'nap', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
-                    ],
-                    rows=_ready_df.to_dict('records'),
-                ).classes('w-full text-sm')
-
-        _svc_edge = display_service_packet.get('service_edge')
-        if _svc_edge is not None and not _svc_edge.empty:
-            with ui.expansion(tr_fn('cutlist.service_edging'), icon='content_cut').classes('w-full mb-2 border rounded'):
-                ui.table(
-                    columns=[
-                        {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
-                        {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
-                        {'name': 'modul', 'label': tr_fn('cutlist.col_module'), 'field': 'Modul'},
-                        {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo'},
-                        {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
-                        {'name': 'kant', 'label': tr_fn('cutlist.col_edge'), 'field': 'Kant'},
-                        {'name': 'nap', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
-                    ],
-                    rows=_svc_edge.to_dict('records'),
-                ).classes('w-full text-sm')
-
-        _svc_proc = display_service_packet.get('service_processing')
-        if _svc_proc is not None and not _svc_proc.empty:
-            with ui.expansion(tr_fn('cutlist.service_processing'), icon='build').classes('w-full mb-2 border rounded'):
-                ui.table(
-                    columns=[
-                        {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
-                        {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
-                        {'name': 'modul', 'label': tr_fn('cutlist.col_module'), 'field': 'Modul'},
-                        {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo'},
-                        {'name': 'tip', 'label': tr_fn('cutlist.col_processing_type'), 'field': 'Tip obrade'},
-                        {'name': 'izvodi', 'label': tr_fn('cutlist.col_ops'), 'field': 'Izvodi'},
-                        {'name': 'osnov', 'label': tr_fn('cutlist.col_basis'), 'field': 'Osnov izvođenja'},
-                        {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
-                        {'name': 'obr', 'label': tr_fn('cutlist.col_processing_note'), 'field': 'Obrada / napomena'},
-                    ],
-                    rows=_svc_proc.to_dict('records'),
-                ).classes('w-full text-sm')
-
-        with ui.row().classes('w-full gap-4 items-start mb-4'):
-            _wcl = display_service_packet.get('workshop_checklist')
-            if _wcl is not None and not _wcl.empty:
-                with ui.card().classes('flex-1 p-3'):
-                    ui.label(tr_fn('cutlist.checklist_service')).classes('font-bold text-base mb-2')
+            # ── Kantovanje ────────────────────────────────────────────────
+            _svc_edge = _display_service_packet.get('service_edge')
+            if _svc_edge is not None and not _svc_edge.empty:
+                with ui.expansion(tr_fn('cutlist.service_edging'), icon='content_cut').classes('w-full mb-2 border rounded'):
                     ui.table(
                         columns=[
-                            {'name': 'rb', 'label': 'RB', 'field': 'RB'},
-                            {'name': 'stavka', 'label': tr_fn('cutlist.col_item'), 'field': 'Stavka'},
-                            {'name': 'status', 'label': tr_fn('cutlist.col_status'), 'field': 'Status'},
+                            {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
+                            {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
+                            {'name': 'modul', 'label': tr_fn('cutlist.col_module'), 'field': 'Modul'},
+                            {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo'},
+                            {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
+                            {'name': 'kant', 'label': tr_fn('cutlist.col_edge'), 'field': 'Kant'},
+                            {'name': 'nap', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
                         ],
-                        rows=_wcl.to_dict('records'),
+                        rows=_svc_edge.to_dict('records'),
                     ).classes('w-full text-sm')
-            _hcl = display_service_packet.get('home_checklist')
-            if _hcl is not None and not _hcl.empty:
-                with ui.card().classes('flex-1 p-3'):
-                    ui.label(tr_fn('cutlist.checklist_assembly')).classes('font-bold text-base mb-2')
+
+            # ── Obrade ────────────────────────────────────────────────────
+            _svc_proc = _display_service_packet.get('service_processing')
+            if _svc_proc is not None and not _svc_proc.empty:
+                with ui.expansion(tr_fn('cutlist.service_processing'), icon='build').classes('w-full mb-2 border rounded'):
                     ui.table(
                         columns=[
-                            {'name': 'rb', 'label': 'RB', 'field': 'RB'},
-                            {'name': 'stavka', 'label': tr_fn('cutlist.col_item'), 'field': 'Stavka'},
-                            {'name': 'status', 'label': tr_fn('cutlist.col_status'), 'field': 'Status'},
+                            {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
+                            {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
+                            {'name': 'modul', 'label': tr_fn('cutlist.col_module'), 'field': 'Modul'},
+                            {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo'},
+                            {'name': 'tip', 'label': tr_fn('cutlist.col_processing_type'), 'field': 'Tip obrade'},
+                            {'name': 'izvodi', 'label': tr_fn('cutlist.col_ops'), 'field': 'Izvodi'},
+                            {'name': 'osnov', 'label': tr_fn('cutlist.col_basis'), 'field': 'Osnov izvođenja'},
+                            {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
+                            {'name': 'obr', 'label': tr_fn('cutlist.col_processing_note'), 'field': 'Obrada / napomena'},
                         ],
-                        rows=_hcl.to_dict('records'),
+                        rows=_svc_proc.to_dict('records'),
                     ).classes('w-full text-sm')
 
-        _titles = {
-            'carcass': tr_fn('cutlist.section_carcass'),
-            'backs': tr_fn('cutlist.section_backs'),
-            'fronts': tr_fn('cutlist.section_fronts'),
-            'drawer_boxes': tr_fn('cutlist.section_drawers'),
-            'worktop': tr_fn('cutlist.section_worktop'),
-            'plinth': tr_fn('cutlist.section_plinth'),
-            'hardware': tr_fn('cutlist.section_hardware'),
-        }
-        _sec_cols = [
-            {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
-            {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
-            {'name': 'modul', 'label': tr_fn('cutlist.col_module'), 'field': 'Modul'},
-            {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo'},
-            {'name': 'poz', 'label': tr_fn('cutlist.col_position'), 'field': 'Pozicija'},
-            {'name': 'korak', 'label': tr_fn('cutlist.col_step'), 'field': 'SklopKorak'},
-            {'name': 'cw', 'label': tr_fn('cutlist.col_length_mm'), 'field': 'CUT_W [mm]'},
-            {'name': 'ch', 'label': tr_fn('cutlist.col_width_mm'), 'field': 'CUT_H [mm]'},
-            {'name': 'deb', 'label': tr_fn('cutlist.col_thickness'), 'field': 'Deb.'},
-            {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
-            {'name': 'kant', 'label': tr_fn('cutlist.col_edge'), 'field': 'Kant'},
-            {'name': 'nap', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
-        ]
-        _hw_cols = [
-            {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
-            {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
-            {'name': 'modul', 'label': tr_fn('cutlist.col_module'), 'field': 'Modul'},
-            {'name': 'kat', 'label': tr_fn('cutlist.col_category'), 'field': 'Kategorija'},
-            {'name': 'naziv', 'label': tr_fn('cutlist.col_name'), 'field': 'Naziv'},
-            {'name': 'sifra', 'label': tr_fn('cutlist.col_type_code'), 'field': 'Tip / Šifra'},
-            {'name': 'korak', 'label': tr_fn('cutlist.col_step'), 'field': 'SklopKorak'},
-            {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
-            {'name': 'nap', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
-        ]
-        for _sk, _df in display_sections.items():
-            if _df is None or _df.empty:
-                continue
-            with ui.expansion(_titles.get(_sk, _sk.capitalize()), icon='table_rows').classes(
-                'w-full mb-2 border rounded'
-            ):
-                # Prevedi nazive delova u "Deo" koloni pre prikaza
-                _display_df = _df.copy()
-                if 'Deo' in _display_df.columns and _sk != 'hardware':
-                    _display_df['Deo'] = _display_df['Deo'].map(
-                        lambda v: _friendly_part_name(v, _lang)
-                    )
-                ui.table(
-                    columns=_hw_cols if _sk == 'hardware' else _sec_cols,
-                    rows=_display_df.to_dict('records')
-                ).classes('w-full text-sm')
+            # ── Checklist-e ───────────────────────────────────────────────
+            with ui.row().classes('w-full gap-4 items-start mb-4'):
+                _wcl = _display_service_packet.get('workshop_checklist')
+                if _wcl is not None and not _wcl.empty:
+                    with ui.card().classes('flex-1 p-3'):
+                        ui.label(tr_fn('cutlist.checklist_service')).classes('font-bold text-base mb-2')
+                        ui.table(
+                            columns=[
+                                {'name': 'rb', 'label': 'RB', 'field': 'RB'},
+                                {'name': 'stavka', 'label': tr_fn('cutlist.col_item'), 'field': 'Stavka'},
+                                {'name': 'status', 'label': tr_fn('cutlist.col_status'), 'field': 'Status'},
+                            ],
+                            rows=_wcl.to_dict('records'),
+                        ).classes('w-full text-sm')
+                _hcl = _display_service_packet.get('home_checklist')
+                if _hcl is not None and not _hcl.empty:
+                    with ui.card().classes('flex-1 p-3'):
+                        ui.label(tr_fn('cutlist.checklist_assembly')).classes('font-bold text-base mb-2')
+                        ui.table(
+                            columns=[
+                                {'name': 'rb', 'label': 'RB', 'field': 'RB'},
+                                {'name': 'stavka', 'label': tr_fn('cutlist.col_item'), 'field': 'Stavka'},
+                                {'name': 'status', 'label': tr_fn('cutlist.col_status'), 'field': 'Status'},
+                            ],
+                            rows=_hcl.to_dict('records'),
+                        ).classes('w-full text-sm')
 
-        ui.separator().classes('my-4')
-        ui.label(tr_fn('cutlist.by_element')).classes('text-xl font-bold mb-3')
-        with ui.card().classes('w-full mb-3 p-3 bg-gray-50'):
-            ui.label(tr_fn('cutlist.legend_title')).classes('text-sm font-semibold text-gray-700 mb-1')
-            _by_unit_legend = [
-                tr_fn('cutlist.legend_partcode'),
-                tr_fn('cutlist.legend_position'),
-                tr_fn('cutlist.legend_step'),
-                tr_fn('cutlist.legend_edge'),
-                tr_fn('cutlist.legend_material'),
+            # ── Sekcije (carcass, backs, fronts…) ────────────────────────
+            _titles = {
+                'carcass': tr_fn('cutlist.section_carcass'),
+                'backs': tr_fn('cutlist.section_backs'),
+                'fronts': tr_fn('cutlist.section_fronts'),
+                'drawer_boxes': tr_fn('cutlist.section_drawers'),
+                'worktop': tr_fn('cutlist.section_worktop'),
+                'plinth': tr_fn('cutlist.section_plinth'),
+                'hardware': tr_fn('cutlist.section_hardware'),
+            }
+            _sec_cols = [
+                {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
+                {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
+                {'name': 'modul', 'label': tr_fn('cutlist.col_module'), 'field': 'Modul'},
+                {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo'},
+                {'name': 'poz', 'label': tr_fn('cutlist.col_position'), 'field': 'Pozicija'},
+                {'name': 'korak', 'label': tr_fn('cutlist.col_step'), 'field': 'SklopKorak'},
+                {'name': 'cw', 'label': tr_fn('cutlist.col_length_mm'), 'field': 'CUT_W [mm]'},
+                {'name': 'ch', 'label': tr_fn('cutlist.col_width_mm'), 'field': 'CUT_H [mm]'},
+                {'name': 'deb', 'label': tr_fn('cutlist.col_thickness'), 'field': 'Deb.'},
+                {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
+                {'name': 'kant', 'label': tr_fn('cutlist.col_edge'), 'field': 'Kant'},
+                {'name': 'nap', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
             ]
-            for _line in _by_unit_legend:
-                ui.label(_line).classes('text-xs text-gray-600 leading-snug')
-        _elem_cols = [
-            {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
-            {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo'},
-            {'name': 'poz', 'label': tr_fn('cutlist.col_position'), 'field': 'Pozicija'},
-            {'name': 'korak', 'label': tr_fn('cutlist.col_step'), 'field': 'SklopKorak'},
-            {'name': 'cw', 'label': tr_fn('cutlist.col_length_mm'), 'field': 'CUT_W [mm]'},
-            {'name': 'ch', 'label': tr_fn('cutlist.col_width_mm'), 'field': 'CUT_H [mm]'},
-            {'name': 'deb', 'label': tr_fn('cutlist.col_thickness'), 'field': 'Deb.'},
-            {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
-            {'name': 'kant', 'label': tr_fn('cutlist.col_edge'), 'field': 'Kant'},
-        ]
-        _combined_e = summary_packet.get('summary_detaljna')
-        _combined_has_id = (
-            _combined_e is not None
-            and not _combined_e.empty
-            and 'ID' in _combined_e.columns
-        )
-
-        def _make_preview_loader(_col, _mm, _mp, _tid):
-            """Lazy loader za 2D/3D preview — poziva se tek pri prvom otvaranju accordion-a."""
-            _done = [False]
-
-            def _load(e):
-                _is_open = e.args if hasattr(e, 'args') else True
-                if not _is_open or _done[0]:
-                    return
-                _done[0] = True
-                _col.clear()
-                with _col:
-                    try:
-                        _pr = _mp.to_dict('records') if _mp is not None and not _mp.empty else None
-                        _u2, _u3 = render_element_preview(
-                            _mm, state.kitchen, label_mode='part_codes', part_rows=_pr
+            _hw_cols = [
+                {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
+                {'name': 'zid', 'label': tr_fn('cutlist.col_wall'), 'field': 'Zid'},
+                {'name': 'modul', 'label': tr_fn('cutlist.col_module'), 'field': 'Modul'},
+                {'name': 'kat', 'label': tr_fn('cutlist.col_category'), 'field': 'Kategorija'},
+                {'name': 'naziv', 'label': tr_fn('cutlist.col_name'), 'field': 'Naziv'},
+                {'name': 'sifra', 'label': tr_fn('cutlist.col_type_code'), 'field': 'Tip / Šifra'},
+                {'name': 'korak', 'label': tr_fn('cutlist.col_step'), 'field': 'SklopKorak'},
+                {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
+                {'name': 'nap', 'label': tr_fn('cutlist.col_note'), 'field': 'Napomena'},
+            ]
+            for _sk, _df in _display_sections.items():
+                if _df is None or _df.empty:
+                    continue
+                with ui.expansion(_titles.get(_sk, _sk.capitalize()), icon='table_rows').classes(
+                    'w-full mb-2 border rounded'
+                ):
+                    _display_df = _df.copy()
+                    if 'Deo' in _display_df.columns and _sk != 'hardware':
+                        _display_df['Deo'] = _display_df['Deo'].map(
+                            lambda v: _friendly_part_name(v, _lang)
                         )
-                        with ui.row().classes('gap-2 items-start'):
-                            with ui.column().classes('items-center gap-0.5'):
-                                ui.label(tr_fn('cutlist.preview_2d')).classes('text-[10px] text-gray-400 font-semibold')
-                                ui.image(_u2).style(
-                                    'width:110px; height:auto; border:1px solid #ddd; border-radius:4px;'
-                                )
-                                ui.label(tr_fn('cutlist.preview_note_short')).classes('text-[10px] text-amber-700')
-                            with ui.column().classes('items-center gap-0.5'):
-                                ui.label(tr_fn('cutlist.preview_3d')).classes('text-[10px] text-gray-400 font-semibold')
-                                ui.image(_u3).style(
-                                    'width:140px; height:auto; border:1px solid #ddd; border-radius:4px;'
-                                )
-                    except Exception as _ex:
-                        _LOG.debug('Cutlist lazy preview failed for template %s: %s', _tid, _ex)
-                        ui.html(svg_for_tid(_tid)).classes('w-32 h-32')
+                    ui.table(
+                        columns=_hw_cols if _sk == 'hardware' else _sec_cols,
+                        rows=_display_df.to_dict('records')
+                    ).classes('w-full text-sm')
 
-            return _load
+            # ── Po elementu ───────────────────────────────────────────────
+            ui.separator().classes('my-4')
+            ui.label(tr_fn('cutlist.by_element')).classes('text-xl font-bold mb-3')
+            with ui.card().classes('w-full mb-3 p-3 bg-gray-50'):
+                ui.label(tr_fn('cutlist.legend_title')).classes('text-sm font-semibold text-gray-700 mb-1')
+                _by_unit_legend = [
+                    tr_fn('cutlist.legend_partcode'),
+                    tr_fn('cutlist.legend_position'),
+                    tr_fn('cutlist.legend_step'),
+                    tr_fn('cutlist.legend_edge'),
+                    tr_fn('cutlist.legend_material'),
+                ]
+                for _line in _by_unit_legend:
+                    ui.label(_line).classes('text-xs text-gray-600 leading-snug')
 
-        for _m in mods:
-            _mid = int(_m.get('id', 0))
-            _mlbl_raw = str(_m.get('label', ''))
-            _mzone = str(_m.get('zone', 'base')).lower()
-            _mw = int(_m.get('w_mm', 0))
-            _mh = int(_m.get('h_mm', 0))
-            _md = int(_m.get('d_mm', 0))
-            _mtid = str(_m.get('template_id', ''))
-            _mlbl = translate_template_label(_mlbl_raw, _lang)
-            _hdr = f'#{_mid} - {_mlbl}  ({_mw}x{_mh}x{_md} mm)'
+            _elem_cols = [
+                {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
+                {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo'},
+                {'name': 'poz', 'label': tr_fn('cutlist.col_position'), 'field': 'Pozicija'},
+                {'name': 'korak', 'label': tr_fn('cutlist.col_step'), 'field': 'SklopKorak'},
+                {'name': 'cw', 'label': tr_fn('cutlist.col_length_mm'), 'field': 'CUT_W [mm]'},
+                {'name': 'ch', 'label': tr_fn('cutlist.col_width_mm'), 'field': 'CUT_H [mm]'},
+                {'name': 'deb', 'label': tr_fn('cutlist.col_thickness'), 'field': 'Deb.'},
+                {'name': 'kol', 'label': tr_fn('cutlist.col_qty'), 'field': 'Kol.'},
+                {'name': 'kant', 'label': tr_fn('cutlist.col_edge'), 'field': 'Kant'},
+            ]
+            _combined_e = _summary_packet.get('summary_detaljna')
+            _combined_has_id = (
+                _combined_e is not None
+                and not _combined_e.empty
+                and 'ID' in _combined_e.columns
+            )
 
-            # Pripremi mparts pre expansion-a (samo brze DataFrame operacije)
-            _mparts = None
-            if _combined_has_id:
-                _mparts = _combined_e[_combined_e['ID'] == _mid]
-                if _mparts is not None and not _mparts.empty and {'Deo', 'Materijal', 'Deb.'}.issubset(_mparts.columns):
-                    _mparts = _mparts.copy()
-                    _mparts['Materijal'] = _mparts.apply(
-                        lambda _r: _summary_material_label(
-                            _r.get('Deo', ''),
-                            _r.get('Materijal', ''),
-                            _r.get('Deb.', ''),
-                            _lang,
-                        ),
-                        axis=1,
-                    )
+            def _make_preview_loader(_col, _mm, _mp, _tid):
+                """Lazy loader za 2D/3D preview — poziva se tek pri prvom otvaranju accordion-a."""
+                _done = [False]
 
-            _exp = ui.expansion(_hdr, icon='view_in_ar').classes('w-full mb-3 border border-gray-200 rounded')
-            with _exp:
-                with ui.row().classes('w-full gap-4 items-start p-2'):
-                    # Placeholder — puni se lazy pri prvom otvaranju
-                    _preview_col = ui.column().classes('shrink-0 gap-2')
-                    with _preview_col:
-                        ui.icon('photo', size='xl').classes('text-gray-300 mt-2')
+                def _load(e):
+                    _is_open = e.args if hasattr(e, 'args') else True
+                    if not _is_open or _done[0]:
+                        return
+                    _done[0] = True
+                    _col.clear()
+                    with _col:
+                        try:
+                            _pr = _mp.to_dict('records') if _mp is not None and not _mp.empty else None
+                            _u2, _u3 = render_element_preview(
+                                _mm, _ks, label_mode='part_codes', part_rows=_pr
+                            )
+                            with ui.row().classes('gap-2 items-start'):
+                                with ui.column().classes('items-center gap-0.5'):
+                                    ui.label(tr_fn('cutlist.preview_2d')).classes('text-[10px] text-gray-400 font-semibold')
+                                    ui.image(_u2).style(
+                                        'width:110px; height:auto; border:1px solid #ddd; border-radius:4px;'
+                                    )
+                                    ui.label(tr_fn('cutlist.preview_note_short')).classes('text-[10px] text-amber-700')
+                                with ui.column().classes('items-center gap-0.5'):
+                                    ui.label(tr_fn('cutlist.preview_3d')).classes('text-[10px] text-gray-400 font-semibold')
+                                    ui.image(_u3).style(
+                                        'width:140px; height:auto; border:1px solid #ddd; border-radius:4px;'
+                                    )
+                        except Exception as _ex:
+                            _LOG.debug('Cutlist lazy preview failed for template %s: %s', _tid, _ex)
+                            ui.html(svg_for_tid(_tid)).classes('w-32 h-32')
 
-                    with ui.column().classes('flex-1 gap-2'):
-                        if _mparts is not None and not _mparts.empty:
-                            _map_df = _mparts[['PartCode', 'Deo', 'Pozicija', 'SklopKorak', 'Kol.']].copy()
-                            _map_df['Deo'] = _map_df['Deo'].map(lambda v: _friendly_part_name(v, _lang))
-                            _map_df['Pozicija'] = _map_df['Pozicija'].map(lambda v: _friendly_position_name(v, _lang))
-                            _map_df = _map_df.sort_values(['SklopKorak', 'PartCode']).reset_index(drop=True)
-                            ui.label(tr_fn('cutlist.parts_map')).classes('text-sm font-semibold text-gray-700')
-                            ui.table(
-                                columns=[
-                                    {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
-                                    {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo'},
-                                    {'name': 'poz', 'label': tr_fn('cutlist.where_goes'), 'field': 'Pozicija'},
-                                    {'name': 'korak', 'label': tr_fn('cutlist.col_step'), 'field': 'SklopKorak'},
-                                    {'name': 'kol', 'label': tr_fn('cutlist.pieces'), 'field': 'Kol.'},
-                                ],
-                                rows=_map_df.to_dict('records'),
-                            ).classes('w-full text-xs')
-                            ui.label(tr_fn('cutlist.preview_note_full')).classes('text-[11px] text-gray-600')
-                            ui.label(tr_fn('cutlist.section_cuts')).classes('text-sm font-semibold text-gray-700')
-                            _cuts_df = _mparts.copy()
-                            _cuts_df['Deo'] = _cuts_df['Deo'].map(lambda v: _friendly_part_name(v, _lang))
-                            _cuts_df['Pozicija'] = _cuts_df['Pozicija'].map(lambda v: _friendly_position_name(v, _lang))
-                            ui.table(columns=_elem_cols, rows=_cuts_df.to_dict('records')).classes('w-full text-xs')
+                return _load
 
-                        ui.label(tr_fn('cutlist.section_assembly')).classes('text-sm font-semibold text-gray-700 mt-2')
-                        if _mparts is not None and not _mparts.empty:
-                            _needed_cols = {'PartCode', 'Deo', 'Pozicija', 'Kol.', 'SklopKorak'}
-                            if _needed_cols.issubset(set(_mparts.columns)):
-                                _asm = _mparts.copy()
-                                _asm['_korak_sort'] = pd.to_numeric(_asm['SklopKorak'], errors='coerce').fillna(99).astype(int)
-                                _asm = _asm.sort_values(['_korak_sort', 'PartCode']).reset_index(drop=True)
-                                with ui.column().classes('gap-0.5 mb-1'):
-                                    for _, _r in _asm.iterrows():
-                                        _line = (
-                                            tr_fn(
-                                                'cutlist.asm_step_line',
-                                                step=_r.get('SklopKorak', '-'),
-                                                part=_r.get('PartCode', ''),
-                                                piece=_friendly_part_name(_r.get('Deo', ''), _lang),
-                                                position=_friendly_position_name(_r.get('Pozicija', '-'), _lang),
-                                                qty=_r.get('Kol.', 1),
+            for _m in _mods:
+                _mid = int(_m.get('id', 0))
+                _mlbl_raw = str(_m.get('label', ''))
+                _mzone = str(_m.get('zone', 'base')).lower()
+                _mw = int(_m.get('w_mm', 0))
+                _mh = int(_m.get('h_mm', 0))
+                _md = int(_m.get('d_mm', 0))
+                _mtid = str(_m.get('template_id', ''))
+                _mlbl = translate_template_label(_mlbl_raw, _lang)
+                _hdr = f'#{_mid} - {_mlbl}  ({_mw}x{_mh}x{_md} mm)'
+
+                # Pripremi mparts pre expansion-a (samo brze DataFrame operacije)
+                _mparts = None
+                if _combined_has_id:
+                    _mparts = _combined_e[_combined_e['ID'] == _mid]
+                    if _mparts is not None and not _mparts.empty and {'Deo', 'Materijal', 'Deb.'}.issubset(_mparts.columns):
+                        _mparts = _mparts.copy()
+                        _mparts['Materijal'] = _mparts.apply(
+                            lambda _r: _summary_material_label(
+                                _r.get('Deo', ''),
+                                _r.get('Materijal', ''),
+                                _r.get('Deb.', ''),
+                                _lang,
+                            ),
+                            axis=1,
+                        )
+
+                _exp = ui.expansion(_hdr, icon='view_in_ar').classes('w-full mb-3 border border-gray-200 rounded')
+                with _exp:
+                    with ui.row().classes('w-full gap-4 items-start p-2'):
+                        # Placeholder — puni se lazy pri prvom otvaranju
+                        _preview_col = ui.column().classes('shrink-0 gap-2')
+                        with _preview_col:
+                            ui.icon('photo', size='xl').classes('text-gray-300 mt-2')
+
+                        with ui.column().classes('flex-1 gap-2'):
+                            if _mparts is not None and not _mparts.empty:
+                                _map_df = _mparts[['PartCode', 'Deo', 'Pozicija', 'SklopKorak', 'Kol.']].copy()
+                                _map_df['Deo'] = _map_df['Deo'].map(lambda v: _friendly_part_name(v, _lang))
+                                _map_df['Pozicija'] = _map_df['Pozicija'].map(lambda v: _friendly_position_name(v, _lang))
+                                _map_df = _map_df.sort_values(['SklopKorak', 'PartCode']).reset_index(drop=True)
+                                ui.label(tr_fn('cutlist.parts_map')).classes('text-sm font-semibold text-gray-700')
+                                ui.table(
+                                    columns=[
+                                        {'name': 'part', 'label': 'PartCode', 'field': 'PartCode'},
+                                        {'name': 'deo', 'label': tr_fn('cutlist.col_part'), 'field': 'Deo'},
+                                        {'name': 'poz', 'label': tr_fn('cutlist.where_goes'), 'field': 'Pozicija'},
+                                        {'name': 'korak', 'label': tr_fn('cutlist.col_step'), 'field': 'SklopKorak'},
+                                        {'name': 'kol', 'label': tr_fn('cutlist.pieces'), 'field': 'Kol.'},
+                                    ],
+                                    rows=_map_df.to_dict('records'),
+                                ).classes('w-full text-xs')
+                                ui.label(tr_fn('cutlist.preview_note_full')).classes('text-[11px] text-gray-600')
+                                ui.label(tr_fn('cutlist.section_cuts')).classes('text-sm font-semibold text-gray-700')
+                                _cuts_df = _mparts.copy()
+                                _cuts_df['Deo'] = _cuts_df['Deo'].map(lambda v: _friendly_part_name(v, _lang))
+                                _cuts_df['Pozicija'] = _cuts_df['Pozicija'].map(lambda v: _friendly_position_name(v, _lang))
+                                ui.table(columns=_elem_cols, rows=_cuts_df.to_dict('records')).classes('w-full text-xs')
+
+                            ui.label(tr_fn('cutlist.section_assembly')).classes('text-sm font-semibold text-gray-700 mt-2')
+                            if _mparts is not None and not _mparts.empty:
+                                _needed_cols = {'PartCode', 'Deo', 'Pozicija', 'Kol.', 'SklopKorak'}
+                                if _needed_cols.issubset(set(_mparts.columns)):
+                                    _asm = _mparts.copy()
+                                    _asm['_korak_sort'] = pd.to_numeric(_asm['SklopKorak'], errors='coerce').fillna(99).astype(int)
+                                    _asm = _asm.sort_values(['_korak_sort', 'PartCode']).reset_index(drop=True)
+                                    with ui.column().classes('gap-0.5 mb-1'):
+                                        for _, _r in _asm.iterrows():
+                                            _line = (
+                                                tr_fn(
+                                                    'cutlist.asm_step_line',
+                                                    step=_r.get('SklopKorak', '-'),
+                                                    part=_r.get('PartCode', ''),
+                                                    piece=_friendly_part_name(_r.get('Deo', ''), _lang),
+                                                    position=_friendly_position_name(_r.get('Pozicija', '-'), _lang),
+                                                    qty=_r.get('Kol.', 1),
+                                                )
                                             )
-                                        )
-                                        ui.label(_line).classes('text-xs text-gray-700 leading-snug')
+                                            ui.label(_line).classes('text-xs text-gray-700 leading-snug')
 
-                        _steps = assembly_instructions(_mtid, _mzone, m=_m, kitchen=state.kitchen, lang=_lang)
-                        with ui.column().classes('gap-0.5'):
-                            for _step in _steps:
-                                ui.label(_step).classes('text-xs text-gray-600 leading-snug')
+                            _steps = assembly_instructions(_mtid, _mzone, m=_m, kitchen=_ks, lang=_lang)
+                            with ui.column().classes('gap-0.5'):
+                                for _step in _steps:
+                                    ui.label(_step).classes('text-xs text-gray-600 leading-snug')
 
-            # Lazy preview: render_element_preview se poziva tek pri prvom klik-otvaranju
-            _exp.on('update:model-value', _make_preview_loader(_preview_col, dict(_m), _mparts, _mtid))
-    except Exception as e:
-        ui.label(tr_fn('cutlist.err_generic', err=e)).classes('text-red-500')
+                # Lazy preview: render_element_preview se poziva tek pri prvom klik-otvaranju
+                _exp.on('update:model-value', _make_preview_loader(_preview_col, dict(_m), _mparts, _mtid))
+
+    # Pokretanje async punjenja — odmah vraća kontrolu NiceGUI event loopu
+    asyncio.ensure_future(_load_cutlist_content())
