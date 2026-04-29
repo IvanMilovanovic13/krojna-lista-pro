@@ -434,7 +434,25 @@ def index(request: Request) -> None:
 
 
 @ui.page('/app')
-def app_entry() -> None:
+async def app_entry() -> None:
+    # Ako je app.storage.user prazan (server restart), pokušaj da obnovi
+    # session token iz browser localStorage (koji preživljava restarte).
+    try:
+        user_storage = app.storage.user
+        if not str(user_storage.get("auth_session_token", "") or "").strip():
+            ls_token = await ui.run_javascript(
+                "return localStorage.getItem('auth_session_token') || '';",
+                timeout=2.0,
+            )
+            ls_exp = await ui.run_javascript(
+                "return localStorage.getItem('auth_session_expires_at') || '';",
+                timeout=2.0,
+            )
+            if ls_token and str(ls_token).strip():
+                user_storage["auth_session_token"] = str(ls_token).strip()
+                user_storage["auth_session_expires_at"] = str(ls_exp or "").strip()
+    except Exception:
+        pass
     _render_app_shell()
 
 

@@ -2042,35 +2042,47 @@ def init_local_session_state() -> None:
 
 
 def _get_user_storage() -> Any | None:
-    # Koristimo app.storage.browser umesto app.storage.user:
-    # - app.storage.user: cuva se kao fajl NA SERVERU → gubi se pri restartu
-    #   (Render free tier restartuje server posle ~15min neaktivnosti)
-    # - app.storage.browser: cuva se u browser-u (localStorage) → prezivljava
-    #   restarte servera i deploy-eve, token ostaje u browseru
-    # Bezbednost: token je ionako u bazi i validira se server-side pri svakom
-    # koristenju, pa cuvanje u localStorage ne umanjuje bezbednost.
+    # app.storage.user: server-side fajl po korisniku.
+    # app.storage.browser: browser localStorage — ne može se pisati tokom
+    # WebSocket eventa (klik na dugme) u NiceGUI 1.4.x → RuntimeError.
+    # Koristimo app.storage.user za čitanje/pisanje tokena, a localStorage
+    # punimo posebno preko ui.run_javascript() u login/logout handleru.
     try:
         from nicegui import app as nicegui_app
-        return nicegui_app.storage.browser
+        return nicegui_app.storage.user
     except Exception:
-        try:
-            from nicegui import app as nicegui_app
-            return nicegui_app.storage.user
-        except Exception:
-            return None
+        return None
 
 
 def _persist_session_token(session_token: str, *, expires_at: str = "") -> None:
+    """Čuva token u app.storage.user i (asinhrono) u browser localStorage."""
     storage = _get_user_storage()
-    if storage is None:
-        return
     clean_token = str(session_token or "").strip()
-    if clean_token:
-        storage["auth_session_token"] = clean_token
-        storage["auth_session_expires_at"] = str(expires_at or "")
-    else:
-        storage.pop("auth_session_token", None)
-        storage.pop("auth_session_expires_at", None)
+    # 1) server-side storage (uvek radi)
+    if storage is not None:
+        if clean_token:
+            storage["auth_session_token"] = clean_token
+            storage["auth_session_expires_at"] = str(expires_at or "")
+        else:
+            storage.pop("auth_session_token", None)
+            storage.pop("auth_session_expires_at", None)
+    # 2) browser localStorage — za preživljavanje restarta servera
+    try:
+        from nicegui import ui as nicegui_ui
+        if clean_token:
+            _tok = clean_token.replace("'", "\\'")
+            _exp = str(expires_at or "").replace("'", "\\'")
+            nicegui_ui.run_javascript(
+                f"localStorage.setItem('auth_session_token','{_tok}');"
+                f"localStorage.setItem('auth_session_expires_at','{_exp}');"
+            )
+        else:
+            nicegui_ui.run_javascript(
+                "localStorage.removeItem('auth_session_token');"
+                "localStorage.removeItem('auth_session_expires_at');"
+            )
+    except Exception:
+        pass
 
 
 def _load_persisted_session_token() -> str:
