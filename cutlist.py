@@ -2322,6 +2322,19 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
                 "Za zaptivanje ruba sudopere i spojeva uz radnu ploču",
                 kategorija="potrosni",
             ))
+            # Šarke za vrata ispod sudopere — prethodno nedostajale jer SINK blok
+            # hvata element pre nego što stigne do opšteg _is_door_m bloka.
+            _n_vrata_sink = 2 if _hw_mm > 600 else 1
+            _dh_sink = _hh - 4.0
+            _sharke_sink = _hinges_per_door(_dh_sink)
+            rows_hardware.append(_hw(
+                _hmid, _hzone, _hmlbl,
+                "Šarka (CLIP-top 110°)",
+                hwc.get("hinge", ""),
+                _n_vrata_sink * _sharke_sink,
+                f"{_n_vrata_sink} vrata × {_sharke_sink} šarke (v vrata≈{_dh_sink:.0f}mm); "
+                "bušenje: Ø35mm dubina 13mm, 22.5mm od ruba",
+            ))
 
         elif _is_freestanding_dish_m:
             continue
@@ -2428,8 +2441,11 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
         # ── Šarke za vrata ───────────────────────────────────
         elif _is_door_m:
             _n_vrata = 2 if (_hw_mm > 500 and "1DOOR" not in _htid) else 1
-            if "SINK" in _htid:
-                _n_vrata = 2 if _hw_mm > 600 else 1
+            # BASE_DOOR_DRAWER — uvek 1 vrata (fioka je zasebna, ne računa se kao vrata)
+            if "DOOR_DRAWER" in _htid and "DOORS" not in _htid:
+                _n_vrata = 1
+            # Napomena: SINK ne može ovde stići (uhvati ga prethodni elif blok);
+            # šarke za SINK su dodane direktno u SINK bloku gore.
             # Visina vrata ≈ visina modula (front gap ~4mm obostrano)
             _dh = _hh - 4.0
             _sharke_po = _hinges_per_door(_dh)
