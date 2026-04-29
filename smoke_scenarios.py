@@ -318,7 +318,7 @@ def smoke_special_front_types() -> tuple[bool, str]:
 
     cases = [
         ("WALL_GLASS", {"zone": "wall", "w_mm": 600, "h_mm": 720, "d_mm": 320}, [(["staklena", "vrata"], 2)]),
-        ("WALL_LIFTUP", {"zone": "wall", "w_mm": 600, "h_mm": 360, "d_mm": 320}, [(["vrata"], 2)]),
+        ("WALL_LIFTUP", {"zone": "wall", "w_mm": 600, "h_mm": 360, "d_mm": 320}, [(["klapne"], 1)]),
         ("TALL_FRIDGE", {"zone": "tall", "w_mm": 600, "h_mm": 2100, "d_mm": 560}, [(["front", "integrisanog", "frižidera"], 1)]),
         ("TALL_FRIDGE_FREEZER", {"zone": "tall", "w_mm": 600, "h_mm": 2100, "d_mm": 560}, [(["gornji", "front", "frižidera"], 1), (["donji", "front", "zamrzivača"], 1)]),
         ("BASE_DISHWASHER", {"zone": "base", "w_mm": 600, "h_mm": 720, "d_mm": 560}, [(["front", "sudove"], 1)]),
@@ -1214,7 +1214,7 @@ def smoke_service_processing_packet() -> tuple[bool, str]:
     proc_types = set(proc["Tip obrade"].astype(str).tolist()) if "Tip obrade" in proc.columns else set()
     missing_types = {
         "Otvor za sudoperu",
-        "Otvor za plocu",
+        "Otvor za ploču",
         "Instalacioni prolaz",
         "Ventilacija / otvor",
         "Prolaz za kabl",
@@ -1896,9 +1896,9 @@ def smoke_wardrobe_hardware() -> tuple[bool, str]:
     """
     P1-6a: Wardrobe moduli moraju dobiti ispravne okove:
     - TALL_WARDROBE_2DOOR_SLIDING, TALL_WARDROBE_CORNER_SLIDING, TALL_WARDROBE_AMERICAN
-      → 'Klizni sistem vrata' red + 'Set tockica' red
+      → 'Klizni sistem vrata' red + 'Set točkića' red
     - TALL_WARDROBE_INT_HANG
-      → 'Sipka za vesanje' red + 'Nosaci sipke' red
+      → 'Šipka za vešanje' red + 'Nosači šipke' red
     """
     def make_mod(mid, tid, w=1800, h=2400, d=620):
         return {
@@ -1930,19 +1930,19 @@ def smoke_wardrobe_hardware() -> tuple[bool, str]:
         klizni = mod_hw[mod_hw["Naziv"].str.contains("Klizni sistem", na=False)]
         if klizni.empty:
             return False, f"FAIL: {label} nema 'Klizni sistem' u hardware-u"
-        tockici = mod_hw[mod_hw["Naziv"].str.contains("tockic", na=False)]
+        tockici = mod_hw[mod_hw["Naziv"].str.contains("točki", na=False)]
         if tockici.empty:
-            return False, f"FAIL: {label} nema 'Set tockica' u hardware-u"
+            return False, f"FAIL: {label} nema 'Set točkića' u hardware-u"
         n_tockici = int(tockici.iloc[0]["Kol."])
         if n_tockici != exp_panels:
             return False, f"FAIL: {label} treba {exp_panels} seta tockica, dobijeno {n_tockici}"
 
     # Provjeri sipku za vesanje za M4
     hang_hw = okovi[okovi["ID"] == 4]
-    sipka = hang_hw[hang_hw["Naziv"].str.contains("Sipka", na=False)]
+    sipka = hang_hw[hang_hw["Naziv"].str.contains("ipka", na=False)]
     if sipka.empty:
         return False, "FAIL: TALL_WARDROBE_INT_HANG nema 'Sipka za vesanje' u hardware-u"
-    nosaci = hang_hw[hang_hw["Naziv"].str.contains("Nosaci sipke", na=False)]
+    nosaci = hang_hw[hang_hw["Naziv"].str.contains("ipke", na=False)]
     if nosaci.empty:
         return False, "FAIL: TALL_WARDROBE_INT_HANG nema 'Nosaci sipke' u hardware-u"
     n_nosaca = int(nosaci.iloc[0]["Kol."])
