@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
@@ -257,6 +257,14 @@ def available_space_in_zone(kitchen: Dict[str, Any], zone: str, wall_key: str | 
         used = sum(int(m.get("w_mm", 0)) + int(m.get("gap_after_mm", 0)) for m in zone_mods)
         tall_used = sum(int(m.get("w_mm", 0)) for m in tall_mods)
         return max(0, usable - used - tall_used)
+    elif z == "tall":
+        # Visoki elementi ne mogu biti na istom podu kao donji (base) elementi.
+        # Slobodan prostor = ukupno - zauzeto tall elementima - zauzeto base elementima.
+        tall_mods = [m for m in mods if _get_zone(m) == "tall"]
+        base_mods = [m for m in mods if _get_zone(m) == "base"]
+        tall_used = sum(int(m.get("w_mm", 0)) + int(m.get("gap_after_mm", 0)) for m in tall_mods)
+        base_used = sum(int(m.get("w_mm", 0)) + int(m.get("gap_after_mm", 0)) for m in base_mods)
+        return max(0, usable - tall_used - base_used)
     else:
         all_mods = [m for m in mods if _get_zone(m) == z]
         used = sum(int(m.get("w_mm", 0)) + int(m.get("gap_after_mm", 0)) for m in all_mods)
