@@ -479,7 +479,10 @@ def find_first_free_x(
     tall_spans = [_span_x(m) for m in mods if _get_zone(m) == "tall"]
 
     if z == "tall":
-        occ = [_effective_span_with_gap(m) for m in mods if _get_zone(m) != "tall_top"]
+        # Visoki elementi dele pod sa donjim (base) elementima, ali NE sa visecim (wall/wall_upper).
+        # Iskljucujemo: tall_top (ide iznad tall-a), wall i wall_upper (vise visoko, ne na podu).
+        _tall_floor_zones = {"tall", "base"}
+        occ = [_effective_span_with_gap(m) for m in mods if _get_zone(m) in _tall_floor_zones]
     else:
         occ = [_effective_span_with_gap(m) for m in mods if _get_zone(m) == z]
         occ = occ + [(a, b) for (a, b) in tall_spans]
