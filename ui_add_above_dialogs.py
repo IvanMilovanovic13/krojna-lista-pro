@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -89,6 +89,30 @@ def open_add_above_tall_dialog(
 
             ui.label(LBL_SIRINA_POZ_AUTO.format(w=tall_w)).classes('text-xs text-gray-700 mt-1')
 
+            # Broj vrata i strana rucke — samo za TALL_TOP_DOORS
+            door_count_inp = None
+            handle_side_inp = None
+
+            def _update_door_widgets():
+                _is_doors = tt_labels.get(str(tid_sel.value)) == 'TALL_TOP_DOORS'
+                door_count_inp.set_visibility(_is_doors)
+                handle_side_inp.set_visibility(_is_doors)
+
+            with ui.row().classes('w-full gap-2'):
+                door_count_inp = ui.select(
+                    {1: '1 vrata', 2: '2 vrata'},
+                    value=2,
+                    label='Broj vrata',
+                ).props('dense outlined').classes('flex-1')
+                handle_side_inp = ui.select(
+                    {'left': 'Levo', 'right': 'Desno'},
+                    value='right',
+                    label='Strana rucke',
+                ).props('dense outlined').classes('flex-1')
+
+            tid_sel.on('update:model-value', lambda _: _update_door_widgets())
+            _update_door_widgets()
+
             def _potvrdi():
                 try:
                     tid = tt_labels[str(tid_sel.value)]
@@ -96,6 +120,10 @@ def open_add_above_tall_dialog(
                     new_h = int(h_inp.value)
                     new_d = int(d_inp.value)
                     new_lbl = str(tmpl.get('label', tid))
+                    _extra = {}
+                    if tid == 'TALL_TOP_DOORS' and door_count_inp is not None:
+                        _extra['door_count'] = int(door_count_inp.value)
+                        _extra['handle_side'] = str(handle_side_inp.value)
 
                     _new_mod = add_module_instance_local(
                         template_id=tid,
@@ -105,6 +133,7 @@ def open_add_above_tall_dialog(
                         h_mm=new_h,
                         d_mm=new_d,
                         label=new_lbl,
+                        params=_extra,
                     )
                     ui.notify(NOTIFY_ADDED_ABOVE_FMT.format(label=new_lbl, id=tall_module_id), type='positive')
                     dlg.close()

@@ -1416,19 +1416,25 @@ def _draw_fridge(ax, x, y, w, h, accent, face, technical):
             color="#666666" if not technical else "#999999",
             ha="center", va="center", alpha=0.85, zorder=16)
 
-def _draw_pantry(ax, x, y, w, h, accent, face, technical):
-    """Visoki za ostavu: 2 krila vrata + police vidljive kroz staklo."""
+def _draw_pantry(ax, x, y, w, h, accent, face, technical,
+                 door_count: int = 2, handle_side: str = "right", n_shelves: int = 4):
+    """Visoki za ostavu: 1 ili 2 krila vrata + police."""
     mid = x + w / 2
-    # 2 vrata
-    ax.plot([mid, mid], [y, y + h], color=accent, linewidth=0.8, zorder=12)
+    n_shelves = max(1, int(n_shelves or 4))
     # Police (horizontalne linije)
-    n_shelves = 4
     for i in range(1, n_shelves):
         sy = y + int(h * i / n_shelves)
         ax.plot([x + 8, x + w - 8], [sy, sy], color=accent, linewidth=0.5,
                 alpha=0.4, linestyle=":", zorder=12)
-    _handle_v(ax, mid - w * 0.12, y + h * 0.5, hh=h * 0.12, technical=technical)
-    _handle_v(ax, mid + w * 0.12, y + h * 0.5, hh=h * 0.12, technical=technical)
+    if door_count == 1:
+        # Jedno vrata — ručka na odabranoj strani
+        handle_cx = (x + 20 + w * 0.08) if handle_side == "left" else (x + w - 20 - w * 0.08)
+        _handle_v(ax, handle_cx, y + h * 0.5, hh=h * 0.12, technical=technical)
+    else:
+        # Dva vrata
+        ax.plot([mid, mid], [y, y + h], color=accent, linewidth=0.8, zorder=12)
+        _handle_v(ax, mid - w * 0.12, y + h * 0.5, hh=h * 0.12, technical=technical)
+        _handle_v(ax, mid + w * 0.12, y + h * 0.5, hh=h * 0.12, technical=technical)
 
 
 
@@ -2049,7 +2055,11 @@ def _draw_module_interior(ax, x: int, y: int, w: int, h: int,
     elif etype == "fridge":
         _draw_fridge(ax, x, y, w, h, accent, face, technical)
     elif etype == "pantry":
-        _draw_pantry(ax, x, y, w, h, accent, face, technical)
+        _dc = int(params.get("door_count", 2) or 2)
+        _hs = str(params.get("handle_side", "right") or "right")
+        _ns = int(params.get("n_shelves", 4) or 4)
+        _draw_pantry(ax, x, y, w, h, accent, face, technical,
+                     door_count=_dc, handle_side=_hs, n_shelves=_ns)
     elif etype == "hood":
         _draw_hood(ax, x, y, w, h, accent, face, technical)
     elif etype == "microwave":
