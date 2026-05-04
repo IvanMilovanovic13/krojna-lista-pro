@@ -897,8 +897,9 @@ def render_params_panel(
         handle_side_sel = None
         door_count_sel = None
 
-        # Door count selector — samo za TALL_DOORS (add mode)
-        if tid == 'TALL_DOORS':
+        # Door count selector — za TALL_DOORS, TALL_PANTRY i TALL_TOP_DOORS
+        _tids_with_door_count = {'TALL_DOORS', 'TALL_PANTRY', 'TALL_TOP_DOORS'}
+        if tid in _tids_with_door_count:
             door_count_sel = ui.select(
                 {1: _t('edit.door_count_1'), 2: _t('edit.door_count_2')},
                 value=2,
@@ -909,8 +910,9 @@ def render_params_panel(
             _default_handle_side = str(_corner_guidance.get('recommended_handle_side') or "right")
             handle_side_sel = ui.select(["left", "right"], value=_default_handle_side, label=l_strana_rucke).props('dense').classes('w-full')
 
-        # Handle side za TALL_DOORS — uvek prikazan (jer može biti 1 ili 2 vrata)
-        if tid == 'TALL_DOORS':
+        # Handle side za TALL_DOORS, TALL_PANTRY, TALL_TOP_DOORS — prikazan uvek
+        # (jer mogu imati 1 ili 2 vrata; kod 1 vrata strana ručke je bitna)
+        if tid in _tids_with_door_count:
             _default_handle_side = str(_corner_guidance.get('recommended_handle_side') or "right")
             handle_side_sel = ui.select(
                 {"left": _t('edit.handle_left'), "right": _t('edit.handle_right')},

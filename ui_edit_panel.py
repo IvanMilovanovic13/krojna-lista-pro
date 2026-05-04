@@ -208,8 +208,9 @@ def render_edit_panel(
             zone_m in ('base', 'wall', 'tall', 'wall_upper') and not _no_handle_side
         )
 
-        # Door count selector — samo za TALL_DOORS
-        if cur_tid == 'TALL_DOORS':
+        # Door count selector — za TALL_DOORS, TALL_PANTRY i TALL_TOP_DOORS
+        _edit_tids_with_door_count = {'TALL_DOORS', 'TALL_PANTRY', 'TALL_TOP_DOORS'}
+        if cur_tid in _edit_tids_with_door_count:
             _cur_door_count = int((m.get("params") or {}).get("door_count", 2) or 2)
             with ui.row().classes('w-full items-center gap-1 py-0.5'):
                 ui.label(_t('edit.door_count')).classes('text-xs text-gray-500 w-14 shrink-0')
