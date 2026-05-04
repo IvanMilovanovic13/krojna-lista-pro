@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from i18n import tr
@@ -14,6 +14,7 @@ from layout_engine import available_space_in_zone
 
 from ui_color_picker import render_color_picker
 from ui_catalog_config import _FRONT_COLOR_PRESETS, translate_template_label
+from state_logic import DesignWarning
 
 _FREESTANDING_TIDS = {
     "BASE_DISHWASHER_FREESTANDING",
@@ -198,6 +199,7 @@ def render_edit_panel(
                     'dense outlined').classes('w-full')
 
         handle_side_sel = None
+        door_count_sel = None
         _no_handle_side = any(k in cur_tid for k in (
             '2DOOR', 'DRAWERS', 'DOOR_DRAWER', 'OPEN', 'SINK', 'FRIDGE', 'FREEZER', 'OVEN', 'HOB', 'COOKING_UNIT',
             'DISHWASHER', 'LIFTUP', 'CORNER', 'GLASS',
@@ -205,6 +207,17 @@ def render_edit_panel(
         _has_handle_side = (
             zone_m in ('base', 'wall', 'tall', 'wall_upper') and not _no_handle_side
         )
+
+        # Door count selector — samo za TALL_DOORS
+        if cur_tid == 'TALL_DOORS':
+            _cur_door_count = int((m.get("params") or {}).get("door_count", 2) or 2)
+            with ui.row().classes('w-full items-center gap-1 py-0.5'):
+                ui.label(_t('edit.door_count')).classes('text-xs text-gray-500 w-14 shrink-0')
+                door_count_sel = ui.select(
+                    {1: _t('edit.door_count_1'), 2: _t('edit.door_count_2')},
+                    value=_cur_door_count,
+                ).props('dense outlined').classes('flex-1')
+
         if _has_handle_side:
             cur_side = str((m.get("params") or {}).get("handle_side", "right"))
             with ui.row().classes('w-full items-center gap-1 py-0.5'):
@@ -740,31 +753,62 @@ def render_edit_panel(
                 _zone_std_d = get_zone_depth_standard(_frozen_zone)
                 _is_indep_edit = is_independent_depth(_frozen_tid)
 
-                def _do_apply_with_depth(use_d: int, new_dm: str = None):
-                    _apply_inner(fresh_m, use_d, new_dm)
+                def _do_apply_with_depth(use_d: int, new_dm: str = None, bypass_warnings: bool = False):
+                    _apply_inner(fresh_m, use_d, new_dm, bypass_warnings=bypass_warnings)
 
-                def _apply_inner(fm, use_d: int, new_dm: str = None):
+                def _apply_inner(fm, use_d: int, new_dm: str = None, bypass_warnings: bool = False):
                     nonlocal new_params_ref
                     new_params_ref = dict(fm.get("params") or {})
                     if handle_side_sel is not None:
                         new_params_ref["handle_side"] = str(handle_side_sel.value)
+                    if door_count_sel is not None:
+                        new_params_ref["door_count"] = int(door_count_sel.value)
                     _collect_drawer_params(new_params_ref)
                     _manual_x = int(x.value) != int(fm.get("x_mm", 0))
-                    update_module_local(
-                        _frozen_id,
-                        x_mm=int(x.value),
-                        w_mm=int(w.value),
-                        h_mm=new_h,
-                        d_mm=use_d,
-                        gap_after_mm=int(g.value),
-                        label=str(name_inp.value),
-                        template_id=_frozen_tid,
-                        params=new_params_ref,
-                        manual_x=_manual_x or bool(fm.get("manual_x", False)),
-                    )
-                    # Ažuriraj depth_mode na modulu direktno
+                    try:
+                        update_module_local(
+                            _frozen_id,
+                            x_mm=int(x.value),
+                            w_mm=int(w.value),
+                            h_mm=new_h,
+                            d_mm=use_d,
+                            gap_after_mm=int(g.value),
+                            label=str(name_inp.value),
+                            template_id=_frozen_tid,
+                            params=new_params_ref,
+                            manual_x=_manual_x or bool(fm.get("manual_x", False)),
+                            bypass_warnings=bypass_warnings,
+                        )
+                    except DesignWarning as _dw:
+                        # Nestandardna dimenzija pri editovanju — pitaj korisnika
+                        _warn_msg = str(_dw).lstrip(chr(9888) + " ").strip()
+                        _cap_d = use_d
+                        _cap_dm = new_dm
+                        _cap_fm = fm
+                        with ui.dialog() as _dlg_edit_warn:
+                            with ui.card().classes("p-4 gap-3 min-w-80 max-w-sm"):
+                                with ui.row().classes("items-center gap-2 w-full"):
+                                    ui.icon("warning").classes("text-amber-500 text-2xl shrink-0")
+                                    ui.label("Upozorenje o dimenziji").classes("font-bold text-sm text-gray-800")
+                                ui.label(_warn_msg).classes("text-sm text-gray-700 leading-snug")
+                                ui.separator()
+                                with ui.row().classes("w-full gap-2 justify-end"):
+                                    ui.button(
+                                        "Otkazi promenu",
+                                        on_click=lambda: _dlg_edit_warn.close()
+                                    ).props("flat").classes("text-xs text-gray-600")
+                                    def _force_edit(d=_cap_d, dm=_cap_dm, fm2=_cap_fm):
+                                        _dlg_edit_warn.close()
+                                        _apply_inner(fm2, d, dm, bypass_warnings=True)
+                                    ui.button(
+                                        "Prihvati ipak",
+                                        on_click=_force_edit
+                                    ).classes("text-xs bg-amber-500 text-white px-3")
+                        _dlg_edit_warn.open()
+                        return
+                    # Uspesno sacuvano — azuriraj depth_mode
                     upd_mods = state.kitchen.get("modules", []) or []
-                    upd_m = next((mm for mm in upd_mods if int(mm.get('id', -1)) == _frozen_id), None)
+                    upd_m = next((mm for mm in upd_mods if int(mm.get("id", -1)) == _frozen_id), None)
                     if upd_m is not None:
                         if _is_indep_edit:
                             upd_m["depth_mode"] = "INDEPENDENT"
@@ -775,14 +819,14 @@ def render_edit_panel(
                         elif use_d == _zone_std_d:
                             upd_m["depth_mode"] = "STANDARD"
                     if drawer_heights_state is not None:
-                        n_cur_e = int(drawer_heights_state.get('n', 3))
-                        heights_e = new_params_ref.get('drawer_heights', [])
+                        n_cur_e = int(drawer_heights_state.get("n", 3))
+                        heights_e = new_params_ref.get("drawer_heights", [])
                         ui.notify(
-                            f'✅ {_t("edit.saved_drawers_fmt", n=n_cur_e, heights=heights_e)}',
-                            type='positive'
+                            f"Sacuvano: {n_cur_e} fioke ({heights_e}mm)",
+                            type="positive"
                         )
                     else:
-                        ui.notify(_t('edit.saved'), type='positive')
+                        ui.notify("Izmene sacuvane.", type="positive")
                     nacrt_refresh()
                     edit_panel_refresh()
 
@@ -853,14 +897,16 @@ def render_edit_panel(
                                 def _set_as_std_edit(dlg=_dlg_edit_d, nd=new_d, fzone=_frozen_zone, fm=fresh_m):
                                     dlg.close()
                                     set_zone_depth_standard(fzone, nd, update_existing=False)
-                                    _apply_inner(fm, nd, "STANDARD")
+                                    # bypass_warnings=True jer korisnik svesno bira nestandardnu dubinu
+                                    _apply_inner(fm, nd, "STANDARD", bypass_warnings=True)
                                     ui.notify(
                                         f'📐 {_t("edit.depth_std_set_fmt", zone=fzone.upper(), depth=nd)}',
                                         type='info'
                                     )
                                 def _keep_custom_edit(dlg=_dlg_edit_d, nd=new_d, fm=fresh_m):
                                     dlg.close()
-                                    _apply_inner(fm, nd, "CUSTOM")
+                                    # bypass_warnings=True jer korisnik svesno bira nestandardnu dubinu
+                                    _apply_inner(fm, nd, "CUSTOM", bypass_warnings=True)
                                 def _cancel_edit(dlg=_dlg_edit_d):
                                     dlg.close()
                                 ui.button(

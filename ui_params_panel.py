@@ -1110,14 +1110,14 @@ def render_params_panel(
                         ui.separator()
                         with ui.row().classes('w-full gap-2 justify-end'):
                             ui.button(
-                                'Odustani',
+                                'Otkazi promenu',
                                 on_click=lambda: _dlg_warn.close()
                             ).props('flat').classes('text-xs text-gray-600')
                             def _force_add(d=_captured_d, std=_captured_std):
                                 _dlg_warn.close()
                                 _do_dodaj(d, override_as_new_standard=std, bypass_warnings=True)
                             ui.button(
-                                'Dodaj svejedno',
+                                'Prihvati ipak',
                                 on_click=_force_add
                             ).classes('text-xs bg-amber-500 text-white px-3')
                 _dlg_warn.open()

@@ -1119,6 +1119,8 @@ def add_module_instance_local(
             f"({_zone_max_h}mm). Smanji visinu!"
         )
 
+    if bypass_warnings:
+        mod["non_standard"] = True  # Korisnik svesno prihvatio nestandardne dimenzije
     k.setdefault("modules", []).append(mod)
 
     # Proveri preklapanje pre pack-a
@@ -1166,6 +1168,7 @@ def update_module_local(
     template_id: Optional[str] = None,
     params: Optional[Dict[str, Any]] = None,
     manual_x: Optional[bool] = None,
+    bypass_warnings: bool = False,
 ) -> None:
     k = state.kitchen
     # snapshot pre-change (for safe rollback)
@@ -1187,6 +1190,7 @@ def update_module_local(
         d_mm=int(d_mm),
         params=params if params is not None else (m.get("params", {}) or {}),
         wall_key=str(m.get("wall_key", "A") or "A").upper(),
+        bypass_warnings=bypass_warnings,
     )
     m["x_mm"] = int(x_mm)
     m["w_mm"] = int(w_mm)
@@ -1194,6 +1198,8 @@ def update_module_local(
     m["d_mm"] = int(d_mm)
     m["gap_after_mm"] = int(gap_after_mm)
     m["label"] = str(label)
+    if bypass_warnings:
+        m["non_standard"] = True  # Korisnik svesno prihvatio nestandardne dimenzije
     if manual_x is not None:
         m["manual_x"] = bool(manual_x)
     if template_id:
