@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # visualization.py
 from __future__ import annotations
 
@@ -1562,9 +1562,21 @@ def _draw_tall_doors(ax, x, y, w, h, accent, face, technical, m=None):
         _handle_v(ax, mid - 24, y + h * 0.5, technical=technical)
         _handle_v(ax, mid + 24, y + h * 0.5, technical=technical)
         return
-    force_one = "1DOOR" in tid
-    force_two = ("2DOOR" in tid) or ("DOORS" in tid and "1DOOR" not in tid)
-    if (not force_one and (force_two or w > 650)):
+
+    # Broj vrata — iz params (door_count), fallback na tid
+    _door_count = int(_params.get("door_count", 0) or 0)
+    force_one = (_door_count == 1) or ("1DOOR" in tid)
+    force_two = (_door_count == 2) or ("2DOOR" in tid) or ("DOORS" in tid and "1DOOR" not in tid and _door_count != 1)
+
+    if force_one:
+        # Jedno vrata — puna širina, ručka na odabranoj strani
+        handle_cy = _clamp_handle_cy(y, h, y + h * 0.50)
+        if handle_side == "left":
+            handle_cx = (x + door_inset) + (handle_edge_off + DOOR_HANDLE_V_W / 2.0)
+        else:
+            handle_cx = (x + w - door_inset) - (handle_edge_off + DOOR_HANDLE_V_W / 2.0)
+        _handle_v(ax, handle_cx, handle_cy, technical=technical)
+    elif (not force_one and (force_two or w > 650)):
         # Dva vrata jedan pored drugog
         ax.plot([mid, mid], [y, y + h], color=accent, linewidth=0.8, zorder=12)
         handle_cy = _clamp_handle_cy(y, h, y + h * 0.50)
@@ -3217,6 +3229,11 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
             y0 = _y_for_tall_top(kitchen, m, mods)
             if h <= 0:
                 h = 400
+            # Klamp: tall_top ne sme preći gornju granicu ni vrh zida
+            _max_h_tt = int(kitchen.get("max_element_height", 0) or 0)
+            _ceil_tt = _max_h_tt if _max_h_tt > 0 else wall_h
+            if (y0 + h) > _ceil_tt:
+                h = max(1, _ceil_tt - y0)
             _draw_module(ax, m, x, y0, w, h, zone="wall", technical=technical,
                          worktop_thk_mm=wt_thk_mm, selected=_is_selected,
                          global_front_color=_global_front, appliance_color=_appliance_col)
@@ -3224,6 +3241,11 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
             y0 = _y_for_wall_upper(kitchen, m, mods)
             if h <= 0:
                 h = 400
+            # Klamp: wall_upper ne sme preći gornju granicu ni vrh zida
+            _max_h_wu = int(kitchen.get("max_element_height", 0) or 0)
+            _ceil_wu = _max_h_wu if _max_h_wu > 0 else wall_h
+            if (y0 + h) > _ceil_wu:
+                h = max(1, _ceil_wu - y0)
             _draw_module(ax, m, x, y0, w, h, zone="wall", technical=technical,
                          worktop_thk_mm=wt_thk_mm, selected=_is_selected,
                          global_front_color=_global_front, appliance_color=_appliance_col)
@@ -3242,6 +3264,11 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
             # Samostojeći uređaji: crtaju se od poda (y0=0), bez stopica i bez praznine.
             if _skip_feet and zone in ("base", "tall"):
                 y0 = 0
+            # Vizuelni sigurnosni klamp: TALL element ne sme preći gornju granicu
+            if zone == "tall":
+                _max_h_viz = int(kitchen.get("max_element_height", 0) or 0)
+                if _max_h_viz > 0 and (y0 + h) > _max_h_viz:
+                    h = max(1, _max_h_viz - y0)
             _draw_module(ax, m, x, y0, w, h, zone=zone, technical=technical,
                          worktop_thk_mm=wt_thk_mm, selected=_is_selected,
                          global_front_color=_global_front, appliance_color=_appliance_col)

@@ -38,6 +38,7 @@ from i18n import (
     PARAMS_WHAT_TO_DO,
 )
 from ui_panels_helpers import format_user_error
+from state_logic import DesignWarning
 from ui_catalog_config import translate_template_label
 from module_rules import (
     default_shelf_count,
@@ -894,9 +895,28 @@ def render_params_panel(
 
         name = ui.input(l_naziv, value=label).props('dense').classes('w-full mt-1')
         handle_side_sel = None
+        door_count_sel = None
+
+        # Door count selector — samo za TALL_DOORS (add mode)
+        if tid == 'TALL_DOORS':
+            door_count_sel = ui.select(
+                {1: _t('edit.door_count_1'), 2: _t('edit.door_count_2')},
+                value=2,
+                label=_t('edit.door_count'),
+            ).props('dense').classes('w-full')
+
         if "1DOOR" in tid and zone in ("base", "wall", "tall"):
             _default_handle_side = str(_corner_guidance.get('recommended_handle_side') or "right")
             handle_side_sel = ui.select(["left", "right"], value=_default_handle_side, label=l_strana_rucke).props('dense').classes('w-full')
+
+        # Handle side za TALL_DOORS — uvek prikazan (jer može biti 1 ili 2 vrata)
+        if tid == 'TALL_DOORS':
+            _default_handle_side = str(_corner_guidance.get('recommended_handle_side') or "right")
+            handle_side_sel = ui.select(
+                {"left": _t('edit.handle_left'), "right": _t('edit.handle_right')},
+                value=_default_handle_side,
+                label=l_strana_rucke,
+            ).props('dense').classes('w-full')
 
         wall_upper_x = None
         if zone == "wall_upper":
@@ -927,7 +947,8 @@ def render_params_panel(
                 ui.label(m_nema_gornjih_1_red).classes('text-xs text-gray-500')
                 state.wall_upper_target_x = -1
 
-        def _do_dodaj(use_d_mm: int, override_as_new_standard: bool = False) -> None:
+        def _do_dodaj(use_d_mm: int, override_as_new_standard: bool = False,
+                      bypass_warnings: bool = False) -> None:
             """Interni helper — stvarno dodaje element."""
             try:
                 # Odbrambena provera: closure je vezan za tid koji je bio selektovan
@@ -1049,6 +1070,8 @@ def render_params_panel(
                     x_use = int(wall_upper_x.value[1])
                 if handle_side_sel is not None:
                     _extra_params["handle_side"] = str(handle_side_sel.value)
+                if door_count_sel is not None:
+                    _extra_params["door_count"] = int(door_count_sel.value)
 
                 # ── Smer goda ─────────────────────────────────────────────────
                 _extra_params["grain_dir"] = str(grain_sel_add.value or "V")
@@ -1065,6 +1088,7 @@ def render_params_panel(
                     params=_extra_params,
                     room=_room_for_add,
                     wall_key=_kwall_key,
+                    bypass_warnings=bypass_warnings,
                 )
                 # Ako je CUSTOM (korisnik uneo drugačiju d od standarda), označi
                 if not _is_indep and int(use_d_mm) != get_zone_depth_standard(zone):
@@ -1072,6 +1096,31 @@ def render_params_panel(
                 ui.notify(_t('elements.added', label=label), type='positive')
                 nacrt_refresh()
                 sidebar_refresh()
+            except DesignWarning as dw:
+                # Meko upozorenje — prikaži dijalog sa opcijom "Dodaj svejedno"
+                _warn_msg = str(dw).lstrip('⚠️ ').strip()
+                _captured_d = use_d_mm
+                _captured_std = override_as_new_standard
+                with ui.dialog() as _dlg_warn:
+                    with ui.card().classes('p-4 gap-3 min-w-80 max-w-sm'):
+                        with ui.row().classes('items-center gap-2 w-full'):
+                            ui.icon('warning').classes('text-amber-500 text-2xl shrink-0')
+                            ui.label('Upozorenje').classes('font-bold text-sm text-gray-800')
+                        ui.label(_warn_msg).classes('text-sm text-gray-700 leading-snug')
+                        ui.separator()
+                        with ui.row().classes('w-full gap-2 justify-end'):
+                            ui.button(
+                                'Odustani',
+                                on_click=lambda: _dlg_warn.close()
+                            ).props('flat').classes('text-xs text-gray-600')
+                            def _force_add(d=_captured_d, std=_captured_std):
+                                _dlg_warn.close()
+                                _do_dodaj(d, override_as_new_standard=std, bypass_warnings=True)
+                            ui.button(
+                                'Dodaj svejedno',
+                                on_click=_force_add
+                            ).classes('text-xs bg-amber-500 text-white px-3')
+                _dlg_warn.open()
             except Exception as e:
                 ui.notify(_t('elements.error', err=format_user_error(e, getattr(state, 'language', 'sr'))), type='negative')
 

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 from dataclasses import dataclass, field
 import copy
@@ -17,6 +17,15 @@ from module_templates import resolve_template
 
 _LOG = logging.getLogger(__name__)
 _EMAIL_RE = re.compile(r"^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)+$", re.IGNORECASE)
+
+
+class DesignWarning(ValueError):
+    """Meko upozorenje o dizajnerskom pravilu koje korisnik može da zaobiđe.
+
+    Za razliku od ValueError (hard block), DesignWarning dozvoljava korisniku
+    da svejedno nastavi sa dodavanjem elementa ako to želi.
+    """
+    pass
 
 
 def normalize_email_address(email: str) -> str:
@@ -207,7 +216,21 @@ def _max_allowed_h_for_zone(zone: str, template_id: str | None = None) -> int:
         return max(100, max_h_global - foot)
 
     elif z == 'tall_top':
-        return max(100, wall_h - 50)
+        # tall_top počinje iznad tall elementa — max visina zavisi od visine tall-a ispod
+        foot = int(k.get('foot_height_mm', 100))
+        _active_wk = str(
+            (getattr(state, 'room', {}) or {}).get('kitchen_wall',
+                (getattr(state, 'room', {}) or {}).get('active_wall', 'A')) or 'A'
+        ).upper()
+        tall_mods = [mm for mm in (k.get('modules', []) or [])
+                     if str(mm.get('zone', '')).lower() == 'tall'
+                     and str(mm.get('wall_key', 'A')).upper() == _active_wk]
+        if tall_mods:
+            # Uzmi najvisoku gornju ivicu tall elementa (konzervativno)
+            tall_top_y = max(foot + int(mm.get('h_mm', 2100)) for mm in tall_mods)
+        else:
+            tall_top_y = foot + 2100  # fallback
+        return max(100, max_h_global - tall_top_y)
 
     return max_h_global
 
@@ -613,12 +636,24 @@ def _validate_blocking_design_rules(
     d_mm: int,
     params: Optional[Dict[str, Any]] = None,
     wall_key: str = "A",
+    bypass_warnings: bool = False,
 ) -> None:
-    """Blocking production/home-assembly checks before module is accepted."""
+    """Blocking production/home-assembly checks before module is accepted.
+
+    Raises:
+        ValueError: Hard block — fizički ili matematski nemoguće, ne može se zaobići.
+        DesignWarning: Meko upozorenje — preporučuje se korekcija, ali korisnik
+                       može da nastavi postavljanjem bypass_warnings=True.
+    """
     tid = str(template_id or "").upper()
     z = _zone_norm(zone)
     p = params or {}
     wk = str(wall_key or "A").upper()
+
+    def _warn(msg: str) -> None:
+        """Meko upozorenje — korisnik može da nastavi uz bypass_warnings=True."""
+        if not bypass_warnings:
+            raise DesignWarning(f"⚠️ {msg}")
 
     # Corner offset safety net: regularni moduli na Wall B/C ne smiju biti u ugaonoj zoni Wall A
     if "CORNER" not in tid and wk != "A" and x_mm > 0:
@@ -667,14 +702,14 @@ def _validate_blocking_design_rules(
         handle_side = str(handle_side_raw or "").lower()
         side_margin = 30
         if handle_side in ("left", "right") and int(x_mm) <= int(left_clear) + side_margin and handle_side == "right":
-            _fail(
-                "Jednokrilna vrata uz levi zid nemaju dovoljno mesta za otvaranje na strani sarke. "
-                "Promeni stranu rucke ili dodaj filer najmanje 30-50mm."
+            _warn(
+                "Jednokrilna vrata uz levi zid možda nemaju dovoljno mesta za otvaranje na strani šarke. "
+                "Preporučuje se promena strane ručke ili filer od 30–50mm."
             )
         if handle_side in ("left", "right") and (int(x_mm) + int(w_mm)) >= (int(wall_len) - int(right_clear) - side_margin) and handle_side == "left":
-            _fail(
-                "Jednokrilna vrata uz desni zid nemaju dovoljno mesta za otvaranje na strani sarke. "
-                "Promeni stranu rucke ili dodaj filer najmanje 30-50mm."
+            _warn(
+                "Jednokrilna vrata uz desni zid možda nemaju dovoljno mesta za otvaranje na strani šarke. "
+                "Preporučuje se promena strane ručke ili filer od 30–50mm."
             )
 
     if z == "wall_upper":
@@ -689,7 +724,7 @@ def _validate_blocking_design_rules(
             str(m.get("zone", "")).lower() == "wall" and str(m.get("wall_key", "A")).upper() == wk
             for m in (kitchen.get("modules", []) or [])
         ):
-            _fail("Drugi red gornjih elemenata mora biti oslonjen na element ispod po celoj svojoj sirini.")
+            _warn("Drugi red gornjih elemenata bi trebalo biti oslonjen na element ispod po celoj širini.")
 
     if z == "tall_top":
         support_found = any(
@@ -703,43 +738,43 @@ def _validate_blocking_design_rules(
             str(m.get("zone", "")).lower() == "tall" and str(m.get("wall_key", "A")).upper() == wk
             for m in (kitchen.get("modules", []) or [])
         ):
-            _fail("Popuna iznad visokog mora biti oslonjena na visoki element ispod po celoj svojoj sirini.")
+            _warn("Popuna iznad visokog bi trebalo biti oslonjena na visoki element ispod po celoj širini.")
 
     if z == "base" and "FREESTANDING" not in tid and "DISHWASHER" not in tid and d_mm < 500:
-        _fail(
-            f"Donji element dubine {d_mm}mm je preplitak za kuhinjski standard. "
-            f"Postavi najmanje 500mm, preporuceno 560mm."
+        _warn(
+            f"Donji element dubine {d_mm}mm je plici od preporucenog standarda. "
+            f"Preporucuje se najmanje 500mm, optimalno 560mm."
         )
 
     if z == "tall" and "FREESTANDING" not in tid and d_mm < 500:
-        _fail(
-            f"Visoki element dubine {d_mm}mm je preplitak za stabilan kuhinjski korpus. "
-            f"Postavi najmanje 500mm, preporuceno 560mm."
+        _warn(
+            f"Visoki element dubine {d_mm}mm je plici od preporucenog standarda. "
+            f"Preporucuje se najmanje 500mm, optimalno 560mm."
         )
 
     if z == "wall" and d_mm > 400:
-        _fail(
-            f"Gornji element dubine {d_mm}mm je predubok za bezbednu i ergonomicnu montazu. "
-            f"Drzi se opsega 300-400mm."
+        _warn(
+            f"Gornji element dubine {d_mm}mm je dublji od preporucenog opsega. "
+            f"Ergonomski optimum je 300-400mm."
         )
 
     if z == "wall_upper" and d_mm > 700:
-        _fail(
-            f"Gornji element drugog reda dubine {d_mm}mm je predubok za sigurno kacenje. "
-            f"Postavi najvise 700mm."
+        _warn(
+            f"Gornji element drugog reda dubine {d_mm}mm je dublji od preporucenog. "
+            f"Preporucuje se najvise 700mm."
         )
 
     if z in ("wall", "wall_upper") and d_mm < 250 and "OPEN" not in tid:
-        _fail(
-            f"Gornji element dubine {d_mm}mm je premalen za standardni korpus i okove. "
-            f"Postavi najmanje 250mm."
+        _warn(
+            f"Gornji element dubine {d_mm}mm moze biti preuzak za standardni korpus i okove. "
+            f"Preporucuje se najmanje 250mm."
         )
 
     if "BASE_DISHWASHER" in tid and "FREESTANDING" not in tid and w_mm < 600:
-        _fail("Ugradna masina za sudove trazi sirinu niše od najmanje 600mm.")
+        _warn("Ugradna masina za sudove preporucuje se u nisi od najmanje 600mm sirine.")
 
     if tid in {"BASE_COOKING_UNIT", "OVEN_HOB", "BASE_OVEN_HOB_FREESTANDING"} and w_mm < 600:
-        _fail("Rerna/sporet sa plocom trazi najmanje 600mm sirine.")
+        _warn("Rerna/sporet sa plocom preporucuje se sa najmanje 600mm sirine.")
 
     if "CORNER" in tid:
         _layout = str(getattr(state, "kitchen_layout", kitchen.get("layout", "")) or "").lower().strip()
@@ -774,52 +809,52 @@ def _validate_blocking_design_rules(
                 _fail(f"Ugaoni modul na zidu {wk} mora biti prvi element na tom kraku.")
 
     if tid in {"TALL_OVEN", "TALL_OVEN_MICRO"} and w_mm < 600:
-        _fail("Visoka appliance kolona za rernu/mikrotalasnu trazi najmanje 600mm sirine.")
+        _warn("Visoka appliance kolona za rernu/mikrotalasnu preporucuje se sa najmanje 600mm sirine.")
 
     if tid in {"TALL_FRIDGE", "TALL_FRIDGE_FREEZER", "TALL_FRIDGE_FREESTANDING"} and w_mm < 600:
-        _fail("Frizider modul trazi najmanje 600mm sirine.")
+        _warn("Frizider modul preporucuje se sa najmanje 600mm sirine.")
 
     if "SINK" in tid and w_mm < 600:
-        _fail("Sudoperski element manji od 600mm nije preporucen za laicki workflow.")
+        _warn("Sudoperski element manji od 600mm nije preporucen za standardnu ugradnju.")
 
     if "CORNER" in tid:
         # Donji ugaoni (BASE) treba min 800mm za lazy-Susan mehanizam.
         # Gornji ugaoni (WALL) je manji element — min 450mm je dovoljan.
         _corner_min_w = 450 if "WALL" in tid else 800
         if w_mm < _corner_min_w:
-            _fail(f"Ugaoni element sirine manje od {_corner_min_w}mm je previse rizican za stabilan ugaoni raspored.")
+            _warn(f"Ugaoni element sirine {w_mm}mm moze biti preuzak za stabilan ugaoni raspored (preporuceno min {_corner_min_w}mm).")
 
     if tid in {"WALL_HOOD", "WALL_MICRO"} and w_mm < 600:
-        _fail("Modul za napu ili mikrotalasnu trazi najmanje 600mm sirine.")
+        _warn("Modul za napu ili mikrotalasnu preporucuje se sa najmanje 600mm sirine.")
 
     if tid in {"WALL_HOOD", "WALL_MICRO"} and d_mm < 300:
-        _fail("Modul za napu ili mikrotalasnu trazi najmanje 300mm dubine.")
+        _warn("Modul za napu ili mikrotalasnu preporucuje se sa najmanje 300mm dubine.")
 
     if tid in {"BASE_DISHWASHER_FREESTANDING", "BASE_OVEN_HOB_FREESTANDING"} and d_mm < 580:
-        _fail("Samostojeci uredjaj u donjoj zoni trazi najmanje 580mm dubine.")
+        _warn("Samostojeci uredjaj u donjoj zoni preporucuje se sa najmanje 580mm dubine.")
 
     if tid == "TALL_FRIDGE_FREESTANDING" and d_mm < 600:
-        _fail("Samostojeci frizider trazi najmanje 600mm dubine.")
+        _warn("Samostojeci frizider preporucuje se sa najmanje 600mm dubine.")
 
     if tid in {"TALL_FRIDGE", "TALL_FRIDGE_FREEZER", "TALL_OVEN", "TALL_OVEN_MICRO"} and d_mm < 560:
-        _fail("Integrisana visoka appliance kolona trazi najmanje 560mm dubine.")
+        _warn("Integrisana visoka appliance kolona preporucuje se sa najmanje 560mm dubine.")
 
     if "LIFTUP" in tid and w_mm > 1200:
-        _fail(
-            f"Lift-up sirine {w_mm}mm je previse rizican za ovu aplikaciju. "
-            f"Razdvoji na dva elementa ili smanji sirinu na najvise 1200mm."
+        _warn(
+            f"Lift-up sirine {w_mm}mm je veci od preporucenog. "
+            f"Preporucuje se do 1200mm ili podela na dva elementa."
         )
 
     if "DRAWER" in tid and d_mm < 450:
-        _fail(
-            f"Fiokar dubine {d_mm}mm je preplitak za stabilan izbor klizaca. "
-            f"Postavi najmanje 450mm."
+        _warn(
+            f"Fiokar dubine {d_mm}mm moze biti preuzak za standardne klizace. "
+            f"Preporucuje se najmanje 450mm."
         )
 
     drawer_heights = p.get("drawer_heights") or []
     if drawer_heights:
         if any(float(x) < 80 for x in drawer_heights):
-            _fail("Front fioke manji od 80mm nije dozvoljen za stabilan laicki workflow.")
+            _warn("Front fioke manji od 80mm moze biti neupotrebljiv u praksi.")
         total = sum(float(x) for x in drawer_heights)
         if total > (h_mm - 10):
             _fail(
@@ -831,9 +866,9 @@ def _validate_blocking_design_rules(
         _default_door_h = min(550.0, max(180.0, h_mm - 170.0))
         door_h = float(p.get("door_height", _default_door_h) or _default_door_h)
         if door_h < 180:
-            _fail("Vrata kod kombinacije vrata + fioka moraju imati najmanje 180mm visine.")
+            _warn("Vrata kod kombinacije vrata + fioka ispod 180mm mogu biti neupotrebljiva.")
         if door_h > (h_mm - 120):
-            _fail("Vrata kod kombinacije vrata + fioka su previsoka; ostavi najmanje 120mm za fioku i fuge.")
+            _warn("Vrata kod kombinacije vrata + fioka su visoka; preporucuje se najmanje 120mm za fioku i fuge.")
         drawer_sum = sum(float(x) for x in (p.get("drawer_heights") or []))
         if drawer_sum > 0 and (door_h + drawer_sum) > h_mm:
             _fail(
@@ -841,9 +876,9 @@ def _validate_blocking_design_rules(
             )
 
     if ("1DOOR" in tid or tid in {"BASE_1DOOR", "WALL_1DOOR", "WALL_NARROW", "BASE_NARROW"}) and w_mm > 600:
-        _fail(
-            f"Jednokrilni element sirine {w_mm}mm je previse sirok za stabilno kucno sklapanje. "
-            f"Koristi 2 vrata ili podeli element."
+        _warn(
+            f"Jednokrilni element sirine {w_mm}mm moze biti nespretan za rukovanje. "
+            f"Preporucuje se 2 vrata ili podela elementa."
         )
 
     if ("CORNER" not in tid) and ("1DOOR" in tid or tid in {"BASE_1DOOR", "WALL_1DOOR", "WALL_UPPER_1DOOR", "WALL_NARROW", "BASE_NARROW"}):
@@ -862,21 +897,21 @@ def _validate_blocking_design_rules(
                 else:
                     _opens_into_corner = _handle_side == "right"
                 if _opens_into_corner:
-                    _fail(
-                        "Jednokrilni sused uz ugaoni modul ne sme da otvara vrata ka uglu. "
-                        "Promeni stranu rucke ili koristi drugi tip susednog elementa."
+                    _warn(
+                        "Jednokrilni sused uz ugaoni modul otvara vrata ka uglu. "
+                        "Preporucuje se promena strane rucke."
                     )
                 _max_corner_neighbor_w = 500 if z == "base" else 450
                 if int(w_mm) > _max_corner_neighbor_w:
-                    _fail(
-                        f"Jednokrilni sused uz ugaoni modul je preširok ({w_mm}mm) za sigurno otvaranje u L uglu. "
-                        f"Koristi max {_max_corner_neighbor_w}mm, dvokrilni element, fiokar ili ostavi filer."
+                    _warn(
+                        f"Jednokrilni sused uz ugaoni modul je siri od preporucenog ({w_mm}mm vs max {_max_corner_neighbor_w}mm). "
+                        f"Moze biti teze za otvaranje u L uglu."
                     )
 
     if z == "tall" and h_mm > 2350 and "TOP" not in tid:
-        _fail(
-            f"Visoki element {h_mm}mm je previsok za standardno kucno rukovanje i montazu. "
-            f"Smanji visinu ili koristi tall + tall_top podelu."
+        _warn(
+            f"Visoki element {h_mm}mm je visi od preporucenog za standardno rukovanje. "
+            f"Razmotriti podelu na tall + tall_top."
         )
 
 
@@ -893,6 +928,7 @@ def add_module_instance_local(
     params: Optional[Dict[str, Any]] = None,
     room: Optional[Dict[str, Any]] = None,
     wall_key: str = "A",
+    bypass_warnings: bool = False,
 ) -> Dict[str, Any]:
     k = state.kitchen
     z = _zone_norm(zone)
@@ -961,6 +997,7 @@ def add_module_instance_local(
         d_mm=int(d_mm),
         params=_params_for_validation,
         wall_key=_wk,
+        bypass_warnings=bypass_warnings,
     )
 
     # ── Room constraints (otvori, instalacije) ────────────────────────────────
@@ -1283,12 +1320,14 @@ def _set_wall_height(val: int) -> None:
     state.kitchen["zones"] = _compute_zones(state.kitchen)
     if "max_element_height" not in state.kitchen:
         state.kitchen["max_element_height"] = _v - 50
+    _clamp_tall_module_heights()
     write_autosave_snapshot(reason="set_wall_height")
 
 
 def _set_foot_height(val: int) -> None:
     state.kitchen["foot_height_mm"] = int(val)
     state.kitchen["zones"] = _compute_zones(state.kitchen)
+    _clamp_tall_module_heights()
     write_autosave_snapshot(reason="set_foot_height")
 
 
@@ -1441,8 +1480,37 @@ def _set_worktop_joint_type(val: str) -> None:
     write_autosave_snapshot(reason="set_worktop_joint_type")
 
 
+def _clamp_tall_module_heights() -> None:
+    """Koriguje visinu postojecih TALL i TALL_TOP elemenata ako prelaze gornju granicu.
+
+    Poziva se nakon svake promene koja utice na max_allowed za tall/tall_top zonu:
+    promene foot_height, max_element_height, wall_height i pri ucitavanju projekta.
+
+    Napomena: tall_top mora biti obradjen POSLE tall elemenata jer _max_allowed_h_for_zone
+    za tall_top zavisi od visine tall elemenata koji su vec isklampirani.
+    """
+    # Prvo klampuj TALL elemente (tall_top zavisi od njihovih visina)
+    for m in (state.kitchen.get("modules", []) or []):
+        if str(m.get("zone", "")).lower().strip() != "tall":
+            continue
+        max_h = _max_allowed_h_for_zone("tall", m.get("template_id"))
+        cur_h = int(m.get("h_mm", 0))
+        if cur_h > 0 and cur_h > max_h:
+            m["h_mm"] = max_h
+
+    # Zatim klampuj TALL_TOP elemente (iznad visokih)
+    for m in (state.kitchen.get("modules", []) or []):
+        if str(m.get("zone", "")).lower().strip() != "tall_top":
+            continue
+        max_h = _max_allowed_h_for_zone("tall_top", m.get("template_id"))
+        cur_h = int(m.get("h_mm", 0))
+        if cur_h > 0 and cur_h > max_h:
+            m["h_mm"] = max_h
+
+
 def _set_max_element_height(val: int) -> None:
     state.kitchen['max_element_height'] = int(val)
+    _clamp_tall_module_heights()
     write_autosave_snapshot(reason="set_max_element_height")
 
 
@@ -3119,6 +3187,8 @@ def load_project_json(data: bytes) -> Tuple[bool, str]:
 
     # Recompute zones (visine, gap-ovi) za slučaj starih fajlova
     state.kitchen["zones"] = _compute_zones(state.kitchen)
+    # Korekcija visine TALL elemenata — štiti od starih save fajlova sa h_mm van granice
+    _clamp_tall_module_heights()
 
     # Resetuj UI state (selekcija, edit panel, itd.)
     state.selected_tid       = ""
