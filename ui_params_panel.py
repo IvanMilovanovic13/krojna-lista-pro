@@ -1145,12 +1145,16 @@ def render_params_panel(
                         with ui.column().classes('w-full gap-2 mt-2'):
                             def _set_as_std():
                                 _dlg_override.close()
-                                _do_dodaj(entered_d, override_as_new_standard=True)
+                                # Korisnik svesno bira nestandardnu dubinu kao novi standard
+                                # — bypass_warnings=True jer je dubina vec odobrena ovim izborom
+                                _do_dodaj(entered_d, override_as_new_standard=True, bypass_warnings=True)
                                 ui.notify(_t('elements.depth_set_ok', zone=zone_label, d=entered_d), type='info')
                                 params_panel_refresh()
                             def _keep_custom():
                                 _dlg_override.close()
-                                _do_dodaj(entered_d, override_as_new_standard=False)
+                                # Korisnik svesno bira nestandardnu dubinu samo za ovaj element
+                                # — bypass_warnings=True jer je dubina vec odobrena ovim izborom
+                                _do_dodaj(entered_d, override_as_new_standard=False, bypass_warnings=True)
                             def _cancel():
                                 _dlg_override.close()
 
