@@ -95,12 +95,23 @@ _EDU: dict[str, dict[str, str]] = {
             "(razmak 32 mm između svake rupe). U tabeli se prikazuje samo "
             "prva (najniža) Y pozicija — sve ostale rupe nastavljaju na svakih 32 mm od nje."
         ),
-        "gen_mirror_note": "⇇  Desna stranica je ogledalo leve stranice.",
-        "gen_shelf_hdr":   "Nosači polica — sistem 32 mm",
-        "gen_shelf_x":     "X (mm)",
-        "gen_shelf_y1":    "Prva Y (mm)",
-        "gen_shelf_count": "Br. rupa",
-        "gen_shelf_note":  "Ostale rupe: svakih 32 mm od prve Y pozicije.",
+        "gen_mirror_note":    "⇇  Desna stranica je ogledalo leve stranice.",
+        "gen_shelf_hdr":      "Nosači polica — sistem 32 mm",
+        "gen_shelf_x":        "X (mm)",
+        "gen_shelf_y1":       "Prva Y (mm)",
+        "gen_shelf_count":    "Br. rupa",
+        "gen_shelf_note":     "Ostale rupe: svakih 32 mm od prve Y pozicije.",
+        # tekstualni blok za police (bez tabele)
+        "shelf_blk_title":    "Rupe za police (sistem 32 mm)",
+        "shelf_blk_intro":    "Rupe za nosače polica bušiti po standardu sistema 32 mm.",
+        "shelf_blk_raster":   "Razmak između rupa: 32 mm",
+        "shelf_blk_first_y":  "Početna visina prve rupe: Y =",
+        "shelf_blk_x_pos":    "X pozicije:",
+        "shelf_blk_outro":    "Rupe se buše celom visinom ploče u ovom rasteru.",
+        "shelf_universal":    (
+            "NAPOMENA: Rupe za police izrađuju se po standardnom sistemu 32 mm "
+            "i ne prikazuju se pojedinačno u tabeli."
+        ),
         # --- Važno za montažu (profesionalna sekcija) ---
         "imp_title":       "VAŽNO ZA MONTAŽU",
         "imp_items": [
@@ -209,12 +220,23 @@ _EDU: dict[str, dict[str, str]] = {
             "(32 mm spacing between holes). Only the first (lowest) Y position "
             "is shown in the table — all subsequent holes continue every 32 mm from there."
         ),
-        "gen_mirror_note": "⇇  Right side is a mirror of the left side.",
-        "gen_shelf_hdr":   "Shelf Pins — 32 mm System",
-        "gen_shelf_x":     "X (mm)",
-        "gen_shelf_y1":    "First Y (mm)",
-        "gen_shelf_count": "No. holes",
-        "gen_shelf_note":  "Remaining holes: every 32 mm from first Y position.",
+        "gen_mirror_note":    "⇇  Right side is a mirror of the left side.",
+        "gen_shelf_hdr":      "Shelf Pins — 32 mm System",
+        "gen_shelf_x":        "X (mm)",
+        "gen_shelf_y1":       "First Y (mm)",
+        "gen_shelf_count":    "No. holes",
+        "gen_shelf_note":     "Remaining holes: every 32 mm from first Y position.",
+        # text block for shelf pins (no table)
+        "shelf_blk_title":    "Shelf Holes (32 mm System)",
+        "shelf_blk_intro":    "Drill shelf pin holes according to the standard 32 mm system.",
+        "shelf_blk_raster":   "Hole spacing: 32 mm",
+        "shelf_blk_first_y":  "First hole height: Y =",
+        "shelf_blk_x_pos":    "X positions:",
+        "shelf_blk_outro":    "Holes are drilled along the full panel height at this pitch.",
+        "shelf_universal":    (
+            "NOTE: Shelf pin holes are made using the standard 32 mm system "
+            "and are not listed individually in the table."
+        ),
         # --- Important for assembly (professional) ---
         "imp_title":       "IMPORTANT FOR ASSEMBLY",
         "imp_items": [
@@ -941,9 +963,8 @@ def _register_fonts() -> tuple[str, str]:
 
 def _condense_holes(holes: list) -> tuple[list, list]:
     """
-    Kondenzuje rupe za nosače polica (sistem 32 mm):
-    - Za shelf_pin: zadržava samo prvu (min Y) rupu po svakom X stubu
-    - Vraća: (ostale_rupe + prve_shelf_rupe, shelf_info_lista)
+    Uklanja SVE shelf_pin rupe iz glavne tabele i vraća samo info za tekstualni blok.
+    - Vraća: (ostale_rupe_bez_shelf_pin, shelf_info_lista)
     shelf_info = [{"x": x_mm, "y1": first_y, "count": n, "dia": d, "depth": dep}, ...]
     """
     shelf = [h for h in holes if h.purpose == "shelf_pin"]
@@ -953,16 +974,15 @@ def _condense_holes(holes: list) -> tuple[list, list]:
     by_x: dict = {}
     for h in shelf:
         by_x.setdefault(h.x_mm, []).append(h)
-    firsts: list = []
-    info:   list = []
+    info: list = []
     for x in sorted(by_x):
         hs = sorted(by_x[x], key=lambda h: h.y_mm)
-        firsts.append(hs[0])
         info.append({
             "x": x, "y1": hs[0].y_mm, "count": len(hs),
             "dia": hs[0].diameter_mm, "depth": hs[0].depth_mm,
         })
-    return rest + firsts, info
+    # shelf_pin rupe se NE vraćaju u glavnu listu — prikazuju se kao tekst
+    return rest, info
 
 
 def _holes_equal(ha: list, hb: list) -> bool:
@@ -1090,8 +1110,17 @@ def build_drilling_pdf_bytes(
                             color=C_GOLD, space_before=6, space_after=5)
     st_imp_item   = _style("ImpItem",  size=9, leading=13, color=C_DARK,
                             left_indent=10, space_after=3)
-    st_shelf_note = _style("ShelfN",   size=7.5, color=C_SHELF,
+    st_shelf_note  = _style("ShelfN",    size=7.5, color=C_SHELF,
                             left_indent=8, space_after=2)
+    st_shelf_title = _style("ShelfTitle", font=font_bold, size=8.5, color=C_SHELF,
+                             space_before=5, space_after=2)
+    st_shelf_body  = _style("ShelfBody",  size=8.5, leading=12, color=C_DARK,
+                             left_indent=8, space_after=1)
+    st_shelf_bullet= _style("ShelfBullet",size=8.5, leading=12, color=C_DARK,
+                             left_indent=16, space_after=2)
+    st_univ_note   = _style("UnivNote",   size=8, leading=11,
+                             color=colors.HexColor("#5D6D7E"),
+                             left_indent=0, space_before=4, space_after=8)
     # --- Stilovi za uputstvo za sklapanje ---
     st_asm_title  = _style("AsmTitle",  font=font_bold, size=15, leading=20,
                             color=C_ASM_BD, space_before=6, space_after=4)
@@ -1221,6 +1250,15 @@ def build_drilling_pdf_bytes(
     # ════════════════════════════════════════════════════════════════════════
     # 3. TEHNIČKE TABELE — po elementu
     # ════════════════════════════════════════════════════════════════════════
+
+    # Univerzalna napomena o policama — jednom na vrhu, ne ponavlja se po ploči
+    story.append(Paragraph(
+        f"ℹ  {_t('shelf_universal')}",
+        st_univ_note,
+    ))
+    story.append(HRFlowable(width=W, thickness=0.5,
+                             color=colors.HexColor("#BDC3C7"), spaceAfter=6))
+
     if not plans:
         story.append(Paragraph(_t("tbl_no_modules"), st_edu_intro))
     else:
@@ -1348,26 +1386,27 @@ def build_drilling_pdf_bytes(
                     t.setStyle(tbl_hdr_style)
                     block.append(t)
 
-                # Kompaktni sažetak nosača polica (sistem 32 mm)
+                # Tekstualni blok za nosače polica (bez tabele, bez stotina redova)
                 if _shelf_info:
+                    block.append(Paragraph(_t("shelf_blk_title"), st_shelf_title))
+                    block.append(Paragraph(_t("shelf_blk_intro"), st_shelf_body))
                     block.append(Paragraph(
-                        _t("gen_shelf_hdr"),
-                        _style(f"SH{id(panel)}", font=font_bold, size=7.5,
-                               color=C_SHELF, space_before=3, space_after=1),
+                        f"•  {_t('shelf_blk_raster')}",
+                        st_shelf_bullet,
                     ))
-                    sh_rows = [sh_hdr] + [
-                        [str(si["x"]), str(si["y1"]), str(si["count"]),
-                         str(si["dia"]), str(si["depth"])]
-                        for si in _shelf_info
-                    ]
-                    sh_t = Table(sh_rows, colWidths=sh_col_w, repeatRows=1)
-                    sh_t.setStyle(sh_style)
-                    block.append(sh_t)
+                    # Prva Y (uzima se od prve X kolone; obično iste za sve stubove)
+                    _first_y = _shelf_info[0]["y1"]
                     block.append(Paragraph(
-                        f"↳  {_t('gen_shelf_note')}",
-                        _style(f"SN{id(panel)}", size=7, color=C_SHELF,
-                               left_indent=8, space_after=2),
+                        f"•  {_t('shelf_blk_first_y')} {_first_y} mm",
+                        st_shelf_bullet,
                     ))
+                    # X pozicije — sve u jednoj liniji
+                    _x_str = "  ,  ".join(f"{si['x']} mm" for si in _shelf_info)
+                    block.append(Paragraph(
+                        f"•  {_t('shelf_blk_x_pos')} {_x_str}",
+                        st_shelf_bullet,
+                    ))
+                    block.append(Paragraph(_t("shelf_blk_outro"), st_shelf_body))
 
                 block.append(Spacer(1, 4))
 
