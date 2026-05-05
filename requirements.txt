@@ -40,6 +40,7 @@ rpds-py==0.30.0
 six==1.17.0
 smmap==5.0.2
 nicegui==1.4.21
+sentry-sdk[fastapi]==2.29.1
 tenacity==9.1.2
 toml==0.10.2
 tornado==6.5.4

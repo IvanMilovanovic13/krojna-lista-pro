@@ -1,9 +1,36 @@
 from __future__ import annotations
 
 import logging
+import os
 import pkgutil
 from pathlib import Path
 from importlib.util import find_spec
+
+# ── Sentry error tracking (opciono — aktiviše se ako je SENTRY_DSN postavljen) ──
+def _init_sentry() -> None:
+    dsn = os.environ.get("SENTRY_DSN", "").strip()
+    if not dsn:
+        return
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.logging import LoggingIntegration
+        sentry_sdk.init(
+            dsn=dsn,
+            environment=os.environ.get("APP_ENV", "development"),
+            traces_sample_rate=0.1,
+            integrations=[
+                FastApiIntegration(),
+                LoggingIntegration(level=logging.WARNING, event_level=logging.ERROR),
+            ],
+            send_default_pii=False,
+        )
+        logging.getLogger(__name__).info("Sentry inicijalizovan (env=%s)",
+                                         os.environ.get("APP_ENV", "development"))
+    except Exception as _se:
+        logging.getLogger(__name__).warning("Sentry init nije uspeo: %s", _se)
+
+_init_sentry()
 
 if not hasattr(pkgutil, "find_loader"):
     def _compat_find_loader(name: str):
