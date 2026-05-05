@@ -2254,20 +2254,32 @@ def build_pdf_bytes(
     # ── 2. Slika kuhinje ───────────────────────────────────────────────────────
     try:
         _wl_v, _wh_v = wall_len_h(kitchen)
-        _sc_v  = 5.0 / max(_wh_v + 280, 1)
-        _fw_v  = max((_wl_v + 260) * _sc_v, 5.0 * 1.65)
-        _fig_k = plt.figure(figsize=(_fw_v, 5.0))
+        # Granice koje _setup_view() postavlja u katalog (dizajn) modu:
+        #   left_pad=170, right_pad=620, bottom_pad=420, top_pad=150
+        _x_total = 170 + _wl_v + 620
+        _y_total = 420 + _wh_v + 150
+        _aspect  = _x_total / max(_y_total, 1)   # data width / data height
+
+        # Figura: tačne proporcije, 6" visina za jasnu sliku
+        _fig_h_in = 6.0
+        _fig_w_in = max(_fig_h_in * _aspect, 4.0)
+
+        _fig_k = plt.figure(figsize=(_fig_w_in, _fig_h_in))
         _ax_k  = _fig_k.add_subplot(111)
-        render_fn(ax=_ax_k, kitchen=kitchen, view_mode='Tehnicki',
-                show_grid=False, grid_mm=10, show_bounds=True,
-                kickboard=True, ceiling_filler=False)
-        _fig_k.tight_layout(pad=0.3)
+        # Katalog/dizajn prikaz — lepši izgled u PDF-u, bez tehničkih linija i indikatora
+        render_fn(ax=_ax_k, kitchen=kitchen, view_mode='Katalog',
+                show_grid=False, grid_mm=10, show_bounds=False,
+                kickboard=True, ceiling_filler=False,
+                show_free_space=False)
+        _fig_k.tight_layout(pad=0.1)
         _kbuf  = BytesIO()
-        _fig_k.savefig(_kbuf, format='png', dpi=150)
+        # bbox_inches='tight' uklanja prazan prostor oko slike
+        _fig_k.savefig(_kbuf, format='png', dpi=150, bbox_inches='tight')
         plt.close(_fig_k)
         _kbuf.seek(0)
-        _ratio = 5.0 / _fw_v
-        story.append(RLImage(_kbuf, width=PW, height=PW * _ratio))
+        # Ratio za prikaz u PDF-u: visina/širina podataka
+        _hw_ratio = _y_total / max(_x_total, 1)
+        story.append(RLImage(_kbuf, width=PW, height=PW * _hw_ratio))
     except Exception as _ek:
         story.append(Paragraph(_safe(f'Slika nije dostupna: {_ek}'), NRM))
     story.append(Spacer(1, 5*mm))

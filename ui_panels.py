@@ -7,7 +7,7 @@ from nicegui import ui
 
 from cutlist import build_cutlist_sections, generate_cutlist_excel, generate_cutlist_pdf
 from module_templates import get_templates
-from state_logic import state, reset_state, reset_project_state, _max_allowed_h_for_zone, add_module_instance_local, update_module_local, delete_module_local, clear_all_local, _set_view_mode, _set_show_grid, _set_grid_mm, _set_show_bounds, _set_ceiling_filler, _set_wall_length, _set_wall_height, _set_foot_height, _set_base_height, _set_vertical_gap, _set_material, _set_front_color, _set_worktop_thickness, _set_worktop_width, _set_worktop_reserve_mm, _set_worktop_front_overhang_mm, _set_worktop_field_cut, _set_worktop_edge_protection, _set_worktop_edge_protection_type, _set_worktop_joint_type, _set_max_element_height, get_zone_depth_standard, set_zone_depth_standard, _get_depth_mode, _is_independent_depth, suggest_corner_neighbor_guidance, save_project_json, load_project_json, build_demo_project_json, save_local_recent_project, list_recent_projects, load_recent_project, list_user_store_projects, load_project_from_store, get_autosave_info, load_autosave_project, login_user_session, register_trial_user_session, restore_local_session_state, logout_current_session, build_forgot_password_message, reset_password_with_token, get_current_billing_summary, get_cutlist_access_state, build_checkout_start_message, build_customer_portal_message, get_release_readiness_summary, get_ops_runtime_summary, get_visible_audit_logs, get_visible_users, _set_language, get_effective_access_context
+from state_logic import state, reset_state, reset_project_state, _max_allowed_h_for_zone, add_module_instance_local, update_module_local, delete_module_local, clear_all_local, _set_view_mode, _set_show_grid, _set_grid_mm, _set_show_bounds, _set_ceiling_filler, _set_show_dim_details, _set_wall_length, _set_wall_height, _set_foot_height, _set_base_height, _set_vertical_gap, _set_material, _set_front_color, _set_worktop_thickness, _set_worktop_width, _set_worktop_reserve_mm, _set_worktop_front_overhang_mm, _set_worktop_field_cut, _set_worktop_edge_protection, _set_worktop_edge_protection_type, _set_worktop_joint_type, _set_max_element_height, get_zone_depth_standard, set_zone_depth_standard, _get_depth_mode, _is_independent_depth, suggest_corner_neighbor_guidance, save_project_json, load_project_json, build_demo_project_json, save_local_recent_project, list_recent_projects, load_recent_project, list_user_store_projects, load_project_from_store, get_autosave_info, load_autosave_project, login_user_session, register_trial_user_session, restore_local_session_state, logout_current_session, build_forgot_password_message, reset_password_with_token, get_current_billing_summary, get_cutlist_access_state, build_checkout_start_message, build_customer_portal_message, get_release_readiness_summary, get_ops_runtime_summary, get_visible_audit_logs, get_visible_users, _set_language, get_effective_access_context
 from layout_engine import find_first_free_x, solve_layout
 from visualization import _render, _wall_len_h, _zone_baseline_and_height, render_element_preview
 from svg_icons import svg_for_tid
@@ -39,6 +39,8 @@ from ui_sidebar_panel import render_sidebar_content_panel
 from ui_params_panel import render_params_panel
 from ui_settings_tab import render_settings_tab
 from ui_cutlist_tab import render_cutlist_tab
+from ui_drilling_tab import render_drilling_tab
+from drilling_plan import build_drilling_plan
 from ui_canvas_toolbar import render_canvas_toolbar
 from ui_elements_tab import render_elements_tab
 from ui_nova_tab import render_nova_tab
@@ -159,6 +161,7 @@ def render_toolbar() -> None:
         ("podesavanja", _tr("tab.settings"), "settings"),
         ("elementi",  _tr("tab.elements"),  "grid_view"),
         ("krojna", _tr("tab.cutlist"), "table_rows"),
+        ("busenje", _tr("tab.drilling"), "hardware"),
         ("pomoc",     _tr("tab.help"),      "help"),
     ]
     _tier = str(_effective_access.get("access_tier", "") or "").strip().lower()
@@ -486,6 +489,7 @@ def canvas_toolbar_panel() -> None:
         set_grid_mm=_set_grid_mm,
         set_show_bounds=_set_show_bounds,
         set_ceiling_filler=_set_ceiling_filler,
+        set_show_dim_details=_set_show_dim_details,
         reset_3d_camera_home=_reset_3d_camera_home,
     )
 
@@ -564,6 +568,8 @@ def _main_content_inner() -> None:
         render_elements_tab=render_elements_tab,
         render_cutlist_tab=render_cutlist_tab,
         cutlist_tr=_tr,
+        render_drilling_tab=render_drilling_tab,
+        build_drilling_plan=build_drilling_plan,
         pd=pd,
         plt=plt,
         build_cutlist_sections=build_cutlist_sections,

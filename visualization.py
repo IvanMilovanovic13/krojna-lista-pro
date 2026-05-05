@@ -1768,14 +1768,14 @@ def _draw_wall_doors(ax, x, y, w, h, accent, face, technical, m=None):
     handle_bottom_off = 50.0
     half_len = DOOR_HANDLE_V_LEN / 2.0
     zone_key = str((m or {}).get("zone", "")).lower().strip()
-    if zone_key == "tall_top":
-        handle_cy = _clamp_handle_cy(y, h, y + h * 0.50)
-    else:
-        handle_cy = _clamp_handle_cy(y, h, y + handle_bottom_off + half_len)
+    # tall_top elementi — rucke pri dnu (kao viseci), ne na sredini
+    handle_cy = _clamp_handle_cy(y, h, y + handle_bottom_off + half_len)
 
     tid = str(m.get("template_id", "")).upper() if m else ""
-    force_one = "1DOOR" in tid
-    force_two = ("2DOOR" in tid) or ("DOORS" in tid and "1DOOR" not in tid)
+    _params_wd = (m.get("params", {}) or {}) if m else {}
+    _door_count_wd = int(_params_wd.get("door_count", 0) or 0)
+    force_one = (_door_count_wd == 1) or ("1DOOR" in tid)
+    force_two = (_door_count_wd == 2) or ("2DOOR" in tid) or ("DOORS" in tid and "1DOOR" not in tid and _door_count_wd != 1)
     if (not force_one and (force_two or w > 650)):
         # 2 krila — vertikalna linija razdvajanja
         ax.plot([mid, mid], [y, y + h], color=accent, linewidth=0.8, zorder=12)
@@ -3053,13 +3053,98 @@ def _dim_arrow_wall(ax, x0: int, x1: int, y: int, txt: str) -> None:
 
 
 # =========================================================
+# Dimenzijski overlay po elementu (visina uvek, dubina samo selektovani)
+# =========================================================
+
+def _draw_height_kota(ax, m: Dict[str, Any], x: int, y0: int, w: int, h: int,
+                      zone: str, kitchen: Dict[str, Any], mods: List[Dict[str, Any]],
+                      technical: bool, is_selected: bool = False) -> None:
+    """Vertikalna kota visine po sredini elementa — uvek u tehničkom modu.
+    Stil identičan horizontalnim kotama: linija + tikovi + tekst.
+    Za selektovani element prikazuje i dubinu.
+    """
+    if not technical:
+        return
+
+    foot_mm = _get_foot_mm(kitchen)
+    _col = "#1A5276"
+    _lw  = 0.85
+    _fsize = max(5.0, FONT_DIM - 2.5)   # manji od kota sirine, optimalan za unutar elementa
+    _kx = float(x) + float(w) / 2.0     # centar elementa (X)
+
+    def _seg(y_bot: float, y_top: float, label: str) -> None:
+        """Jedan vertikalni segment: dvostrana strelica + tekst desno."""
+        if (y_top - y_bot) < 15:
+            return
+        # Dvostrana strelica (kao horizontalne kote, ali vertikalna)
+        ax.annotate(
+            "",
+            xy=(_kx, y_bot), xytext=(_kx, y_top),
+            arrowprops=dict(arrowstyle="<->", color=_col, lw=_lw,
+                            shrinkA=0, shrinkB=0),
+            zorder=24,
+        )
+        # Tekst desno od linije, vertikalno centriran
+        mid_y = (y_bot + y_top) / 2.0
+        ax.text(_kx + 11, mid_y, f"{label}mm",
+                fontsize=_fsize, ha="left", va="center",
+                color=_col, zorder=25,
+                bbox=dict(boxstyle="round,pad=0.15", facecolor="white",
+                          alpha=0.88, edgecolor="none"))
+
+    # ── Segmenti po zoni ─────────────────────────────────────────────────
+    if zone == "base":
+        if foot_mm > 0:
+            _seg(0.0, float(foot_mm), f"{foot_mm}")
+        _seg(float(foot_mm), float(foot_mm + h), f"{h}")
+
+    elif zone == "wall":
+        _seg(float(y0), float(y0 + h), f"{h}")
+
+    elif zone == "tall":
+        tid_t = str(m.get("template_id", "")).upper()
+        _base_y = 0.0 if "FRIDGE" in tid_t else float(foot_mm)
+        if "FRIDGE" not in tid_t and foot_mm > 0:
+            _seg(0.0, float(foot_mm), f"{foot_mm}")
+        _seg(_base_y, _base_y + h, f"{h}")
+        # Tall_top iznad (ako postoji na istoj X poziciji)
+        _tt = next(
+            (mm for mm in mods
+             if str(mm.get("zone", "")).lower().strip() == "tall_top"
+             and int(mm.get("x_mm", -9999)) == x),
+            None,
+        )
+        if _tt:
+            _tth = int(_tt.get("h_mm", 0) or 0)
+            if _tth > 0:
+                _seg(_base_y + h, _base_y + h + _tth, f"{_tth}")
+
+    elif zone in ("tall_top", "wall_upper"):
+        _seg(float(y0), float(y0 + h), f"{h}")
+
+    # ── Dubina — samo za selektovani element ─────────────────────────────
+    if is_selected:
+        d_mm = int(m.get("d_mm", 0) or 0)
+        if d_mm > 0:
+            ax.text(
+                x + 5, y0 + 5,
+                f"D:{d_mm}mm",
+                fontsize=_fsize, ha="left", va="bottom",
+                color="#7D3C11", zorder=26,
+                bbox=dict(boxstyle="round,pad=0.2", facecolor="#FFF8F0",
+                          alpha=0.90, edgecolor="#D4AC72", linewidth=0.5),
+            )
+
+
+# =========================================================
 # Glavni render
 # =========================================================
 def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_mm: int,
             show_bounds: bool, kickboard: bool, ceiling_filler: bool,
             selected_id: Optional[int] = None,
             room: Optional[Dict[str, Any]] = None,
-            wall_key: str = "A") -> None:
+            wall_key: str = "A",
+            show_free_space: bool = True) -> None:
     wall_len, wall_h = _wall_len_h(kitchen)
     _wk = str(wall_key or "A").upper()
     mods = [
@@ -3200,8 +3285,9 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
     _draw_ceiling_filler(ax, kitchen, mods, wall_len, wall_h,
                          technical=technical, enabled=ceiling_filler)
 
-    # Slobodan prostor (uvek vidljiv)
-    _draw_free_space_info(ax, kitchen, mods, wall_len, wall_h, technical)
+    # Slobodan prostor (može se isključiti za PDF/clean prikaz)
+    if show_free_space:
+        _draw_free_space_info(ax, kitchen, mods, wall_len, wall_h, technical)
 
     # Filler blokovi — mesta gde su obrisani elementi (keep_gap=True)
     _draw_fillers(ax, kitchen, technical)
@@ -3247,6 +3333,8 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
             _draw_module(ax, m, x, y0, w, h, zone="wall", technical=technical,
                          worktop_thk_mm=wt_thk_mm, selected=_is_selected,
                          global_front_color=_global_front, appliance_color=_appliance_col)
+            _draw_height_kota(ax, m, x, y0, w, h, zone="tall_top", kitchen=kitchen,
+                              mods=mods, technical=technical, is_selected=_is_selected)
         elif zone == "wall_upper":
             y0 = _y_for_wall_upper(kitchen, m, mods)
             if h <= 0:
@@ -3259,6 +3347,8 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
             _draw_module(ax, m, x, y0, w, h, zone="wall", technical=technical,
                          worktop_thk_mm=wt_thk_mm, selected=_is_selected,
                          global_front_color=_global_front, appliance_color=_appliance_col)
+            _draw_height_kota(ax, m, x, y0, w, h, zone="wall_upper", kitchen=kitchen,
+                              mods=mods, technical=technical, is_selected=_is_selected)
         else:
             y0, zone_h = _zone_baseline_and_height(kitchen, zone)
             if h <= 0:
@@ -3282,6 +3372,8 @@ def _render(ax, kitchen: Dict[str, Any], view_mode: str, show_grid: bool, grid_m
             _draw_module(ax, m, x, y0, w, h, zone=zone, technical=technical,
                          worktop_thk_mm=wt_thk_mm, selected=_is_selected,
                          global_front_color=_global_front, appliance_color=_appliance_col)
+            _draw_height_kota(ax, m, x, y0, w, h, zone=zone, kitchen=kitchen,
+                              mods=mods, technical=technical, is_selected=_is_selected)
 
     if not technical:
         _draw_l_layout_inset(ax, kitchen, room, active_wall=_wk)

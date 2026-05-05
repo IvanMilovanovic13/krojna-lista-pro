@@ -24,6 +24,8 @@ def render_main_content_inner(
     render_elements_tab,
     render_cutlist_tab,
     cutlist_tr,
+    render_drilling_tab,
+    build_drilling_plan,
     pd,
     plt,
     build_cutlist_sections,
@@ -153,6 +155,14 @@ def render_main_content_inner(
             render_element_preview=render_element_preview,
             svg_for_tid=svg_for_tid,
             assembly_instructions=assembly_instructions,
+        )
+        return
+    elif state.active_tab == "busenje":
+        render_drilling_tab(
+            ui=ui,
+            state=state,
+            tr_fn=tr_fn,
+            build_drilling_plan=build_drilling_plan,
         )
         return
     elif state.active_tab == "podesavanja":
