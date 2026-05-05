@@ -30,6 +30,7 @@ from ui_public_site import (
     render_reset_password_page,
     render_verify_email_page,
 )
+from ui_legal_pages import render_privacy_page, render_terms_page
 GLOBAL_UI_STYLE = '''
 <style>
   html, body, .nicegui-content {
@@ -484,6 +485,16 @@ def verify_email_page(request: Request) -> None:
 @ui.page('/reset-password')
 def reset_password_page(request: Request) -> None:
     render_reset_password_page(request)
+
+
+@ui.page('/privacy')
+def privacy_page() -> None:
+    render_privacy_page()
+
+
+@ui.page('/terms')
+def terms_page() -> None:
+    render_terms_page()
 
 
 @app.post('/api/billing/webhook')

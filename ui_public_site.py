@@ -165,33 +165,173 @@ def _topbar(*, action_label: str, action_target: str, current_path: str) -> None
             )
 
 
-def _pricing_feature_card(title: str, desc: str) -> None:
-    with ui.column().classes("public-card grow p-6 gap-2"):
+def _pricing_feature_card(title: str, desc: str, icon: str = "check_circle") -> None:
+    with ui.column().classes("public-card grow p-6 gap-3"):
+        ui.icon(icon).classes("text-[#2563eb] text-[28px]")
         ui.label(title).classes("text-lg font-bold text-slate-900")
-        ui.label(desc).classes("text-sm text-slate-600")
+        ui.label(desc).classes("text-sm text-slate-600 leading-relaxed")
+
+
+def _plan_feature(text: str, included: bool = True) -> None:
+    with ui.row().classes("w-full items-start gap-2"):
+        ui.icon("check" if included else "remove").classes(
+            f"text-[16px] mt-0.5 {'text-[#2563eb]' if included else 'text-gray-300'}"
+        )
+        ui.label(text).classes(f"text-sm {'text-gray-700' if included else 'text-gray-400'}")
 
 
 def render_pricing_page() -> None:
     _public_shell()
     with ui.column().classes("public-shell w-full"):
         _topbar(action_label=_tr("public.login_btn"), action_target="/login", current_path="/pricing")
-        with ui.column().classes("w-full items-center px-6 py-12 gap-8"):
-            with ui.column().classes("public-card info-card items-center gap-5"):
-                ui.label(_tr("public.pricing_title")).classes("public-hero-title")
-                ui.label(_tr("public.pricing_desc")).classes("public-hero-text max-w-3xl")
-                with ui.row().classes("w-full justify-center gap-3 max-md:flex-col"):
-                    ui.button(_tr("public.create_account_btn"), on_click=lambda: ui.navigate.to("/register")).classes(
-                        "bg-[#2563eb] text-white px-8"
-                    )
-                    ui.button(_tr("public.have_account_btn"), on_click=lambda: ui.navigate.to("/login")).props("outline color=dark")
-            with ui.row().classes("w-full max-w-6xl items-stretch gap-6 max-md:flex-col"):
-                _pricing_feature_card(_tr("public.feature_easy_title"), _tr("public.feature_easy_desc"))
-                _pricing_feature_card(_tr("public.feature_workshop_title"), _tr("public.feature_workshop_desc"))
-                _pricing_feature_card(_tr("public.feature_saas_title"), _tr("public.feature_saas_desc"))
+
+        # ── Hero ──────────────────────────────────────────────────────────
+        with ui.column().classes("w-full items-center bg-white px-6 pt-16 pb-12 gap-6"):
+            _hero_brand()
+            ui.label(_tr("public.pricing_title")).classes(
+                "text-[36px] font-black text-slate-900 text-center leading-tight max-w-3xl max-md:text-[26px]"
+            )
+            ui.label(_tr("public.pricing_desc")).classes(
+                "text-[16px] text-slate-500 text-center max-w-2xl leading-relaxed"
+            )
+            with ui.row().classes("gap-3 flex-wrap justify-center mt-2"):
+                ui.button(
+                    _tr("public.create_account_btn"),
+                    on_click=lambda: ui.navigate.to("/register"),
+                ).classes("bg-[#2563eb] text-white px-8 py-3 text-base font-semibold")
+                ui.button(
+                    _tr("public.have_account_btn"),
+                    on_click=lambda: ui.navigate.to("/login"),
+                ).props("outline color=dark").classes("px-6 py-3 text-base")
+
+        # ── Kako radi ─────────────────────────────────────────────────────
+        with ui.column().classes("w-full items-center bg-[#f8fafc] px-6 py-14 gap-8"):
+            ui.label(_tr("public.how_it_works_title")).classes(
+                "text-2xl font-black text-slate-900 uppercase tracking-wide text-center"
+            )
+            with ui.row().classes("w-full max-w-5xl gap-6 justify-center max-md:flex-col"):
+                for step_title, step_desc, icon_name in (
+                    (_tr("public.how_step1_title"), _tr("public.how_step1_desc"), "straighten"),
+                    (_tr("public.how_step2_title"), _tr("public.how_step2_desc"), "kitchen"),
+                    (_tr("public.how_step3_title"), _tr("public.how_step3_desc"), "file_download"),
+                ):
+                    with ui.column().classes("public-card flex-1 p-7 gap-3 items-center text-center"):
+                        ui.icon(icon_name).classes("text-[#2563eb] text-[40px]")
+                        ui.label(step_title).classes("text-base font-bold text-slate-900")
+                        ui.label(step_desc).classes("text-sm text-slate-500 leading-relaxed")
+
+        # ── Feature cards ─────────────────────────────────────────────────
+        with ui.column().classes("w-full items-center bg-white px-6 py-14 gap-8"):
+            with ui.row().classes("w-full max-w-5xl items-stretch gap-6 max-md:flex-col"):
+                _pricing_feature_card(
+                    _tr("public.feature_easy_title"),
+                    _tr("public.feature_easy_desc"),
+                    "touch_app",
+                )
+                _pricing_feature_card(
+                    _tr("public.feature_workshop_title"),
+                    _tr("public.feature_workshop_desc"),
+                    "content_cut",
+                )
+                _pricing_feature_card(
+                    _tr("public.feature_saas_title"),
+                    _tr("public.feature_saas_desc"),
+                    "cloud_done",
+                )
+
+        # ── Planovi ───────────────────────────────────────────────────────
+        with ui.column().classes("w-full items-center bg-[#f8fafc] px-6 py-14 gap-8"):
+            ui.label(_tr("public.pricing_plans_title")).classes(
+                "text-2xl font-black text-slate-900 uppercase tracking-wide text-center"
+            )
+            with ui.row().classes("w-full max-w-3xl gap-6 justify-center max-md:flex-col"):
+                # Trial plan
+                with ui.column().classes("public-card flex-1 p-8 gap-4"):
+                    ui.label(_tr("public.plan_trial_title")).classes("text-xl font-black text-slate-900")
+                    ui.label("Besplatno").classes("text-3xl font-black text-slate-900")
+                    ui.label(_tr("public.plan_trial_desc")).classes("text-sm text-slate-500")
+                    ui.separator()
+                    _plan_feature(_tr("public.plan_trial_feature1"))
+                    _plan_feature(_tr("public.plan_trial_feature2"))
+                    _plan_feature(_tr("public.plan_trial_feature3"))
+                    _plan_feature(_tr("public.plan_pro_feature1"), included=False)
+                    _plan_feature(_tr("public.plan_pro_feature2"), included=False)
+                    ui.button(
+                        _tr("public.create_account_btn"),
+                        on_click=lambda: ui.navigate.to("/register"),
+                    ).classes("w-full bg-white text-[#111] border border-[#111] mt-auto")
+
+                # PRO plan
+                with ui.column().classes(
+                    "public-card flex-1 p-8 gap-4 border-2 border-[#2563eb] relative overflow-hidden"
+                ):
+                    with ui.element("div").classes(
+                        "absolute top-4 right-4 bg-[#2563eb] text-white text-xs font-bold px-3 py-1 rounded-full"
+                    ):
+                        ui.label("PRO")
+                    ui.label(_tr("public.plan_pro_title")).classes("text-xl font-black text-[#2563eb]")
+                    ui.label(_tr("public.plan_pro_price")).classes("text-xl font-black text-slate-900")
+                    ui.label(_tr("public.plan_pro_desc")).classes("text-sm text-slate-500")
+                    ui.separator()
+                    _plan_feature(_tr("public.plan_trial_feature1"))
+                    _plan_feature(_tr("public.plan_trial_feature2"))
+                    _plan_feature(_tr("public.plan_trial_feature3"))
+                    _plan_feature(_tr("public.plan_pro_feature1"))
+                    _plan_feature(_tr("public.plan_pro_feature2"))
+                    _plan_feature(_tr("public.plan_pro_feature3"))
+                    _plan_feature(_tr("public.plan_pro_feature4"))
+                    ui.button(
+                        _tr("public.create_account_btn"),
+                        on_click=lambda: ui.navigate.to("/register"),
+                    ).classes("w-full bg-[#2563eb] text-white mt-auto")
+
+        # ── CTA na dnu ────────────────────────────────────────────────────
+        with ui.column().classes("w-full items-center bg-[#111827] px-6 py-16 gap-5"):
+            ui.label(_tr("public.pricing_cta_title")).classes(
+                "text-3xl font-black text-white text-center"
+            )
+            ui.label(_tr("public.pricing_cta_desc")).classes(
+                "text-base text-gray-400 text-center"
+            )
+            ui.button(
+                _tr("public.create_account_btn"),
+                on_click=lambda: ui.navigate.to("/register"),
+            ).classes("bg-white text-[#111827] px-10 py-3 text-base font-bold")
+
+        # ── Footer ────────────────────────────────────────────────────────
+        with ui.row().classes(
+            "w-full justify-center items-center gap-4 py-6 bg-white"
+            " border-t border-gray-100"
+        ):
+            ui.html('<span style="font-size:12px;color:#9ca3af;">CabinetCutPro &copy; 2026</span>')
+            ui.html('<span style="color:#e5e7eb;">|</span>')
+            ui.html(
+                '<a href="/privacy" style="font-size:12px;color:#6b7280;'
+                'text-decoration:none;">Privacy Policy</a>'
+            )
+            ui.html('<span style="color:#e5e7eb;">|</span>')
+            ui.html(
+                '<a href="/terms" style="font-size:12px;color:#6b7280;'
+                'text-decoration:none;">Terms of Service</a>'
+            )
+            ui.html('<span style="color:#e5e7eb;">|</span>')
+            ui.html(
+                '<a href="mailto:ivan_milovanovic@live.com" style="font-size:12px;'
+                'color:#6b7280;text-decoration:none;">Contact</a>'
+            )
 
 
 def _auth_footer() -> None:
-    ui.label(f"Copyright (c) {_tr('wizard.title_app')} 2026.").classes("public-footer")
+    with ui.row().classes("justify-center items-center gap-3 flex-wrap"):
+        ui.html('<span style="font-size:12px;color:#9ca3af;">CabinetCutPro &copy; 2026</span>')
+        ui.html(
+            '<a href="/privacy" style="font-size:12px;color:#9ca3af;text-decoration:none;">'
+            'Privacy</a>'
+        )
+        ui.html(
+            '<a href="/terms" style="font-size:12px;color:#9ca3af;text-decoration:none;">'
+            'Terms</a>'
+        )
 
 
 def render_login_page(request: Request | None = None) -> None:
