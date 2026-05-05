@@ -321,6 +321,7 @@ class AppState:
     grid_mm: int = 10
     show_bounds: bool = True
     ceiling_filler: bool = False
+    show_dim_details: bool = False
     wall_upper_target_x: int = -1
     front_color: str = "#FDFDFB"
     selected_edit_id: int = 0
@@ -514,6 +515,7 @@ def reset_project_state() -> None:
     state.grid_mm           = 10
     state.show_bounds       = True
     state.ceiling_filler    = False
+    state.show_dim_details  = False
     state.wall_upper_target_x = -1
     state.front_color       = "#FDFDFB"
     state.selected_edit_id  = 0
@@ -589,6 +591,7 @@ def reset_workspace_for_active_session() -> None:
     state.grid_mm = 10
     state.show_bounds = True
     state.ceiling_filler = False
+    state.show_dim_details = False
     state.wall_upper_target_x = -1
     state.front_color = "#FDFDFB"
     state.selected_edit_id = 0
@@ -1298,6 +1301,11 @@ def _set_show_bounds(val: bool) -> None:
 
 def _set_ceiling_filler(val: bool) -> None:
     state.ceiling_filler = bool(val)
+
+
+def _set_show_dim_details(val: bool) -> None:
+    state.show_dim_details = bool(val)
+
 
 
 def _set_wall_length(val: int) -> None:

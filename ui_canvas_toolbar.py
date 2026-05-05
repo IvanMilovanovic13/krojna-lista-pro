@@ -24,6 +24,7 @@ def render_canvas_toolbar(
     set_grid_mm,
     set_show_bounds,
     set_ceiling_filler,
+    set_show_dim_details=None,
     reset_3d_camera_home=None,
 ) -> None:
     """Renderuje toolbar iznad 2D/3D canvasa (UI-only, bez promene logike)."""

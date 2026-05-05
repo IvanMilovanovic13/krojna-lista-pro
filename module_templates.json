@@ -974,7 +974,8 @@
     "zone": "tall",
     "type": "TALL",
     "features": {
-      "doors": true
+      "doors": true,
+      "door_count": 2
     },
     "visual": {
       "face_color": null,
@@ -990,6 +991,10 @@
       "pt-br": "Torre (portas)",
       "zh-cn": "高柜（门）",
       "hi": "टॉल (दरवाज़े)"
+    },
+    "params": {
+      "door_count": 2,
+      "handle_side": "right"
     }
   },
   "TALL_OVEN": {

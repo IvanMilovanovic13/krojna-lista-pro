@@ -1647,7 +1647,12 @@ def generate_cutlist(kitchen: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
         elif (tid in _DOOR_TIDS or "1DOOR" in tid
                 or ("2DOOR" in tid and "SLIDING" not in tid)
                 or ("WARDROBE" in tid and "CORNER" in tid and "DRAWERS" not in tid and "SLIDING" not in tid)):
-            num_doors = 2 if (w > 500 and "1DOOR" not in tid) else 1
+            # Za TALL_DOORS: door_count iz params ima prioritet
+            _p_door_count = int((params or {}).get("door_count", 0) or 0)
+            if _p_door_count in (1, 2):
+                num_doors = _p_door_count
+            else:
+                num_doors = 2 if (w > 500 and "1DOOR" not in tid) else 1
             door_w = (fw - front_gap) / num_doors if num_doors > 1 else fw
             door_h = h - 2 * front_gap
             rows_fronts.append(fr("Vrata", door_w, door_h, kol_=num_doors))
