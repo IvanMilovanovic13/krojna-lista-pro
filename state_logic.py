@@ -611,7 +611,7 @@ def reset_workspace_for_active_session() -> None:
         "tall": 560,
         "tall_top": 560,
     }
-    state.language = preserved_language if preserved_language in ("sr", "en", "de") else "sr"
+    state.language = preserved_language if preserved_language in ("sr", "en", "de", "fr", "es", "pt-br", "ru", "zh-cn", "hi") else "sr"
     _sync_kitchen_wall_from_room(room=state.room, wall_key="A")
 
 
@@ -3155,7 +3155,7 @@ def load_project_json(data: bytes) -> Tuple[bool, str]:
     state.project_type         = project_type
     state.kitchen["project_type"] = state.project_type
     _saved_language = str(payload.get("language", "sr") or "sr").lower().strip()
-    state.language = _saved_language if _saved_language in ("sr", "en") else "sr"
+    state.language = _saved_language if _saved_language in ("sr", "en", "de", "fr", "es", "pt-br", "ru", "zh-cn", "hi") else "sr"
 
     # kitchen_layout + l_corner_side (backward compat: čitaj iz kitchen ako nedostaje)
     _saved_layout = str(payload.get("kitchen_layout", "") or "").lower().strip()
