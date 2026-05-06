@@ -248,7 +248,7 @@ def render_pricing_page() -> None:
                 # Trial plan
                 with ui.column().classes("public-card flex-1 p-8 gap-4"):
                     ui.label(_tr("public.plan_trial_title")).classes("text-xl font-black text-slate-900")
-                    ui.label("Besplatno").classes("text-3xl font-black text-slate-900")
+                    ui.label(_tr("public.plan_trial_price")).classes("text-3xl font-black text-slate-900")
                     ui.label(_tr("public.plan_trial_desc")).classes("text-sm text-slate-500")
                     ui.separator()
                     _plan_feature(_tr("public.plan_trial_feature1"))
