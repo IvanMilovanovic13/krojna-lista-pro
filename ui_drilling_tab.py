@@ -299,8 +299,12 @@ def render_drilling_tab(
                                     {"name": "dep",     "label": _tr("depth"),   "field": "dep",     "align": "right"},
                                     {"name": "note",    "label": "Napomena",     "field": "note",    "align": "left"},
                                 ]
+                                # Odvoji police od ostalih rupa
+                                shelf_holes = [h for h in panel.holes if h.purpose == "shelf_pin"]
+                                other_holes = [h for h in panel.holes if h.purpose != "shelf_pin"]
+
                                 hole_rows = []
-                                for h in panel.holes:
+                                for h in other_holes:
                                     icon = _PURPOSE_ICON.get(h.purpose, "•")
                                     hole_rows.append({
                                         "purpose": f"{icon} {_purpose_label(h.purpose, _lang)}",
@@ -310,10 +314,35 @@ def render_drilling_tab(
                                         "dep":     f"{h.depth_mm} mm",
                                         "note":    h.note or "",
                                     })
-                                ui.table(
-                                    columns=hole_cols,
-                                    rows=hole_rows,
-                                ).classes("w-full text-xs").props("dense flat")
+                                if hole_rows:
+                                    ui.table(
+                                        columns=hole_cols,
+                                        rows=hole_rows,
+                                    ).classes("w-full text-xs").props("dense flat")
+
+                                # Tekstualni blok za police (sistem 32 mm)
+                                if shelf_holes:
+                                    by_x: dict = {}
+                                    for h in shelf_holes:
+                                        by_x.setdefault(h.x_mm, []).append(h)
+                                    x_positions = sorted(by_x)
+                                    first_y = min(h.y_mm for h in shelf_holes)
+                                    total_count = len(shelf_holes)
+                                    dia = shelf_holes[0].diameter_mm
+                                    dep = shelf_holes[0].depth_mm
+                                    x_str = "  ·  ".join(f"{x} mm" for x in x_positions)
+                                    with ui.column().classes(
+                                        "w-full gap-1 mt-2 p-3 rounded-lg bg-blue-50 border border-blue-200"
+                                    ):
+                                        ui.label(
+                                            f"📌  Rupe za police — sistem 32 mm  ({total_count} rupa, Ø{dia}, dubina {dep} mm)"
+                                        ).classes("text-xs font-semibold text-blue-800")
+                                        ui.label(
+                                            f"• Prva rupa od dna: {first_y} mm, pa na svakih 32 mm"
+                                        ).classes("text-xs text-blue-700")
+                                        ui.label(
+                                            f"• X pozicije: {x_str}"
+                                        ).classes("text-xs text-blue-700")
 
                     # Napomene za radionicu
                     if plan.workshop_notes:
