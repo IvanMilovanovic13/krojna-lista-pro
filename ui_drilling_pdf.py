@@ -363,6 +363,40 @@ _EDU: dict[str, dict[str, str]] = {
             "Der Einlegeboden kann auf beliebige Hohe eingestellt werden.",
             "Fur einen Einlegeboden werden 4 Trager benotigt (2 je Seite).",
         ],
+        # --- Allgemeine Regeln ---
+        "gen_rules_title": "Allgemeine Regeln",
+        "gen_sys32_title": "32-mm-System — Regaltrager",
+        "gen_sys32_text":  (
+            "Regaltrager-Bohrungen sind nach dem 32-mm-Standard ausgefuhrt "
+            "(32 mm Abstand zwischen den Bohrungen). In der Tabelle wird nur die "
+            "erste (unterste) Y-Position angezeigt — alle weiteren Bohrungen folgen alle 32 mm."
+        ),
+        "gen_mirror_note":    "⇇  Rechte Seitenplatte ist ein Spiegel der linken.",
+        "gen_shelf_hdr":      "Regaltrager — 32-mm-System",
+        "gen_shelf_x":        "X (mm)",
+        "gen_shelf_y1":       "Erste Y (mm)",
+        "gen_shelf_count":    "Anz. Bohr.",
+        "gen_shelf_note":     "Weitere Bohrungen: alle 32 mm von der ersten Y-Position.",
+        # Textblock fur Regaltrager
+        "shelf_blk_title":    "Regalbohrungen (32-mm-System)",
+        "shelf_blk_intro":    "Regaltrager-Bohrungen nach dem 32-mm-Standard setzen.",
+        "shelf_blk_raster":   "Bohrungsabstand: 32 mm",
+        "shelf_blk_first_y":  "Erste Bohrung ab Boden: Y =",
+        "shelf_blk_x_pos":    "X-Positionen:",
+        "shelf_blk_outro":    "Bohrungen werden in diesem Raster uber die gesamte Plattenhohe gesetzt.",
+        "shelf_universal":    (
+            "HINWEIS: Regaltrager-Bohrungen sind nach dem 32-mm-System gefertigt "
+            "und werden nicht einzeln in der Tabelle aufgefuhrt."
+        ),
+        # --- Wichtig fur die Montage ---
+        "imp_title":       "WICHTIG FUR DIE MONTAGE",
+        "imp_items": [
+            "Alle Bohrungen sind werkseitig definiert — kein zusatzliches Bohren.",
+            "Dubel dient nur zur Ausrichtung (klemmt nicht).",
+            "Schraube / Konfirmat klemmt das Element.",
+            "Einlegebodem konnen auf beliebige Hohe eingestellt werden (32-mm-System).",
+            "Plattenorientierung beachten: X = von links, Y = vom Boden.",
+        ],
     },
     "es": {
         "doc_title":      "Plan de Taladrado para el Taller",
@@ -453,6 +487,40 @@ _EDU: dict[str, dict[str, str]] = {
             "Los agujeros para baldas siguen el sistema de 32 mm.",
             "La balda puede colocarse a cualquier altura deseada.",
             "Para una balda se necesitan 4 soportes (2 por lado).",
+        ],
+        # --- Reglas generales ---
+        "gen_rules_title": "Reglas generales",
+        "gen_sys32_title": "Sistema 32 mm — soportes de balda",
+        "gen_sys32_text":  (
+            "Los agujeros para soportes de balda se realizan con el sistema estandar de 32 mm "
+            "(32 mm entre agujeros). En la tabla solo se muestra la primera (mas baja) "
+            "posicion Y — los restantes continuan cada 32 mm."
+        ),
+        "gen_mirror_note":    "⇇  El panel derecho es el espejo del izquierdo.",
+        "gen_shelf_hdr":      "Soportes de balda — sistema 32 mm",
+        "gen_shelf_x":        "X (mm)",
+        "gen_shelf_y1":       "Primera Y (mm)",
+        "gen_shelf_count":    "Num. agujeros",
+        "gen_shelf_note":     "Agujeros restantes: cada 32 mm desde la primera posicion Y.",
+        # bloque de texto para baldas
+        "shelf_blk_title":    "Agujeros de baldas (sistema 32 mm)",
+        "shelf_blk_intro":    "Taladrar agujeros para soportes de balda segun el sistema estandar de 32 mm.",
+        "shelf_blk_raster":   "Espaciado entre agujeros: 32 mm",
+        "shelf_blk_first_y":  "Altura del primer agujero: Y =",
+        "shelf_blk_x_pos":    "Posiciones X:",
+        "shelf_blk_outro":    "Los agujeros se taladran en toda la altura del panel con este paso.",
+        "shelf_universal":    (
+            "NOTA: Los agujeros para baldas se realizan con el sistema de 32 mm "
+            "y no se listan individualmente en la tabla."
+        ),
+        # --- Importante para el montaje ---
+        "imp_title":       "IMPORTANTE PARA EL MONTAJE",
+        "imp_items": [
+            "Todos los agujeros estan definidos de fabrica — no se requiere taladrado adicional.",
+            "La clavija sirve solo para alinear los paneles (no aprieta).",
+            "El tornillo / confirmat aprieta el elemento.",
+            "Las baldas pueden colocarse a cualquier altura (sistema 32 mm).",
+            "Verificar orientacion: X = borde izquierdo, Y = borde inferior.",
         ],
     },
     "fr": {
@@ -545,6 +613,41 @@ _EDU: dict[str, dict[str, str]] = {
             "L'etagere peut etre placee a n'importe quelle hauteur souhaitee.",
             "Une etagere necessite 4 tasseaux (2 par cote).",
         ],
+        # --- Regles generales ---
+        "gen_rules_title": "Regles generales",
+        "gen_sys32_title": "Systeme 32 mm — tasseaux d'etagere",
+        "gen_sys32_text":  (
+            "Les trous de tasseaux sont realises selon le systeme standard 32 mm "
+            "(espacement 32 mm entre chaque trou). Seule la premiere (plus basse) "
+            "position Y est indiquee dans le tableau — tous les trous suivants "
+            "continuent tous les 32 mm."
+        ),
+        "gen_mirror_note":    "⇇  Le cote droit est le miroir du cote gauche.",
+        "gen_shelf_hdr":      "Tasseaux d'etagere — systeme 32 mm",
+        "gen_shelf_x":        "X (mm)",
+        "gen_shelf_y1":       "Premiere Y (mm)",
+        "gen_shelf_count":    "Nb trous",
+        "gen_shelf_note":     "Trous suivants : tous les 32 mm depuis la premiere position Y.",
+        # bloc de texte pour etageres
+        "shelf_blk_title":    "Trous d'etageres (systeme 32 mm)",
+        "shelf_blk_intro":    "Percer les trous de tasseaux selon le systeme standard 32 mm.",
+        "shelf_blk_raster":   "Espacement entre trous : 32 mm",
+        "shelf_blk_first_y":  "Hauteur du premier trou : Y =",
+        "shelf_blk_x_pos":    "Positions X :",
+        "shelf_blk_outro":    "Les trous sont perces sur toute la hauteur du panneau a ce pas.",
+        "shelf_universal":    (
+            "NOTE : Les trous de tasseaux sont realises selon le systeme 32 mm "
+            "et ne sont pas listes individuellement dans le tableau."
+        ),
+        # --- Important pour le montage ---
+        "imp_title":       "IMPORTANT POUR LE MONTAGE",
+        "imp_items": [
+            "Tous les trous sont definis en usine — aucun percage supplementaire.",
+            "La cheville sert uniquement a l'alignement des panneaux (ne serre pas).",
+            "La vis / le confirmat serre l'assemblage.",
+            "Les etageres peuvent etre placees a la hauteur souhaitee (systeme 32 mm).",
+            "Respecter l'orientation : X = bord gauche, Y = bord inferieur.",
+        ],
     },
     "pt-br": {
         "doc_title":      "Plano de Furacao para a Marcenaria",
@@ -635,6 +738,40 @@ _EDU: dict[str, dict[str, str]] = {
             "Os furos para prateleiras seguem o sistema de 32 mm.",
             "A prateleira pode ser colocada em qualquer altura desejada.",
             "Uma prateleira requer 4 suportes (2 por lado).",
+        ],
+        # --- Regras gerais ---
+        "gen_rules_title": "Regras gerais",
+        "gen_sys32_title": "Sistema 32 mm — suportes de prateleira",
+        "gen_sys32_text":  (
+            "Os furos para suportes de prateleira sao feitos com o sistema padrao de 32 mm "
+            "(32 mm entre furos). Na tabela e mostrada apenas a primeira (mais baixa) "
+            "posicao Y — todos os furos seguintes continuam a cada 32 mm."
+        ),
+        "gen_mirror_note":    "⇇  O painel direito e espelho do painel esquerdo.",
+        "gen_shelf_hdr":      "Suportes de prateleira — sistema 32 mm",
+        "gen_shelf_x":        "X (mm)",
+        "gen_shelf_y1":       "Primeira Y (mm)",
+        "gen_shelf_count":    "Num. furos",
+        "gen_shelf_note":     "Furos restantes: a cada 32 mm da primeira posicao Y.",
+        # bloco de texto para prateleiras
+        "shelf_blk_title":    "Furos de prateleira (sistema 32 mm)",
+        "shelf_blk_intro":    "Furar suportes de prateleira conforme o sistema padrao de 32 mm.",
+        "shelf_blk_raster":   "Espacamento entre furos: 32 mm",
+        "shelf_blk_first_y":  "Altura do primeiro furo: Y =",
+        "shelf_blk_x_pos":    "Posicoes X:",
+        "shelf_blk_outro":    "Os furos sao feitos em toda a altura da peca neste passo.",
+        "shelf_universal":    (
+            "NOTA: Os furos de prateleira sao feitos com o sistema de 32 mm "
+            "e nao sao listados individualmente na tabela."
+        ),
+        # --- Importante para a montagem ---
+        "imp_title":       "IMPORTANTE PARA A MONTAGEM",
+        "imp_items": [
+            "Todos os furos sao definidos em fabrica — nenhuma furacao adicional.",
+            "A cavilha serve apenas para alinhar as pecas (nao aperta).",
+            "O parafuso / confirmat aperta o elemento.",
+            "As prateleiras podem ser colocadas em qualquer altura (sistema 32 mm).",
+            "Verificar orientacao: X = borda esquerda, Y = borda inferior.",
         ],
     },
     "ru": {
@@ -727,6 +864,40 @@ _EDU: dict[str, dict[str, str]] = {
             "Polku mozhno ustanovit na lyubuyu zhelajemuyu vysotu.",
             "Dlya odnoj polki ispolzujutsja 4 derzhatelja (2 s kazhdoj storony).",
         ],
+        # --- Obshhije pravila ---
+        "gen_rules_title": "Obshhije pravila",
+        "gen_sys32_title": "Sistema 32 mm — polkoderzhatelja",
+        "gen_sys32_text":  (
+            "Otverstija dlja polkoderzhatelej vypolneny po standartnoi sisteme 32 mm "
+            "(rasstojanije 32 mm mezhdu otverstijami). V tablice pokazyvajetsja tolko "
+            "pervaja (nizhnjaja) Y pozicija — ostalnyje otverstija kazhdyje 32 mm."
+        ),
+        "gen_mirror_note":    "⇇  Pravaja stjenka javljajetsja zerkalom levoj.",
+        "gen_shelf_hdr":      "Polkoderzhatelja — sistema 32 mm",
+        "gen_shelf_x":        "X (mm)",
+        "gen_shelf_y1":       "Pervaja Y (mm)",
+        "gen_shelf_count":    "Kol-vo otv.",
+        "gen_shelf_note":     "Ostalnyje otverstija: kazhdyje 32 mm ot pervoj Y pozicii.",
+        # Tekstovyi blok dlja polok
+        "shelf_blk_title":    "Otverstija dlja polok (sistema 32 mm)",
+        "shelf_blk_intro":    "Sverlit otverstija dlja polkoderzhatelej po sisteme 32 mm.",
+        "shelf_blk_raster":   "Rasstojanije mezhdu otverstijami: 32 mm",
+        "shelf_blk_first_y":  "Vysota pervogo otverstija: Y =",
+        "shelf_blk_x_pos":    "X pozicii:",
+        "shelf_blk_outro":    "Otverstija sveryatsja po vsej vysote plity v etom rastere.",
+        "shelf_universal":    (
+            "PRIMECHANIJE: Otverstija dlja polok vypolneny po sisteme 32 mm "
+            "i ne pokazyvajutsja poodinochno v tablice."
+        ),
+        # --- Vazhno dlja sborki ---
+        "imp_title":       "VAZHNO DLJA SBORKI",
+        "imp_items": [
+            "Vse otverstija zavodski opredeleny — dopolnitelnoje sverljenije ne trebuetsja.",
+            "Shpon sluzhit tolko dlja vyravnivanija plit (ne stjagivajet).",
+            "Vint / konfirmat stjagivajet sojedinjenije.",
+            "Polki mozhno stavit na lyubuyu vysotu (sistema 32 mm).",
+            "Sledit za oriyentaciyej: X = ot levogo kraja, Y = ot nizhnego kraja.",
+        ],
     },
     "zh-cn": {
         "doc_title":      "钻孔计划（车间用）",
@@ -816,6 +987,38 @@ _EDU: dict[str, dict[str, str]] = {
             "层板可安装在任意所需高度。",
             "一块层板需要4个支撑销（每侧2个）。",
         ],
+        # --- 通用规则 ---
+        "gen_rules_title": "通用规则",
+        "gen_sys32_title": "32 mm 系统 — 层板销",
+        "gen_sys32_text":  (
+            "层板销孔按标准32 mm系统加工（孔间距32 mm）。"
+            "表格中只显示第一个（最低的）Y位置——所有后续孔每隔32 mm排列。"
+        ),
+        "gen_mirror_note":    "⇇  右侧板是左侧板的镜像。",
+        "gen_shelf_hdr":      "层板销 — 32 mm 系统",
+        "gen_shelf_x":        "X (mm)",
+        "gen_shelf_y1":       "首个 Y (mm)",
+        "gen_shelf_count":    "孔数",
+        "gen_shelf_note":     "其余孔：从第一个Y位置起每隔32 mm一个。",
+        # 层板文本块
+        "shelf_blk_title":    "层板孔（32 mm 系统）",
+        "shelf_blk_intro":    "按标准32 mm系统钻层板销孔。",
+        "shelf_blk_raster":   "孔间距：32 mm",
+        "shelf_blk_first_y":  "第一个孔距底部：Y =",
+        "shelf_blk_x_pos":    "X 位置：",
+        "shelf_blk_outro":    "按此间距在板件全高范围内钻孔。",
+        "shelf_universal":    (
+            "注意：层板销孔按32 mm系统加工，不在表格中单独列出。"
+        ),
+        # --- 组装注意事项 ---
+        "imp_title":       "组装注意事项",
+        "imp_items": [
+            "所有孔位均已在工厂定义——无需额外钻孔。",
+            "木榫仅用于板件对齐（不夹紧接合处）。",
+            "螺丝或确认钉夹紧接合处。",
+            "层板可安装在任意所需高度（32 mm系统）。",
+            "注意板件方向：X = 距左边缘，Y = 距下边缘。",
+        ],
     },
     "hi": {
         "doc_title":      "वर्कशॉप ड्रिलिंग प्लान",
@@ -904,6 +1107,40 @@ _EDU: dict[str, dict[str, str]] = {
             "शेल्फ के लिए छेद 32 mm सिस्टम से बनाए गए हैं।",
             "शेल्फ को किसी भी वांछित ऊंचाई पर रखा जा सकता है।",
             "एक शेल्फ के लिए 4 पिन (प्रत्येक साइड 2) की जरूरत होती है।",
+        ],
+        # --- सामान्य नियम ---
+        "gen_rules_title": "सामान्य नियम",
+        "gen_sys32_title": "32 mm सिस्टम — शेल्फ पिन",
+        "gen_sys32_text":  (
+            "शेल्फ पिन के छेद मानक 32 mm सिस्टम के अनुसार बनाए जाते हैं "
+            "(छेदों के बीच 32 mm)। तालिका में केवल पहली (सबसे नीची) Y स्थिति "
+            "दिखाई जाती है — बाकी सभी छेद वहाँ से हर 32 mm पर होते हैं।"
+        ),
+        "gen_mirror_note":    "⇇  दायाँ पैनल बाएँ पैनल का दर्पण है।",
+        "gen_shelf_hdr":      "शेल्फ पिन — 32 mm सिस्टम",
+        "gen_shelf_x":        "X (mm)",
+        "gen_shelf_y1":       "पहली Y (mm)",
+        "gen_shelf_count":    "छेदों की संख्या",
+        "gen_shelf_note":     "शेष छेद: पहली Y स्थिति से हर 32 mm पर।",
+        # पुस्तक में शेल्फ के लिए टेक्स्ट ब्लॉक
+        "shelf_blk_title":    "शेल्फ छेद (32 mm सिस्टम)",
+        "shelf_blk_intro":    "शेल्फ पिन के छेद मानक 32 mm सिस्टम के अनुसार बनाएं।",
+        "shelf_blk_raster":   "छेदों के बीच दूरी: 32 mm",
+        "shelf_blk_first_y":  "पहले छेद की ऊंचाई: Y =",
+        "shelf_blk_x_pos":    "X स्थितियाँ:",
+        "shelf_blk_outro":    "छेद इस रैस्टर में पूरे पैनल की ऊंचाई पर बनाए जाते हैं।",
+        "shelf_universal":    (
+            "नोट: शेल्फ पिन के छेद 32 mm सिस्टम के अनुसार बनाए जाते हैं "
+            "और तालिका में अलग-अलग नहीं दिखाए जाते।"
+        ),
+        # --- मोंटेज के लिए महत्वपूर्ण ---
+        "imp_title":       "मोंटेज के लिए महत्वपूर्ण",
+        "imp_items": [
+            "सभी छेद फ़ैक्टरी में निर्धारित हैं — अतिरिक्त ड्रिलिंग आवश्यक नहीं।",
+            "डॉवेल केवल पैनलों को संरेखित करने के लिए है (कसता नहीं)।",
+            "स्क्रू / कन्फर्मेट जोड़ को कसता है।",
+            "शेल्फ किसी भी ऊंचाई पर लगाई जा सकती है (32 mm सिस्टम)।",
+            "पैनलों की दिशा ध्यान रखें: X = बाएँ किनारे से, Y = निचले किनारे से।",
         ],
     },
 }

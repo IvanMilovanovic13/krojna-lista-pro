@@ -35,6 +35,16 @@ _TAB_STRINGS: dict[str, dict[str, str]] = {
         "module_label":     "Element",
         "zone_label":       "Zona",
         "total_modules":    "Ukupno elemenata:",
+        # kolone tabele rupa
+        "col_code":         "Oznaka",
+        "col_type":         "Tip",
+        "col_note":         "Napomena",
+        # police blok
+        "shelf_title":      "Rupe za police — sistem 32 mm",
+        "shelf_holes_word": "rupa",
+        "shelf_first_y":    "Prva rupa od dna:",
+        "shelf_every_32":   "pa na svakih 32 mm",
+        "shelf_x_pos":      "X pozicije:",
     },
     "en": {
         "title":            "Drilling plan for workshop",
@@ -62,6 +72,14 @@ _TAB_STRINGS: dict[str, dict[str, str]] = {
         "module_label":     "Element",
         "zone_label":       "Zone",
         "total_modules":    "Total elements:",
+        "col_code":         "Code",
+        "col_type":         "Type",
+        "col_note":         "Note",
+        "shelf_title":      "Shelf holes — 32 mm system",
+        "shelf_holes_word": "holes",
+        "shelf_first_y":    "First hole from bottom:",
+        "shelf_every_32":   "then every 32 mm",
+        "shelf_x_pos":      "X positions:",
     },
     "de": {
         "title":            "Bohrplan für die Werkstatt",
@@ -89,6 +107,14 @@ _TAB_STRINGS: dict[str, dict[str, str]] = {
         "module_label":     "Element",
         "zone_label":       "Zone",
         "total_modules":    "Elemente gesamt:",
+        "col_code":         "Kürzel",
+        "col_type":         "Typ",
+        "col_note":         "Hinweis",
+        "shelf_title":      "Regalbohrungen — 32-mm-System",
+        "shelf_holes_word": "Bohrungen",
+        "shelf_first_y":    "Erste Bohrung vom Boden:",
+        "shelf_every_32":   "dann alle 32 mm",
+        "shelf_x_pos":      "X-Positionen:",
     },
     "fr": {
         "title":            "Plan de perçage pour l'atelier",
@@ -116,6 +142,14 @@ _TAB_STRINGS: dict[str, dict[str, str]] = {
         "module_label":     "Élément",
         "zone_label":       "Zone",
         "total_modules":    "Total éléments :",
+        "col_code":         "Code",
+        "col_type":         "Type",
+        "col_note":         "Note",
+        "shelf_title":      "Trous de tasseaux — système 32 mm",
+        "shelf_holes_word": "trous",
+        "shelf_first_y":    "Premier trou depuis le bas :",
+        "shelf_every_32":   "puis tous les 32 mm",
+        "shelf_x_pos":      "Positions X :",
     },
     "es": {
         "title":            "Plan de taladrado para el taller",
@@ -143,6 +177,14 @@ _TAB_STRINGS: dict[str, dict[str, str]] = {
         "module_label":     "Elemento",
         "zone_label":       "Zona",
         "total_modules":    "Total elementos:",
+        "col_code":         "Código",
+        "col_type":         "Tipo",
+        "col_note":         "Nota",
+        "shelf_title":      "Agujeros de soportes — sistema 32 mm",
+        "shelf_holes_word": "agujeros",
+        "shelf_first_y":    "Primer agujero desde abajo:",
+        "shelf_every_32":   "luego cada 32 mm",
+        "shelf_x_pos":      "Posiciones X:",
     },
 }
 
@@ -265,10 +307,10 @@ def render_drilling_tab(
                             "text-xs font-semibold uppercase tracking-wide text-gray-500"
                         )
                         columns = [
-                            {"name": "code",   "label": "Oznaka",        "field": "code",   "align": "left"},
-                            {"name": "name",   "label": _tr("panel"),    "field": "name",   "align": "left"},
-                            {"name": "dims",   "label": _tr("dimensions"),"field": "dims",  "align": "left"},
-                            {"name": "holes",  "label": _tr("holes"),    "field": "holes",  "align": "left"},
+                            {"name": "code",   "label": _tr("col_code"),  "field": "code",   "align": "left"},
+                            {"name": "name",   "label": _tr("panel"),     "field": "name",   "align": "left"},
+                            {"name": "dims",   "label": _tr("dimensions"),"field": "dims",   "align": "left"},
+                            {"name": "holes",  "label": _tr("holes"),     "field": "holes",  "align": "left"},
                         ]
                         rows = []
                         for p in plan.panels:
@@ -292,12 +334,12 @@ def render_drilling_tab(
                         ).classes("w-full bg-gray-50 rounded border border-gray-100"):
                             with ui.column().classes("gap-1 p-1"):
                                 hole_cols = [
-                                    {"name": "purpose", "label": "Tip",          "field": "purpose", "align": "left"},
+                                    {"name": "purpose", "label": _tr("col_type"),        "field": "purpose", "align": "left"},
                                     {"name": "x",       "label": f"X ({_tr('pos_from_left')})", "field": "x", "align": "right"},
                                     {"name": "y",       "label": f"Y ({_tr('pos_from_bottom')})", "field": "y", "align": "right"},
-                                    {"name": "dia",     "label": "Ø (mm)",       "field": "dia",     "align": "right"},
-                                    {"name": "dep",     "label": _tr("depth"),   "field": "dep",     "align": "right"},
-                                    {"name": "note",    "label": "Napomena",     "field": "note",    "align": "left"},
+                                    {"name": "dia",     "label": "Ø (mm)",               "field": "dia",     "align": "right"},
+                                    {"name": "dep",     "label": _tr("depth"),            "field": "dep",     "align": "right"},
+                                    {"name": "note",    "label": _tr("col_note"),         "field": "note",    "align": "left"},
                                 ]
                                 # Odvoji police od ostalih rupa
                                 shelf_holes = [h for h in panel.holes if h.purpose == "shelf_pin"]
@@ -335,13 +377,15 @@ def render_drilling_tab(
                                         "w-full gap-1 mt-2 p-3 rounded-lg bg-blue-50 border border-blue-200"
                                     ):
                                         ui.label(
-                                            f"📌  Rupe za police — sistem 32 mm  ({total_count} rupa, Ø{dia}, dubina {dep} mm)"
+                                            f"📌  {_tr('shelf_title')}  "
+                                            f"({total_count} {_tr('shelf_holes_word')}, "
+                                            f"Ø{dia}, {_tr('depth')} {dep} mm)"
                                         ).classes("text-xs font-semibold text-blue-800")
                                         ui.label(
-                                            f"• Prva rupa od dna: {first_y} mm, pa na svakih 32 mm"
+                                            f"• {_tr('shelf_first_y')} {first_y} mm, {_tr('shelf_every_32')}"
                                         ).classes("text-xs text-blue-700")
                                         ui.label(
-                                            f"• X pozicije: {x_str}"
+                                            f"• {_tr('shelf_x_pos')} {x_str}"
                                         ).classes("text-xs text-blue-700")
 
                     # Napomene za radionicu
