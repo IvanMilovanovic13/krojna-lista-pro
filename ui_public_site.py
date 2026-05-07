@@ -106,6 +106,15 @@ PUBLIC_PAGE_STYLE = """
 
 def _public_shell() -> None:
     ensure_runtime_state_initialized(allow_local_fallback=False)
+    # Obnovi jezik iz per-session storage — preživljava multi-worker routing i page reload
+    try:
+        from nicegui import app as nicegui_app
+        from state_logic import state as _st
+        stored_lang = str(nicegui_app.storage.user.get("language", "") or "").strip()
+        if stored_lang:
+            _st.language = stored_lang
+    except Exception:
+        pass
     ui.add_head_html(PUBLIC_PAGE_STYLE)
     ui.query("body").style("margin: 0; background: #f8fafc;")
 

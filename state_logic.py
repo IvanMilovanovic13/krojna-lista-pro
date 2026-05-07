@@ -3217,4 +3217,11 @@ def load_project_json(data: bytes) -> Tuple[bool, str]:
 
 
 def _set_language(lang: str) -> None:
-    state.language = normalize_language_code(lang)
+    normalized = normalize_language_code(lang)
+    state.language = normalized
+    # Persistuj jezik u per-session storage da preživi multi-worker routing i page reload
+    try:
+        from nicegui import app as nicegui_app
+        nicegui_app.storage.user["language"] = normalized
+    except Exception:
+        pass
