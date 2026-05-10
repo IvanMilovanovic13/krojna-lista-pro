@@ -205,11 +205,12 @@ def render_edit_panel(
             'DISHWASHER', 'LIFTUP', 'CORNER', 'GLASS',
         ))
         _has_handle_side = (
-            zone_m in ('base', 'wall', 'tall', 'wall_upper') and not _no_handle_side
+            zone_m in ('base', 'wall', 'tall', 'wall_upper', 'tall_top') and not _no_handle_side
         )
 
         # Door count selector — za TALL_DOORS, TALL_PANTRY i TALL_TOP_DOORS
         _edit_tids_with_door_count = {'TALL_DOORS', 'TALL_PANTRY', 'TALL_TOP_DOORS'}
+        _handle_side_row = None  # referenca za show/hide
         if cur_tid in _edit_tids_with_door_count:
             _cur_door_count = int((m.get("params") or {}).get("door_count", 2) or 2)
             with ui.row().classes('w-full items-center gap-1 py-0.5'):
@@ -221,12 +222,29 @@ def render_edit_panel(
 
         if _has_handle_side:
             cur_side = str((m.get("params") or {}).get("handle_side", "right"))
-            with ui.row().classes('w-full items-center gap-1 py-0.5'):
+            # Za elemente sa door_count selektorom, prikaži handle_side samo kada je 1 vrata
+            _initial_door_count = int((m.get("params") or {}).get("door_count", 1) or 1)
+            _handle_visible = (cur_tid not in _edit_tids_with_door_count) or (_initial_door_count == 1)
+            with ui.row().classes('w-full items-center gap-1 py-0.5').style(
+                '' if _handle_visible else 'display:none'
+            ) as _handle_side_row:
                 ui.label(_t('edit.handle')).classes('text-xs text-gray-500 w-14 shrink-0')
                 handle_side_sel = ui.select(
                     {"left": _t('edit.handle_left'), "right": _t('edit.handle_right')},
                     value=cur_side,
                 ).props('dense outlined').classes('flex-1')
+
+        # Reaktivno prikazivanje/skrivanje ručke kada se promeni door_count
+        if door_count_sel is not None and _handle_side_row is not None:
+            def _on_door_count_change(e):
+                try:
+                    if int(e.value or 1) == 1:
+                        _handle_side_row.style('')
+                    else:
+                        _handle_side_row.style('display:none')
+                except Exception:
+                    pass
+            door_count_sel.on_value_change(_on_door_count_change)
 
         if cur_tid in {"BASE_COOKING_UNIT", "OVEN_HOB"}:
             _params = dict(m.get("params", {}) or {})
