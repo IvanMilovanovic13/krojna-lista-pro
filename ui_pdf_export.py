@@ -2277,8 +2277,13 @@ def build_pdf_bytes(
         _fig_k.savefig(_kbuf, format='png', dpi=150, bbox_inches='tight')
         plt.close(_fig_k)
         _kbuf.seek(0)
-        # Ratio za prikaz u PDF-u: visina/širina podataka
-        _hw_ratio = _y_total / max(_x_total, 1)
+        # Čitaj stvarne pixel dimenzije iz PNG headera — bbox_inches='tight'
+        # menja stvarnu veličinu slike pa se virtuelni ratio ne sme koristiti.
+        _raw_png = _kbuf.read()
+        _pw_px   = _struct.unpack('>I', _raw_png[16:20])[0]   # pixel width
+        _ph_px   = _struct.unpack('>I', _raw_png[20:24])[0]   # pixel height
+        _hw_ratio = _ph_px / max(_pw_px, 1)
+        _kbuf.seek(0)
         story.append(RLImage(_kbuf, width=PW, height=PW * _hw_ratio))
     except Exception as _ek:
         story.append(Paragraph(_safe(f'Slika nije dostupna: {_ek}'), NRM))
