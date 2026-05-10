@@ -1099,6 +1099,12 @@ def add_module_instance_local(
     _params_final = dict(tpl.get("params") or {})
     if params:
         _params_final.update(dict(params or {}))
+    # Ako grain_dir nije eksplicitno prosleđen, uzmi pametni default iz template-a
+    if "grain_dir" not in _params_final:
+        _grain_default = str(tpl.get("grain_dir_default", "V") or "V").upper()
+        if _grain_default not in ("H", "V", "N"):
+            _grain_default = "V"
+        _params_final["grain_dir"] = _grain_default
 
     mod = {
         "id": nid,

@@ -268,9 +268,23 @@ def _module_properties_panel_inner(
                     ).props('outlined dense').classes('w-full')
 
                 with ui.column().classes('w-full gap-1.5'):
-                    ui.label(_txt('Smer goda', 'Grain direction')).classes(
-                        'text-[9px] font-bold uppercase tracking-widest text-gray-400'
-                    )
+                    with ui.row().classes('w-full items-center gap-1'):
+                        ui.label(_txt('Smer goda', 'Grain direction')).classes(
+                            'text-[9px] font-bold uppercase tracking-widest text-gray-400'
+                        )
+                        _grain_info = ui.icon('info_outline').classes('text-[13px] text-gray-300 cursor-help')
+                        _grain_info.tooltip(
+                            _txt(
+                                'V = vertikalno (standardno za vrata/fioke)\n'
+                                'H = horizontalno (police, TV komode)\n'
+                                'N = bez dezena (aparati, staklo)\n'
+                                'Utiče na raspored rezova u krojnoj listi.',
+                                'V = vertical (standard for doors/drawers)\n'
+                                'H = horizontal (shelves, TV units)\n'
+                                'N = no grain (appliances, glass)\n'
+                                'Affects cut direction in the cut list.'
+                            )
+                        )
                     grain_sel = ui.select(
                         {'V': GRAIN_VERT, 'H': GRAIN_HORZ, 'N': GRAIN_NONE},
                         value=cur_grain,
