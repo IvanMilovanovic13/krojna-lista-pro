@@ -5076,7 +5076,10 @@ def build_cutlist_pdf_bytes(
         story.append(_df_to_table(_hdr_df, ["Polje", "Vrednost"]))
     story.append(Spacer(1, 4 * mm))
 
-    # ---- Katalog prikaz ----
+    # ---- Katalog prikaz — cela stranica ----
+    # Slika zida sa elementima dobija sopstvenu stranicu (landscape A4).
+    # Popunjava celu stranicu uz odrzavanje tacnih proporcija zida.
+    story.append(PageBreak())
     try:
         from visualization import _render as _viz_render, _wall_len_h  # type: ignore
         import struct as _struct
@@ -5085,8 +5088,10 @@ def build_cutlist_pdf_bytes(
         _wl_v, _wh_v = _wall_len_h(kitchen)
         _x_total = 170 + _wl_v + 620   # left_pad + wall_len + right_pad
         _y_total = 420 + _wh_v + 150   # bottom_pad + wall_h + top_pad
-        _aspect  = _x_total / max(_y_total, 1)   # data width / data height
-        _fig_h_in = 5.0
+        _aspect  = _x_total / max(_y_total, 1)
+
+        # Visoki DPI render — slika ce biti velika pa mora biti ostrog kvaliteta
+        _fig_h_in = 8.0
         _fig_w_in = max(_fig_h_in * _aspect, 4.0)
 
         _fig = plt.figure(figsize=(_fig_w_in, _fig_h_in))
@@ -5102,33 +5107,42 @@ def build_cutlist_pdf_bytes(
             ceiling_filler=False,
         )
         _img_buf = BytesIO()
-        _fig.savefig(_img_buf, format="png", dpi=150, bbox_inches="tight",
+        _fig.savefig(_img_buf, format="png", dpi=200, bbox_inches="tight",
                      facecolor="white", edgecolor="none")
         plt.close(_fig)
         _img_buf.seek(0)
-        # Citaj stvarne pixel dimenzije iz PNG headera — bbox_inches='tight' menja
-        # stvarnu velicinu pa se virtuelni ratio ne sme koristiti.
+
+        # Citaj stvarne pixel dimenzije iz PNG headera
         _raw_png = _img_buf.read()
         _pw_px = _struct.unpack('>I', _raw_png[16:20])[0]
         _ph_px = _struct.unpack('>I', _raw_png[20:24])[0]
-        # Skaliranje: visina je fiksna referenca (zid uvek iste vizuelne velicine),
-        # sirina se racuna srazmerno stvarnom aspect ratio PNG-a.
-        # Ako sirina premasi stranicu, skaliramo oba proporcionalno.
-        _MAX_IMG_W_MM = 270.0
-        _BASE_IMG_H_MM = 120.0   # zid uvek ~120mm visine u PDF-u
-        _img_h_mm = _BASE_IMG_H_MM
-        _img_w_mm = _BASE_IMG_H_MM * _pw_px / max(_ph_px, 1)
-        if _img_w_mm > _MAX_IMG_W_MM:
-            _scale = _MAX_IMG_W_MM / _img_w_mm
-            _img_w_mm = _MAX_IMG_W_MM
-            _img_h_mm = _BASE_IMG_H_MM * _scale
+
+        # Iskoristiva povrsina stranice (landscape A4, po 10mm margine)
+        _PAGE_W_MM = 277.0   # 297 - 2*10
+        _PAGE_H_MM = 190.0   # 210 - 2*10
+
+        # Skaliraj sliku da popuni stranicu uz odrzavanje razmere
+        _img_aspect = _pw_px / max(_ph_px, 1)
+        _fit_w = _PAGE_W_MM
+        _fit_h = _fit_w / _img_aspect
+        if _fit_h > _PAGE_H_MM:
+            _fit_h = _PAGE_H_MM
+            _fit_w = _fit_h * _img_aspect
+
+        # Vertikalno centriranje
+        _v_pad = (_PAGE_H_MM - _fit_h) / 2.0
+        if _v_pad > 1.0:
+            story.append(Spacer(1, _v_pad * mm))
+
         _img_buf.seek(0)
-        _img = RLImage(_img_buf, width=_img_w_mm * mm, height=_img_h_mm * mm)
+        _img = RLImage(_img_buf, width=_fit_w * mm, height=_fit_h * mm)
         story.append(_img)
     except Exception as _viz_err:
-        story.append(Paragraph(_pdf_clean_text(f"[{_t('Katalog slika nije dostupna', 'Catalog image is not available')}: {_viz_err}]"), s_norm))
+        story.append(Paragraph(_pdf_clean_text(
+            f"[{_t('Katalog slika nije dostupna', 'Catalog image is not available')}: {_viz_err}]"
+        ), s_norm))
 
-    story.append(Spacer(1, 5 * mm))
+    story.append(PageBreak())
 
     # ---- Sekcija: Koordinate projekta ----
     wall = kitchen.get("wall", {}) or {}
