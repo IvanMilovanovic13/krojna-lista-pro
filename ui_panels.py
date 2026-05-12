@@ -30,7 +30,6 @@ from ui_panels_helpers import (
 from ui_catalog_panel import (
     render_palette as _render_palette,
     render_variants as _render_variants,
-    select_template as _select_template,
 )
 from ui_catalog_config import PALETTE_TABS, _FRONT_COLOR_PRESETS, get_palette_tabs
 from ui_color_picker import render_color_picker
@@ -311,13 +310,10 @@ def render_variants(container=None) -> None:
 
 
 async def select_template(tid: str) -> None:
-    await _select_template(
-        ui=ui,
-        state=state,
-        tid=tid,
-        render_variants_refresh=render_variants.refresh,
-        params_panel_refresh=params_panel.refresh,
-    )
+    # Setuj selektovani tid — sidebar_content.refresh() odmah prikazuje params karticu
+    # bez potrebe za zasebnim render_variants + params_panel refreshom.
+    state.selected_tid = tid
+    sidebar_content.refresh()
 
 
 @ui.refreshable

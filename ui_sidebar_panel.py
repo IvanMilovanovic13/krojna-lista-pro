@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from i18n import tr
-from ui_catalog_config import translate_palette_label
+from ui_catalog_config import translate_palette_label, translate_template_label
 
 
 def render_sidebar_content_panel(
@@ -43,6 +43,11 @@ def render_sidebar_content_panel(
         nacrt_refresh()
         sidebar_refresh()
 
+    def _deselect_template() -> None:
+        """Nazad na katalog — poništi selekciju elementa."""
+        state.selected_tid = ""
+        sidebar_refresh()
+
     def _has_items_for_tab(_k: str) -> bool:
         _tab = palette_tab_map.get(_k, {})
         return any(
@@ -51,9 +56,33 @@ def render_sidebar_content_panel(
             for _tid in _sg.get("tids", [])
         )
 
+    _is_selected = bool(state.selected_tid)
+
     def _render_add_body() -> None:
-        render_palette()
-        params_panel()
+        if _is_selected:
+            # ── Kartica selektovanog elementa ─────────────────────────────────
+            # Zaglavlje kartice: "← Nazad" + ime elementa
+            _tmpl = templates.get(state.selected_tid, {})
+            _elem_lbl = translate_template_label(
+                _tmpl.get("label", state.selected_tid),
+                _lang,
+                _tmpl.get("label_i18n"),
+            )
+            with ui.row().classes(
+                'w-full items-center gap-1 px-2 py-1.5 bg-gray-100 border-b border-gray-200 shrink-0'
+            ):
+                ui.button(
+                    icon='arrow_back',
+                    on_click=_deselect_template,
+                ).props('flat round dense size=sm').classes('text-gray-500')
+                ui.label(_elem_lbl).classes(
+                    'text-[12px] font-semibold text-gray-700 truncate flex-1'
+                )
+            # Params panel za selektovani element (dimenzije, fioke, police, itd.)
+            params_panel()
+        else:
+            # ── Katalog — lista elemenata ──────────────────────────────────────
+            render_palette()
 
     render_sidebar_content_layout(
         ui=ui,
@@ -68,6 +97,7 @@ def render_sidebar_content_panel(
         footer_label=_label,
         on_footer_click=run_sidebar_primary_action,
         tr_fn=lambda key: tr(key, _lang),
+        show_footer=_is_selected,  # Footer se prikazuje samo kada je element selektovan
     )
 
     set_sidebar_footer_refresh(None)
