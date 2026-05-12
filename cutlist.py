@@ -5117,9 +5117,11 @@ def build_cutlist_pdf_bytes(
         _pw_px = _struct.unpack('>I', _raw_png[16:20])[0]
         _ph_px = _struct.unpack('>I', _raw_png[20:24])[0]
 
-        # Iskoristiva povrsina stranice (landscape A4, po 10mm margine)
-        _PAGE_W_MM = 277.0   # 297 - 2*10
-        _PAGE_H_MM = 190.0   # 210 - 2*10
+        # Iskoristiva povrsina stranice (landscape A4).
+        # ReportLab frame je nesto manji od teorijskog (297-20 x 210-20),
+        # koristimo konzervativne vrednosti sa bufferom da slika sigurno stane.
+        _PAGE_W_MM = 265.0
+        _PAGE_H_MM = 178.0
 
         # Skaliraj sliku da popuni stranicu uz odrzavanje razmere
         _img_aspect = _pw_px / max(_ph_px, 1)
