@@ -194,19 +194,19 @@ def render_params_panel(
                     label=l_sirina_mm, value=defaults.get('w_mm', 600),
                     min=100, max=3000, step=10,
                     on_change=_on_w_change,
-                ).props('dense outlined').classes('flex-1 min-w-0')
+                ).props('dense outlined stack-label').classes('flex-1 min-w-0')
                 w.on('update:model-value', _on_w_change)
                 h = ui.number(
                     label=l_visina_mm, value=min(_h_val, _max_h),
                     min=100, max=_max_h, step=10,
                     on_change=_on_h_change,
-                ).props('dense outlined').classes('flex-1 min-w-0')
+                ).props('dense outlined stack-label').classes('flex-1 min-w-0')
                 h.on('update:model-value', _on_h_change)
             d = ui.number(
                 label=l_dubina_mm, value=_d_val,
                 min=100, max=2000, step=10,
                 on_change=_on_d_change,
-            ).props('dense outlined').classes('w-full')
+            ).props('dense outlined stack-label').classes('w-full')
             d.on('update:model-value', _on_d_change)
             ui.label(_t("params.max_height_fmt", h=_max_h)).classes(
                 'text-[10px] text-gray-500'
