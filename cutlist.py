@@ -5111,15 +5111,17 @@ def build_cutlist_pdf_bytes(
         _raw_png = _img_buf.read()
         _pw_px = _struct.unpack('>I', _raw_png[16:20])[0]
         _ph_px = _struct.unpack('>I', _raw_png[20:24])[0]
-        _img_w_mm = 270.0
-        _img_h_mm = _img_w_mm * _ph_px / max(_pw_px, 1)
-        # Ogranicenje visine: slika ne sme biti visa od stranice (A4 content ~185mm).
-        # Ako bi bila visa, skaliramo i sirinu i visinu proporcionalno.
-        _MAX_IMG_H_MM = 170.0
-        if _img_h_mm > _MAX_IMG_H_MM:
-            _scale = _MAX_IMG_H_MM / _img_h_mm
-            _img_w_mm = _img_w_mm * _scale
-            _img_h_mm = _MAX_IMG_H_MM
+        # Skaliranje: visina je fiksna referenca (zid uvek iste vizuelne velicine),
+        # sirina se racuna srazmerno stvarnom aspect ratio PNG-a.
+        # Ako sirina premasi stranicu, skaliramo oba proporcionalno.
+        _MAX_IMG_W_MM = 270.0
+        _BASE_IMG_H_MM = 120.0   # zid uvek ~120mm visine u PDF-u
+        _img_h_mm = _BASE_IMG_H_MM
+        _img_w_mm = _BASE_IMG_H_MM * _pw_px / max(_ph_px, 1)
+        if _img_w_mm > _MAX_IMG_W_MM:
+            _scale = _MAX_IMG_W_MM / _img_w_mm
+            _img_w_mm = _MAX_IMG_W_MM
+            _img_h_mm = _BASE_IMG_H_MM * _scale
         _img_buf.seek(0)
         _img = RLImage(_img_buf, width=_img_w_mm * mm, height=_img_h_mm * mm)
         story.append(_img)
