@@ -5078,9 +5078,18 @@ def build_cutlist_pdf_bytes(
 
     # ---- Katalog prikaz ----
     try:
-        from visualization import _render as _viz_render  # type: ignore
+        from visualization import _render as _viz_render, _wall_len_h  # type: ignore
+        import struct as _struct
 
-        _fig = plt.figure(figsize=(16, 5))
+        # Izracunaj stvarne proporcije zida (iste granice kao _setup_view katalog mod)
+        _wl_v, _wh_v = _wall_len_h(kitchen)
+        _x_total = 170 + _wl_v + 620   # left_pad + wall_len + right_pad
+        _y_total = 420 + _wh_v + 150   # bottom_pad + wall_h + top_pad
+        _aspect  = _x_total / max(_y_total, 1)   # data width / data height
+        _fig_h_in = 5.0
+        _fig_w_in = max(_fig_h_in * _aspect, 4.0)
+
+        _fig = plt.figure(figsize=(_fig_w_in, _fig_h_in))
         _ax = _fig.add_subplot(111)
         _viz_render(
             ax=_ax,
@@ -5097,8 +5106,15 @@ def build_cutlist_pdf_bytes(
                      facecolor="white", edgecolor="none")
         plt.close(_fig)
         _img_buf.seek(0)
-        # Prilagodi visinu slike prema A4 landscape proporciji
-        _img = RLImage(_img_buf, width=270 * mm, height=70 * mm)
+        # Citaj stvarne pixel dimenzije iz PNG headera — bbox_inches='tight' menja
+        # stvarnu velicinu pa se virtuelni ratio ne sme koristiti.
+        _raw_png = _img_buf.read()
+        _pw_px = _struct.unpack('>I', _raw_png[16:20])[0]
+        _ph_px = _struct.unpack('>I', _raw_png[20:24])[0]
+        _img_w_mm = 270.0
+        _img_h_mm = _img_w_mm * _ph_px / max(_pw_px, 1)
+        _img_buf.seek(0)
+        _img = RLImage(_img_buf, width=_img_w_mm * mm, height=_img_h_mm * mm)
         story.append(_img)
     except Exception as _viz_err:
         story.append(Paragraph(_pdf_clean_text(f"[{_t('Katalog slika nije dostupna', 'Catalog image is not available')}: {_viz_err}]"), s_norm))

@@ -2094,7 +2094,8 @@ def build_pdf_bytes(
     def _t(sr: str, en: str) -> str:
         return _pdf_t(sr, en, _lang)
 
-    # ── Helpers ────────────────────────────────────────────────────────────────
+    # ── Fonts i helpers ───────────────────────────────────────────────────────
+    FONT_REGULAR, FONT_BOLD = _register_pdf_fonts()
     import struct as _struct
 
     def _safe(text: str) -> str:
