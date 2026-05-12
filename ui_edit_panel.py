@@ -246,6 +246,18 @@ def render_edit_panel(
                     pass
             door_count_sel.on_value_change(_on_door_count_change)
 
+        # Smer goda — uvek prikazan u edit panelu
+        _cur_grain = str((m.get("params") or {}).get("grain_dir", "V"))
+        GRAIN_VERT = _t('params.grain_vertical')
+        GRAIN_HORZ = _t('params.grain_horizontal')
+        GRAIN_NONE = _t('params.grain_none')
+        with ui.row().classes('w-full items-center gap-1 py-0.5'):
+            ui.label(_t('edit.grain_dir')).classes('text-xs text-gray-500 w-14 shrink-0')
+            grain_sel_edit = ui.select(
+                {'V': GRAIN_VERT, 'H': GRAIN_HORZ, 'N': GRAIN_NONE},
+                value=_cur_grain,
+            ).props('dense outlined').classes('flex-1')
+
         if cur_tid in {"BASE_COOKING_UNIT", "OVEN_HOB"}:
             _params = dict(m.get("params", {}) or {})
             _oven_h_info = float(_params.get("oven_h", 595) or 595)
@@ -782,6 +794,7 @@ def render_edit_panel(
                         new_params_ref["handle_side"] = str(handle_side_sel.value)
                     if door_count_sel is not None:
                         new_params_ref["door_count"] = int(door_count_sel.value)
+                    new_params_ref["grain_dir"] = str(grain_sel_edit.value or "V")
                     _collect_drawer_params(new_params_ref)
                     _manual_x = int(x.value) != int(fm.get("x_mm", 0))
                     try:
