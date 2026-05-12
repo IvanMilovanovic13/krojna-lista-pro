@@ -5113,6 +5113,13 @@ def build_cutlist_pdf_bytes(
         _ph_px = _struct.unpack('>I', _raw_png[20:24])[0]
         _img_w_mm = 270.0
         _img_h_mm = _img_w_mm * _ph_px / max(_pw_px, 1)
+        # Ogranicenje visine: slika ne sme biti visa od stranice (A4 content ~185mm).
+        # Ako bi bila visa, skaliramo i sirinu i visinu proporcionalno.
+        _MAX_IMG_H_MM = 170.0
+        if _img_h_mm > _MAX_IMG_H_MM:
+            _scale = _MAX_IMG_H_MM / _img_h_mm
+            _img_w_mm = _img_w_mm * _scale
+            _img_h_mm = _MAX_IMG_H_MM
         _img_buf.seek(0)
         _img = RLImage(_img_buf, width=_img_w_mm * mm, height=_img_h_mm * mm)
         story.append(_img)
