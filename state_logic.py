@@ -257,8 +257,10 @@ def _default_kitchen() -> Dict[str, Any]:
         "manufacturing": {"profile": "EU_SRB"},
         "materials": {
             "carcass_material": "Iverica",
+            "carcass_material_code": "",   # šifra proizvoda za korpus (npr. W980 ST2)
             "carcass_thk": 18,
             "front_material": "Iverica",
+            "front_material_code": "",     # šifra proizvoda za front (npr. H1180 ST12)
             "front_thk": 18,
             "back_thk": 8,
             "edge_abs_thk": 2,

@@ -3709,6 +3709,13 @@ def _translate_export_text(value: Any, lang: str = "sr", column: str = "") -> An
         }
         return mapping.get(txt.lower(), txt)
 
+    if col in {"Smer goda", "Grain", "Tekstura/godovi", "Texture/grain"}:
+        # Prikaz punog naziva + ikona smera — lakše firmama koje seku
+        grain_map_sr = {"V": "Vertikalno ↕", "H": "Horizontalno ↔", "N": "Bez teksture ○", "-": "Bez teksture ○"}
+        grain_map_en = {"V": "Vertical ↕", "H": "Horizontal ↔", "N": "No texture ○", "-": "No texture ○"}
+        _gmap = grain_map_en if lang == "en" else grain_map_sr
+        return _gmap.get(txt.upper(), txt)
+
     if col in {"Naziv", "Name"} and txt.startswith("UPOZORENJE"):
         return txt.replace("UPOZORENJE", "WARNING")
 
@@ -4141,6 +4148,7 @@ def _translate_export_df(df: pd.DataFrame | None, lang: str = "sr") -> pd.DataFr
         "Naziv", "Name",
         "Materijal", "Material",
         "Orijentacija", "Orientation",
+        "Smer goda", "Grain", "Tekstura/godovi", "Texture/grain",
         "Element",
         "Type / Code",
         "Napomena", "Napomena za servis", "Note",
@@ -4318,9 +4326,12 @@ def build_service_packet(
         if "Zid" not in board_df.columns:
             board_df["Zid"] = ""
 
+        # Osiguraj da "Smer goda" postoji u board_df
+        if "Smer goda" not in board_df.columns:
+            board_df["Smer goda"] = "V"
         service_cuts = (
             board_df.groupby(
-                ["Zid", "Materijal", "Deb.", "CUT_W [mm]", "CUT_H [mm]", "Kant"],
+                ["Zid", "Materijal", "Deb.", "CUT_W [mm]", "CUT_H [mm]", "Smer goda", "Kant"],
                 as_index=False,
             )
             .agg({"Kol.": "sum"})
@@ -4329,8 +4340,8 @@ def build_service_packet(
         )
         service_cuts.insert(0, "RB", range(1, len(service_cuts) + 1))
         service_cuts["Napomena za servis"] = _t(
-            "U servisu seci po CUT merama i proveri kantovanje u posebnoj tabeli",
-            "In the workshop, cut strictly by CUT dimensions and verify edging in the separate table",
+            "CUT = mera za sečenje (pre kantovanja). FIN = gotova mera posle kanta.",
+            "CUT = cut size (before edging). FIN = finished size after edge banding.",
         )
         packet["service_cuts"] = service_cuts
 
@@ -5624,6 +5635,36 @@ def generate_cutlist_excel(
     mats = kitchen.get("materials", {}) or {}
     wall = kitchen.get("wall", {}) or {}
 
+    # ── Post-processing: dodaj "Šifra mat." u sve sekcije ───────────────────
+    # Mapira naziv materijala → šifru proizvoda koju je korisnik uneo u podešavanjima.
+    _carcass_mat  = str(mats.get("carcass_material", "") or "")
+    _front_mat    = str(mats.get("front_material", "") or "")
+    _carcass_code = str(mats.get("carcass_material_code", "") or "")
+    _front_code   = str(mats.get("front_material_code", "") or "")
+
+    def _mat_code(mat_name: str) -> str:
+        s = str(mat_name or "").strip()
+        if s == _carcass_mat:
+            return _carcass_code
+        if s == _front_mat:
+            return _front_code
+        return ""
+
+    def _inject_mat_code(df):
+        """Dodaje kolonu 'Šifra mat.' u DataFrame ako ima kolonu 'Materijal'."""
+        if df is None or df.empty:
+            return df
+        df = df.copy()
+        if "Materijal" in df.columns:
+            df["Šifra mat."] = df["Materijal"].map(_mat_code)
+        else:
+            df["Šifra mat."] = ""
+        return df
+
+    sections = {k: _inject_mat_code(v) for k, v in sections.items()}
+    if "service_cuts" in service_packet and service_packet["service_cuts"] is not None:
+        service_packet["service_cuts"] = _inject_mat_code(service_packet["service_cuts"])
+
     # ── Boje ────────────────────────────────────────────────────────────────
     CLR_HDR_BG = "1F3864"   # tamno plava — header
     CLR_HDR_FG = "FFFFFF"
@@ -5650,11 +5691,13 @@ def generate_cutlist_excel(
     _now  = datetime.now().strftime("%d.%m.%Y  %H:%M")
     _wl   = wall.get("length_mm", 0)
     _wh   = wall.get("height_mm", 0)
+    _corp_code_str = f" [{_carcass_code}]" if _carcass_code else ""
+    _front_code_str = f" [{_front_code}]" if _front_code else ""
     _info = (
         f"{_t('Zid', 'Wall')}: {_wl}×{_wh} mm   |   "
-        f"{_format_material_role(mats.get('carcass_material','?'), mats.get('carcass_thk','?'), 'carcass', _lang)}   |   "
-        f"{_format_material_role(mats.get('front_material','?'), mats.get('front_thk','?'), 'front', _lang)}   |   "
-        f"{_format_material_role((mats.get('back_material') or ''), (mats.get('back_thk') or ''), 'back', _lang)}   |   "
+        f"{_format_material_role(mats.get('carcass_material','?'), mats.get('carcass_thk','?'), 'carcass', _lang)}{_corp_code_str}   |   "
+        f"{_format_material_role(mats.get('front_material','?'), mats.get('front_thk','?'), 'front', _lang)}{_front_code_str}   |   "
+        f"{_t('CUT = mera za sečenje (pre kanta)  ·  FIN = gotova mera posle kanta', 'CUT = cut size before edging  ·  FIN = finished size after edging')}   |   "
         f"{_t('Generisano', 'Generated')}: {_now}"
     )
 
@@ -5667,14 +5710,15 @@ def generate_cutlist_excel(
         ("Deo",         _t("Deo", "Part"),          24),
         ("Pozicija",    _t("Pozicija", "Position"),      9),
         ("SklopKorak",  _t("Korak", "Step"),         7),
-        ("Materijal",   _t("Materijal", "Material"),    12),
-        ("Deb.",        "Deb.",          6),
+        ("Materijal",   _t("Materijal", "Material"),    14),
+        ("Šifra mat.",  _t("Šifra mat.", "Mat. code"),    12),
+        ("Deb.",        "Deb. [mm]",     6),
         ("Kol.",        _t("Kol.", "Qty"),          5),
         ("CUT_W [mm]",  _t("CUT Duž.", "CUT Length"),      9),
         ("CUT_H [mm]",  _t("CUT Šir.", "CUT Width"),      9),
         ("Dužina [mm]", _t("FIN Duž.", "FIN Length"),      9),
         ("Širina [mm]", _t("FIN Šir.", "FIN Width"),      9),
-        ("Smer goda",   _t("Smer goda", "Grain"),     8),
+        ("Smer goda",   _t("Tekstura/godovi", "Texture/grain"),  18),
         ("Kant",        _t("Kant", "Edge"),         24),
         ("L1",          "L1",            4),
         ("L2",          "L2",            4),
@@ -5698,15 +5742,17 @@ def generate_cutlist_excel(
         ("Vrednost", _t("Vrednost", "Value"), 60),
     ]
     SERVICE_CUTS_COLS = [
-        ("RB", "RB", 6),
-        ("Zid", _t("Zid", "Wall"), 10),
-        ("Materijal", _t("Materijal", "Material"), 18),
-        ("Deb.", "Deb.", 8),
+        ("RB", "RB", 5),
+        ("Zid", _t("Zid", "Wall"), 8),
+        ("Materijal", _t("Materijal", "Material"), 16),
+        ("Šifra mat.", _t("Šifra mat.", "Mat. code"), 14),
+        ("Deb.", "Deb. [mm]", 7),
         ("CUT_W [mm]", _t("CUT Dužina", "CUT Length"), 12),
         ("CUT_H [mm]", _t("CUT Širina", "CUT Width"), 12),
-        ("Kant", _t("Kant", "Edge"), 24),
-        ("Kol.", _t("Kol.", "Qty"), 8),
-        ("Napomena za servis", _t("Napomena za servis", "Workshop note"), 42),
+        ("Smer goda", _t("Tekstura/godovi", "Texture/grain"), 18),
+        ("Kant", _t("Kant", "Edge"), 22),
+        ("Kol.", _t("Kol.", "Qty"), 6),
+        ("Napomena za servis", _t("Napomena za servis", "Workshop note"), 52),
     ]
     SERVICE_EDGE_COLS = [
         ("PartCode", "PartCode", 12),
@@ -5756,7 +5802,8 @@ def generate_cutlist_excel(
     ]
     SUM_COLS = [
         ("Materijal",   _t("Materijal", "Material"),    14),
-        ("Deb.",        "Deb.",          6),
+        ("Šifra mat.",  _t("Šifra mat.", "Mat. code"),   14),
+        ("Deb.",        "Deb. [mm]",     6),
         ("CUT_W [mm]",  _t("CUT Dužina", "CUT Length"),    9),
         ("CUT_H [mm]",  _t("CUT Širina", "CUT Width"),    9),
         ("Dužina [mm]", _t("FIN Dužina", "FIN Length"),    9),
@@ -5879,7 +5926,7 @@ def generate_cutlist_excel(
             if col not in combined.columns:
                 combined[col] = ""
         grp = [c for c in
-               ["Materijal", "Deb.", "CUT_W [mm]", "CUT_H [mm]", "Dužina [mm]", "Širina [mm]", "Kant"]
+               ["Materijal", "Šifra mat.", "Deb.", "CUT_W [mm]", "CUT_H [mm]", "Dužina [mm]", "Širina [mm]", "Kant"]
                if c in combined.columns]
         summary = (
             combined
@@ -5904,7 +5951,8 @@ def generate_cutlist_excel(
         ("Širina [mm]",  _t("Širina [mm]", "Width [mm]"),  10),
         ("Deb.",         "Deb. [mm]",     8),
         ("Materijal",    _t("Materijal", "Material"),    16),
-        ("Smer goda",    _t("Orijent.", "Grain"),     10),
+        ("Šifra mat.",   _t("Šifra mat.", "Mat. code"),   14),
+        ("Smer goda",    _t("Tekstura/godovi", "Texture/grain"), 18),
         ("L1",           ("Borda L1" if _lang == "pt-br" else ("Borde L1" if _lang == "es" else ("Кромка L1" if _lang == "ru" else ("封边 L1" if _lang == "zh-cn" else ("एज L1" if _lang == "hi" else _t("Kant L1", "Edge L1")))))),       7),
         ("L2",           ("Borda L2" if _lang == "pt-br" else ("Borde L2" if _lang == "es" else ("Кромка L2" if _lang == "ru" else ("封边 L2" if _lang == "zh-cn" else ("एज L2" if _lang == "hi" else _t("Kant L2", "Edge L2")))))),       7),
         ("K1",           ("Borda K1" if _lang == "pt-br" else ("Borde K1" if _lang == "es" else ("Кромка K1" if _lang == "ru" else ("封边 K1" if _lang == "zh-cn" else ("एज K1" if _lang == "hi" else _t("Kant K1", "Edge K1")))))),       7),
@@ -5919,7 +5967,8 @@ def generate_cutlist_excel(
         ("Širina [mm]",  _t("Širina [mm]", "Width [mm]"),  10),
         ("Deb.",         "Deb. [mm]",     8),
         ("Materijal",    _t("Materijal", "Material"),    16),
-        ("Smer goda",    _t("Orijent.", "Grain"),     10),
+        ("Šifra mat.",   _t("Šifra mat.", "Mat. code"),   14),
+        ("Smer goda",    _t("Tekstura/godovi", "Texture/grain"), 18),
         ("L1",           ("Borda L1" if _lang == "pt-br" else ("Borde L1" if _lang == "es" else ("Кромка L1" if _lang == "ru" else ("封边 L1" if _lang == "zh-cn" else ("एज L1" if _lang == "hi" else _t("Kant L1", "Edge L1")))))),       7),
         ("L2",           ("Borda L2" if _lang == "pt-br" else ("Borde L2" if _lang == "es" else ("Кромка L2" if _lang == "ru" else ("封边 L2" if _lang == "zh-cn" else ("एज L2" if _lang == "hi" else _t("Kant L2", "Edge L2")))))),       7),
         ("K1",           ("Borda K1" if _lang == "pt-br" else ("Borde K1" if _lang == "es" else ("Кромка K1" if _lang == "ru" else ("封边 K1" if _lang == "zh-cn" else ("एज K1" if _lang == "hi" else _t("Kant K1", "Edge K1")))))),       7),

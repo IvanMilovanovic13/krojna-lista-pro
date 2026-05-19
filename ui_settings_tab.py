@@ -209,6 +209,16 @@ def render_settings_tab(
                             value=mats.get("carcass_material", "Iverica"),
                             on_change=lambda e: set_material("carcass_material", e.value),
                         ).props("dense borderless").classes("flex-1")
+                    with _field_row(_t("settings.carcass_material_code"), 9.8):
+                        ui.label(_t("settings.carcass_material_code")).classes(
+                            "text-sm text-gray-700 shrink-0"
+                        ).style("width: var(--settings-label-width);")
+                        _corp_code_inp = ui.input(
+                            placeholder=_t("settings.material_code_placeholder"),
+                            value=mats.get("carcass_material_code", ""),
+                        ).props("dense borderless clearable").classes("flex-1")
+                        _corp_code_inp.on("blur", lambda e: set_material("carcass_material_code", e.sender.value or ""))
+                        _corp_code_inp.on("keydown.enter", lambda e: set_material("carcass_material_code", e.sender.value or ""))
                     with _field_row(tr_fn("settings.front_material"), 9.8):
                         ui.label(tr_fn("settings.front_material")).classes(
                             "text-sm text-gray-700 shrink-0"
@@ -218,6 +228,16 @@ def render_settings_tab(
                             value=mats.get("front_material", "MDF"),
                             on_change=lambda e: set_material("front_material", e.value),
                         ).props("dense borderless").classes("flex-1")
+                    with _field_row(_t("settings.front_material_code"), 9.8):
+                        ui.label(_t("settings.front_material_code")).classes(
+                            "text-sm text-gray-700 shrink-0"
+                        ).style("width: var(--settings-label-width);")
+                        _front_code_inp = ui.input(
+                            placeholder=_t("settings.material_code_placeholder"),
+                            value=mats.get("front_material_code", ""),
+                        ).props("dense borderless clearable").classes("flex-1")
+                        _front_code_inp.on("blur", lambda e: set_material("front_material_code", e.sender.value or ""))
+                        _front_code_inp.on("keydown.enter", lambda e: set_material("front_material_code", e.sender.value or ""))
                     with _field_row(tr_fn("settings.carcass_thk"), 9.8):
                         ui.label(tr_fn("settings.carcass_thk").replace(" [mm]", "")).classes(
                             "text-sm text-gray-700 shrink-0"
