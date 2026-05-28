@@ -264,6 +264,7 @@ def _default_kitchen() -> Dict[str, Any]:
             "front_thk": 18,
             "back_thk": 8,
             "edge_abs_thk": 2,
+            "abs_edge_code": "",           # šifra ABS trake za servis (npr. PD3000_LN_08_22)
         },
         "front_color": "#FDFDFB",
         "modules": [],

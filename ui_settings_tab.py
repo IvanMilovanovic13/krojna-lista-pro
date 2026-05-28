@@ -278,6 +278,16 @@ def render_settings_tab(
                             on_change=lambda e: set_material("edge_abs_thk", e.value),
                         ).props("dense borderless").classes("flex-1")
                         ui.label("mm").classes("text-sm text-gray-500 shrink-0")
+                    with _field_row(_t("settings.abs_edge_code"), 9.8):
+                        ui.label(_t("settings.abs_edge_code")).classes(
+                            "text-sm text-gray-700 shrink-0"
+                        ).style("width: var(--settings-label-width);")
+                        _abs_inp = ui.input(
+                            placeholder=_t("settings.abs_edge_code_placeholder"),
+                            value=mats.get("abs_edge_code", ""),
+                        ).props("dense borderless clearable").classes("flex-1")
+                        _abs_inp.on("blur", lambda e: set_material("abs_edge_code", e.sender.value or ""))
+                        _abs_inp.on("keydown.enter", lambda e: set_material("abs_edge_code", e.sender.value or ""))
 
             with ui.card().classes("p-4").style("flex: 1 1 19rem; min-width: 18rem; max-width: 21rem;"):
                 ui.label(_t("settings.room_dim_title")).classes("font-bold text-base mb-3")
