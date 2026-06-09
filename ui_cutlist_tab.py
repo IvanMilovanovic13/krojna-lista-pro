@@ -442,10 +442,50 @@ def render_cutlist_tab(
                                     tr_fn('cutlist.export_jobs_error', error=str(_row['error_message']))
                                 ).classes('text-xs text-red-600')
 
-            # ── Beginner guide ────────────────────────────────────────────
-            with ui.card().classes('w-full mb-4 p-3 bg-gray-50'):
-                ui.label(tr_fn('cutlist.beginner_title')).classes('font-bold text-base mb-2')
-                ui.markdown(tr_fn('cutlist.beginner_items'))
+            # ── Info baner: Pre slanja krojne liste ──────────────────────
+            with ui.expansion(
+                tr_fn('cutlist.pre_send_title'),
+                icon='tips_and_updates',
+                value=True,
+            ).classes('w-full mb-4 border border-amber-300 rounded-lg').style(
+                'background: #fffbeb;'
+            ):
+                with ui.column().classes('w-full gap-4 px-1 pb-2'):
+                    # 1. Kontaktiraj firmu
+                    with ui.column().classes('gap-1'):
+                        ui.label(tr_fn('cutlist.pre_send_contact_header')).classes(
+                            'font-semibold text-sm text-amber-900'
+                        )
+                        ui.markdown(tr_fn('cutlist.pre_send_contact_text')).classes(
+                            'text-sm text-gray-700 leading-relaxed'
+                        )
+                    ui.separator().classes('opacity-40')
+                    # 2. Lista pitanja za servis
+                    with ui.column().classes('gap-1'):
+                        ui.label(tr_fn('cutlist.pre_send_questions_header')).classes(
+                            'font-semibold text-sm text-amber-900'
+                        )
+                        ui.markdown(tr_fn('cutlist.pre_send_questions_items')).classes(
+                            'text-sm text-gray-700 leading-relaxed'
+                        )
+                    ui.separator().classes('opacity-40')
+                    # 3. Objasnjenje kolona
+                    with ui.column().classes('gap-1'):
+                        ui.label(tr_fn('cutlist.pre_send_cols_header')).classes(
+                            'font-semibold text-sm text-amber-900'
+                        )
+                        ui.markdown(tr_fn('cutlist.pre_send_cols_text')).classes(
+                            'text-sm text-gray-700 leading-relaxed'
+                        )
+                    ui.separator().classes('opacity-40')
+                    # 4. Sifare materijala
+                    with ui.column().classes('gap-1'):
+                        ui.label(tr_fn('cutlist.pre_send_matcodes_header')).classes(
+                            'font-semibold text-sm text-amber-900'
+                        )
+                        ui.markdown(tr_fn('cutlist.pre_send_matcodes_text')).classes(
+                            'text-sm text-gray-700 leading-relaxed'
+                        )
 
             # ── Upozorenja ────────────────────────────────────────────────
             if _warnings_df is not None and not _warnings_df.empty:
