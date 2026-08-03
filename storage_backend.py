@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from importlib.util import find_spec
 from typing import Any
 
-from app_config import DATA_DIR, DatabaseConfig, get_database_config
+from app_config import DATA_DIR, DatabaseConfig, get_database_config, mask_database_url
 
 
 @dataclass(frozen=True)
@@ -142,7 +142,7 @@ def get_store_runtime_info_dict() -> dict[str, str]:
     info = get_store_backend().runtime_info()
     return {
         "backend": str(info.backend),
-        "database_url": str(info.database_url),
+        "database_url": mask_database_url(info.database_url),
         "sqlite_path": str(info.sqlite_path),
         "ready": "true" if info.ready else "false",
         "note": str(info.note),

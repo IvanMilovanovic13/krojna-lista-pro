@@ -146,6 +146,25 @@ def get_database_config() -> DatabaseConfig:
     )
 
 
+def mask_database_url(raw: str) -> str:
+    """Sakriva korisnicko ime i lozinku iz connection stringa pre javnog izlaganja (ops rute)."""
+    value = str(raw or "").strip()
+    if not value:
+        return value
+    try:
+        parsed = urlparse(value)
+        if not parsed.password and not parsed.username:
+            return value
+        netloc = parsed.hostname or ""
+        if parsed.port:
+            netloc = f"{netloc}:{parsed.port}"
+        if parsed.username:
+            netloc = f"***:***@{netloc}"
+        return parsed._replace(netloc=netloc).geturl()
+    except Exception:
+        return "***"
+
+
 def _env(name: str, default: str = "") -> str:
     return str(os.getenv(name, default) or "").strip()
 
@@ -255,7 +274,7 @@ def get_public_runtime_config() -> dict[str, str]:
         "web_workers": str(cfg.web_workers),
         "export_worker_mode": str(cfg.export_worker_mode),
         "export_worker_poll_seconds": str(cfg.export_worker_poll_seconds),
-        "database_url": str(cfg.database_url),
+        "database_url": mask_database_url(cfg.database_url),
         "debug": "true" if cfg.debug else "false",
         "has_secret_key": "true" if bool(cfg.secret_key) else "false",
         "billing_provider": "lemonsqueezy",
