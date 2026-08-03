@@ -137,18 +137,31 @@ def _split_brand_title() -> tuple[str, str]:
 
 
 def _hero_brand(caption: str = "") -> None:
-    brand_main, brand_badge = _split_brand_title()
+    from pathlib import Path
+
+    from state_logic import state
+
+    language = str(getattr(state, "language", "sr") or "sr")
+    logo_name = "logo_sr_light.png" if language == "sr" else "logo_en_light.png"
+    logo_path = Path(__file__).resolve().parent / "assets" / "brand" / logo_name
     with ui.column().classes("w-full items-center gap-2"):
-        with ui.row().classes("items-start justify-center gap-2"):
-            ui.label(brand_main).classes(
-                "text-[52px] font-black tracking-[-0.05em] leading-none text-[#6d8ee8] "
-                "drop-shadow-[0_8px_24px_rgba(109,142,232,0.18)] max-md:text-[36px]"
+        if logo_path.exists():
+            ui.image(f"/assets/brand/{logo_name}").classes("max-md:w-[280px]").style(
+                "width:400px; max-width:86vw; height:auto;"
             )
-            if brand_badge:
-                ui.label(brand_badge).classes(
-                    "mt-1 rounded-[10px] border-2 border-[#6d8ee8] px-2 py-0.5 text-[18px] font-black "
-                    "leading-none tracking-[-0.02em] text-[#6d8ee8] max-md:text-[14px]"
+        else:
+            # Fallback na tekstualni brend ako logo fajl ne postoji
+            brand_main, brand_badge = _split_brand_title()
+            with ui.row().classes("items-start justify-center gap-2"):
+                ui.label(brand_main).classes(
+                    "text-[52px] font-black tracking-[-0.05em] leading-none text-[#6d8ee8] "
+                    "drop-shadow-[0_8px_24px_rgba(109,142,232,0.18)] max-md:text-[36px]"
                 )
+                if brand_badge:
+                    ui.label(brand_badge).classes(
+                        "mt-1 rounded-[10px] border-2 border-[#6d8ee8] px-2 py-0.5 text-[18px] font-black "
+                        "leading-none tracking-[-0.02em] text-[#6d8ee8] max-md:text-[14px]"
+                    )
         if caption:
             ui.label(caption).classes(
                 "text-xs font-semibold uppercase tracking-[0.28em] text-[#b4bfdc] text-center"

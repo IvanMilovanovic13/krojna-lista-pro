@@ -38,8 +38,11 @@ def render_toolbar_layout(
 
         # Naziv aplikacije
         with ui.element('div').classes(
-            'flex items-center gap-1 px-3 border-r border-gray-200 shrink-0'
+            'flex items-center gap-1.5 px-3 border-r border-gray-200 shrink-0'
         ):
+            ui.image('/assets/brand/icon_k.png').classes('shrink-0').style(
+                'width:20px; height:20px; border-radius:4px;'
+            )
             ui.label(toolbar_app_name).classes(
                 'text-[13px] font-bold text-gray-800 whitespace-nowrap'
             )

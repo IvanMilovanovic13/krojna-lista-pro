@@ -643,6 +643,7 @@ def run_app() -> None:
     promote_env_admins_to_admin()  # Promoviše APP_ADMIN_EMAILS na admin tier bez resetovanja lozinke
     ui.run(
         title='krojna lista PRO',
+        favicon=str(Path(__file__).resolve().parent / 'assets' / 'brand' / 'favicon_64.png'),
         host=str(cfg.host or '127.0.0.1'),
         port=int(cfg.port),
         reload=False,
