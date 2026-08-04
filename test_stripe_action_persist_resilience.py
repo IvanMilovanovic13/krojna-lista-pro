@@ -37,6 +37,7 @@ def run_stripe_action_persist_resilience_check() -> tuple[bool, str]:
         checkout_url="",
         portal_url="",
         current_period_end="",
+        trial_started_at="",
         created_at="2026-03-28T10:00:00+00:00",
         updated_at="2026-03-28T10:00:00+00:00",
     )
