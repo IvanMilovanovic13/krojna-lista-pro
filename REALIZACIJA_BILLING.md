@@ -69,9 +69,10 @@ Vizuelno:
 - [ ] Commit necomitovanih izmena (popunjen QA smoke test rezultati, sitne config izmene)
 
 **Faza B — Zatvoriti Lemon store**
-- [ ] Proveriti u Lemon dashboardu zašto piše "store not activated" (blokiralo customer portal test E1-E3)
+- [x] Proveriti u Lemon dashboardu zašto piše "store not activated" — **NALAZ (04.08.2026 uveče):** Settings → General → "Store activation" nema dugme za klik; "Identity verification" status = **"In Review"**. Store se ne može aktivirati dok Lemon ne završi pregled identiteta — nije nešto što se sad klikne, čeka se njihov odgovor.
+- [x] Proveriti email za Lemon poruku sa zahtevom za dodatne info — **POTVRĐENO 04.08.2026 uveče:** Lemon je tražio ("Your application has been received") primere proizvoda/demo i website URL; Ivan je već odgovorio sa punim opisom proizvoda + staging URL-om (`staging.cabinetcutpro.com`) + pozivom da naprave free nalog. Ovaj korak je zatvoren — dalje se samo čeka njihov review, ništa više da se radi sa naše strane.
 - [ ] Dodati `cover_en` sliku u Lemon Media
-- [ ] Klik "Activate your store" u Lemonu (self-serve, radi korisnik)
+- [ ] Kad "Identity verification" pređe iz "In Review" u odobreno → store se aktivira (proveriti da li treba dodatni klik ili je automatsko)
 
 **Faza C — Poslednji test u Test modu**
 - [ ] Test kupovina na stagingu test karticom (4242...) kroz ceo tok: checkout → webhook → unlock PRO → customer portal

@@ -190,7 +190,8 @@
       "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe list_users_cli.py)",
       "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe run_all_tests.py)",
       "Bash(./venv/Scripts/python.exe run_all_tests.py)",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "mcp__claude-in-chrome__tabs_context_mcp"
     ]
   }
 }
