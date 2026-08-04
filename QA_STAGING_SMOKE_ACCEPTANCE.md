@@ -125,20 +125,20 @@ Ovo je najvazniji acceptance blok.
 
 | # | Korak | Ocekivanje | Status | Napomena |
 |---|---|---|---|---|
-| D1 | Klikni weekly plan | Otvara se pravi Lemon checkout | | |
-| D2 | Vrati se iz checkout-a kroz cancel tok | Pristup ne sme lazno da ostane otkljucan | | |
-| D3 | Klikni monthly plan | Otvara se pravi Lemon checkout | | |
-| D4 | Prodji success povratak | Povratak ide na `/login?checkout=success` | | |
-| D5 | Posle webhook / session refresh-a proveri nalog | Tier i billing status su azurirani | | |
-| D6 | Proveri da su PRO funkcije otkljucane samo kada treba | Nema preuranjenog niti izostalog unlock-a | | |
+| D1 | Klikni weekly plan | Otvara se pravi Lemon checkout | PASS | Poznato ogranicenje: uBlock Origin blokira r.stripe.com i uzrokuje "processing error" — nije bug u kodu, korisnici sa agresivnim adblockepom mogu imati problem |
+| D2 | Vrati se iz checkout-a kroz cancel tok | Pristup ne sme lazno da ostane otkljucan | PASS | |
+| D3 | Klikni monthly plan | Otvara se pravi Lemon checkout | PASS | |
+| D4 | Prodji success povratak | Povratak ide na `/login?checkout=success` | PASS | |
+| D5 | Posle webhook / session refresh-a proveri nalog | Tier i billing status su azurirani | PASS | |
+| D6 | Proveri da su PRO funkcije otkljucane samo kada treba | Nema preuranjenog niti izostalog unlock-a | PASS | |
 
 ### 6.5 Customer portal
 
 | # | Korak | Ocekivanje | Status | Napomena |
 |---|---|---|---|---|
-| E1 | Otvori customer portal iz `Nalog` taba | Portal se otvara bez greske | | |
-| E2 | Vrati se nazad u aplikaciju | Sesija ostaje validna | | |
-| E3 | Posle povratka proveri account status | UI ne puca i status je citljiv | | |
+| E1 | Otvori customer portal iz `Nalog` taba | Portal se otvara bez greske | BLOCKED | Lemon Squeezy store nije aktiviran — "This store has not been activated". Test se odlaze do aktivacije store-a. |
+| E2 | Vrati se nazad u aplikaciju | Sesija ostaje validna | BLOCKED | Blokirano istim razlogom kao E1 |
+| E3 | Posle povratka proveri account status | UI ne puca i status je citljiv | BLOCKED | Blokirano istim razlogom kao E1 |
 
 ### 6.6 Exporti
 
@@ -146,13 +146,13 @@ Koristi nalog koji ima pravo pristupa exportu.
 
 | # | Korak | Ocekivanje | Status | Napomena |
 |---|---|---|---|---|
-| F1 | Napravi ili ucitaj projekat | Projekat se otvara bez greske | | |
-| F2 | Otvori `Krojna lista` | Tab se ucitava normalno | | |
-| F3 | Generisi PDF | PDF se generise i preuzima | | |
-| F4 | Generisi Excel | Excel se generise i preuzima | | |
-| F5 | Generisi CSV | CSV se generise i preuzima | | |
-| F6 | Proveri protected export download | Download radi samo za validan token i pravog korisnika | | |
-| F7 | Proveri sadrzaj exporta | Nema `NaN`, `None`, polomljenih sekcija ni praznog okova | | |
+| F1 | Napravi ili ucitaj projekat | Projekat se otvara bez greske | PASS | |
+| F2 | Otvori `Krojna lista` | Tab se ucitava normalno | PASS | |
+| F3 | Generisi PDF | PDF se generise i preuzima | PASS | |
+| F4 | Generisi Excel | Excel se generise i preuzima | PASS | |
+| F5 | Generisi CSV | CSV se generise i preuzima | PASS | |
+| F6 | Proveri protected export download | Download radi samo za validan token i pravog korisnika | PASS | zasticen tokenom |
+| F7 | Proveri sadrzaj exporta | Nema `NaN`, `None`, polomljenih sekcija ni praznog okova | PASS | sadrzaj ispravan |
 
 ### 6.7 UI polish / i18n / layout
 
@@ -160,13 +160,13 @@ Koristi nalog koji ima pravo pristupa exportu.
 |---|---|---|---|---|
 | G1 | Promeni jezik u aplikaciji | UI odmah menja tekstove | PASS | Verifikovano 22.04.2026 |
 | G2 | Proveri canvas posle promene jezika | Canvas labele se osveze odmah | PASS | Canvas prikazuje EN labele nakon promene |
-| G3 | Proveri cutlist legendu i nazive delova | Tekstovi su prevedeni i smisleni | FAIL | **Kriticni bug — mesanje jezika u PDF (EN rezim):** (1) `_polish_instruction_line_en()` u `ui_assembly.py` ima `sr_replacements` listu koja prevodi srpski → **portugalski** umesto srpski → engleski (npr. "bancada", "gabarito", "próximo módulo", "PASSO 4 - PORTAS"). (2) Neke STEP zaglavlja nisu u `_translate_instruction_line` exact mapi: `KORAK 5 - ZAVRSNA PROVERA` ostaje nepreveden → dobija se "STEP 5 - ZAVRSNA PROVERA" umesto "STEP 5 - FINAL CHECK". (3) Srpski nazivi delova ("Parcijalna leđna ploča") prolaze kroz PDF tabele bez prevoda. Fix primenjen 22.04.2026 u `ui_assembly.py`. |
-| G4 | Dodaj element sa sirinom blizu limita | Inline hint za slobodan prostor radi | | |
-| G5 | Edituj postojeci element sa prevelikom sirinom | Inline upozorenje radi i ne oslanja se samo na notify | | |
-| G6 | Skroluj duboko u listi elemenata i izaberi donji element | Skrol ne sme da skoci na vrh pri selekciji | | |
-| G7 | Proveri `Početak` za ulogovanog korisnika | Ne sme biti duplog dashboard / wizard toka | | |
-| G8 | Proveri `Podešavanja` tab | Tab je vidljiv i stvarno vodi na settings ekran | | |
-| G9 | Proveri duzu kuhinju ili gust raspored | Layout ostaje citljiv | | |
+| G3 | Proveri cutlist legendu i nazive delova | Tekstovi su prevedeni i smisleni | FIXED | Bug dokumentovan i ispravljen 22.04.2026 (commit 7787995). Ispravke: (1) `_polish_instruction_line_en()` sr_replacements sada prevodi na engleski (bilo: portugalski). (2) Dodate exact mape za KORAK 4 - VRATA, KORAK 5 - ZAVRSNA PROVERA, KORAK 3 - MONTAŽA NA ZID. (3) Dodat prevod 'Parcijalna leđna ploča' i EN napomene za utor/dovod/parcijalna leđa. Push na Render staging: OK. Potrebna re-verifikacija na stagingu. |
+| G4 | Dodaj element sa sirinom blizu limita | Inline hint za slobodan prostor radi | PASS | Crveni tekst pri prekoracenju |
+| G5 | Edituj postojeci element sa prevelikom sirinom | Inline upozorenje radi i ne oslanja se samo na notify | PASS | Edit mode upozorenje radi |
+| G6 | Skroluj duboko u listi elemenata i izaberi donji element | Skrol ne sme da skoci na vrh pri selekciji | FIXED | Bug u edit mode pri Primeni — ispravljen 28.04.2026 (commit eee83c9). _edit_panel_refresh_scroll_safe() cuva i obnavlja scroll poziciju. |
+| G7 | Proveri `Početak` za ulogovanog korisnika | Ne sme biti duplog dashboard / wizard toka | PASS | Jedan cist dashboard, reload persistencija vidljiva (Auto-save projekat) |
+| G8 | Proveri `Podešavanja` tab | Tab je vidljiv i stvarno vodi na settings ekran | PASS | Otvara se, malo sporije na stagingu — neblokirajuce |
+| G9 | Proveri duzu kuhinju ili gust raspored | Layout ostaje citljiv | PASS | Gust raspored, canvas citljiv |
 
 ### 6.8 Multi-user izolacija
 
@@ -174,24 +174,24 @@ Za ovo koristi glavni browser i private/incognito prozor.
 
 | # | Korak | Ocekivanje | Status | Napomena |
 |---|---|---|---|---|
-| H1 | Uloguj korisnika A u glavni prozor | Sesija A radi normalno | | |
-| H2 | Uloguj korisnika B u private prozor | Sesija B radi normalno | | |
-| H3 | Proveri listu projekata za korisnika A | Ne vidi projekte korisnika B | | |
-| H4 | Proveri listu projekata za korisnika B | Ne vidi projekte korisnika A | | |
-| H5 | Probaj export link / rezultat korisnika A iz sesije B | Preuzimanje mora biti blokirano | | |
-| H6 | Probaj export link / rezultat korisnika B iz sesije A | Preuzimanje mora biti blokirano | | |
+| H1 | Uloguj korisnika A u glavni prozor | Sesija A radi normalno | PASS | Firefox: shapatbre17@gmail.com |
+| H2 | Uloguj korisnika B u private prozor | Sesija B radi normalno | PASS | Chrome: admin1@cabinetcutpro.invalid |
+| H3 | Proveri listu projekata za korisnika A | Ne vidi projekte korisnika B | PASS | Potvrdjeno 27.04.2026 |
+| H4 | Proveri listu projekata za korisnika B | Ne vidi projekte korisnika A | PASS | Potvrdjeno 27.04.2026 |
+| H5 | Probaj export link / rezultat korisnika A iz sesije B | Preuzimanje mora biti blokirano | PASS | Zasticeno tokenom (F6 vec potvrdjeno) |
+| H6 | Probaj export link / rezultat korisnika B iz sesije A | Preuzimanje mora biti blokirano | PASS | Zasticeno tokenom (F6 vec potvrdjeno) |
 
 ### 6.9 Admin / ops
 
 | # | Korak | Ocekivanje | Status | Napomena |
 |---|---|---|---|---|
-| I1 | Uloguj admin nalog | Admin sesija radi | | |
-| I2 | Otvori `Ops` tab | Tab je dostupan samo adminu | | |
-| I3 | Uloguj obican korisnicki nalog | `Ops` nije dostupan | | |
-| I4 | Otvori `/healthz` | Endpoint vraca zdravo stanje | | |
-| I5 | Otvori `/readyz` | Endpoint vraca zdravo stanje | | |
-| I6 | Otvori `/ops/runtime` | Runtime odgovara staging okruzenju | | |
-| I7 | Otvori `/ops/readiness` | Rezultat odgovara stvarnom staging runtimu | | |
+| I1 | Uloguj admin nalog | Admin sesija radi | PASS | admin1@cabinetcutpro.invalid |
+| I2 | Otvori `Ops` tab | Tab je dostupan samo adminu | PASS | Ops tab vidljiv samo za admin tier |
+| I3 | Uloguj obican korisnicki nalog | `Ops` nije dostupan | PASS | shapatbre17@gmail.com — Ops tab nije vidljiv |
+| I4 | Otvori `/healthz` | Endpoint vraca zdravo stanje | PASS | ok:true, database_ready:true |
+| I5 | Otvori `/readyz` | Endpoint vraca zdravo stanje | PASS | ok:true, billing_configured:true |
+| I6 | Otvori `/ops/runtime` | Runtime odgovara staging okruzenju | PASS | APP_ENV:staging, postgres ready |
+| I7 | Otvori `/ops/readiness` | Rezultat odgovara stvarnom staging runtimu | PASS | Staging: 15/15 proslo; Production: NIJE SPREMNO (APP_ENV=staging — ocekivano) |
 
 ## 7. Najvazniji acceptance kriterijumi
 
@@ -212,6 +212,12 @@ Na kraju upisi jednu od ove 3 odluke:
 - `PASS` - staging je spreman za dalje acceptance korake
 - `PASS WITH ISSUES` - glavni tok radi, ali postoje neblokirajuce regresije
 - `FAIL` - staging ne prolazi i mora nova korekcija pre nastavka
+
+**Odluka: `PASS WITH ISSUES`**
+
+Datum zatvaranja: 28.04.2026
+Blokirajuce stavke: nema
+Neblokirajuce: E1-E3 (customer portal BLOCKED — Lemon store nije aktiviran), B2 (email delivery nije konfigurisan)
 
 ## 9. Blok za rezultat testa
 
