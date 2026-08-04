@@ -392,23 +392,21 @@ def render_nova_tab(
                 if _upgrade_focus:
                     ui.timer(0.05, lambda: ui.run_javascript('window.scrollTo({top: 0, behavior: "auto"})'), once=True)
 
-            # Free trial kartica — prikazuje se samo za unactivated korisnike
+            # Besplatni trial se aktivira automatski, bez klika, cim se korisnik
+            # prvi put uloguje (jednokratno — ova grana se gasi cim billing_status
+            # prestane da bude 'unactivated').
             if _onboarding == "unactivated":
-                def _activate_trial() -> None:
-                    ok, msg = activate_free_trial()
-                    if ok:
-                        ui.notify('Besplatni probni pristup aktiviran! Imas 7 dana.', type='positive', timeout=5000)
-                        main_content_refresh()
-                    else:
-                        ui.notify(msg, type='negative', timeout=5000)
-
-                with ui.card().classes('w-full p-5 bg-[#f0f7ff] border border-[#3b82f6]'):
-                    ui.label('Isprobaj besplatno — 7 dana').classes('text-base font-bold text-gray-900')
-                    ui.label('Kreiraj kuhinju, slazi module i istrazuj aplikaciju bez placanja. Krojna lista i izvoz su dostupni uz plaćeni plan.').classes('text-sm text-gray-600')
-                    ui.button(
-                        'Aktiviraj besplatni probni pristup',
-                        on_click=_activate_trial,
-                    ).classes('w-full mt-4 bg-white text-[#111] border border-[#111]')
+                ok, _activate_msg = activate_free_trial()
+                if ok:
+                    ui.notify(
+                        'Besplatni probni pristup je aktiviran — imaš 10 dana da isprobaš aplikaciju. '
+                        'Krojna lista i izvoz se otključavaju plaćanjem.',
+                        type='positive',
+                        timeout=7000,
+                    )
+                    _onboarding = get_user_onboarding_state()
+                else:
+                    ui.notify(_activate_msg, type='negative', timeout=5000)
 
             # Prikaz preostalog vremena triala
             if _onboarding == "trial_active":

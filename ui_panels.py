@@ -235,6 +235,15 @@ def render_toolbar() -> None:
     if _session_email:
         _session_label = _tr("toolbar.session_fmt", email=_session_email, tier=_session_tier or "-")
 
+    _trial_badge_label = ""
+    if _session_email and _session_tier == "trial":
+        from billing_models import get_trial_days_remaining_for_email
+        _trial_days_left = get_trial_days_remaining_for_email(_session_email)
+        if _trial_days_left > 0:
+            _trial_badge_label = _tr("toolbar.trial_days_left_fmt", days=_trial_days_left)
+        elif _trial_days_left == 0:
+            _trial_badge_label = _tr("toolbar.trial_expired_badge")
+
     render_toolbar_layout(
         ui=ui,
         tabs=tabs,
@@ -256,6 +265,7 @@ def render_toolbar() -> None:
         toolbar_load_tooltip=_tr("toolbar.load_tooltip"),
         toolbar_reset_tooltip=_tr("toolbar.reset_tooltip"),
         session_label=_session_label,
+        trial_badge_label=_trial_badge_label,
         account_label=_tr("toolbar.account"),
         logout_label=_tr("toolbar.logout"),
         on_account_click=lambda: switch_tab("nalog"),

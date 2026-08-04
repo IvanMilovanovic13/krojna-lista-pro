@@ -72,7 +72,7 @@ def activate_free_trial_for_email(email: str) -> bool:
 
 
 def get_trial_days_remaining_for_email(email: str) -> int:
-    """Vraca broj dana preostalog triala. -1 = nije na trialu, 0 = istekao, 1-7 = aktivan."""
+    """Vraca broj dana preostalog triala. -1 = nije na trialu, 0 = istekao, 1-10 = aktivan."""
     from datetime import datetime, timezone, timedelta
     try:
         user = get_user_by_email(str(email or "").strip().lower())
@@ -95,7 +95,7 @@ def get_trial_days_remaining_for_email(email: str) -> int:
                 continue
         else:
             return -1
-        trial_end = started + timedelta(days=7)
+        trial_end = started + timedelta(days=10)
         now = datetime.utcnow()
         remaining = (trial_end - now).days
         return max(0, remaining)
@@ -157,6 +157,11 @@ def apply_billing_status_to_user(email: str, billing_status: str, plan_code: str
     status = str(billing_status or "").strip().lower()
     access_tier, user_status = _status_to_access(status, str(plan_code or "paid"))
 
+    existing_user = get_user_by_email(email)
+    if existing_user is not None and str(existing_user.access_tier or "").strip().lower() == "admin":
+        # Billing eventi ne smeju da skinu admin nalog na paid/trial/blocked tier.
+        access_tier, user_status = "admin", "admin_active"
+
     user = set_user_access_status(email=email, access_tier=access_tier, status=user_status, auth_mode="password")
     if user is None:
         return None
@@ -175,10 +180,16 @@ def _extract_event_object(event: dict) -> dict:
     return data if isinstance(data, dict) else {}
 
 
+def _extract_custom_data(event: dict) -> dict:
+    meta = event.get("meta", {}) if isinstance(event, dict) else {}
+    custom_data = meta.get("custom_data", {}) if isinstance(meta, dict) else {}
+    return custom_data if isinstance(custom_data, dict) else {}
+
+
 def _extract_email_from_event(event: dict) -> str:
     obj = _extract_event_object(event)
     attributes = obj.get("attributes", {}) if isinstance(obj.get("attributes", {}), dict) else {}
-    custom_data = attributes.get("custom_data", {}) if isinstance(attributes.get("custom_data", {}), dict) else {}
+    custom_data = _extract_custom_data(event)
     candidates = [
         custom_data.get("user_email"),
         attributes.get("user_email"),
@@ -195,7 +206,7 @@ def _extract_email_from_event(event: dict) -> str:
 def _extract_plan_code(event: dict) -> str:
     obj = _extract_event_object(event)
     attributes = obj.get("attributes", {}) if isinstance(obj.get("attributes", {}), dict) else {}
-    custom_data = attributes.get("custom_data", {}) if isinstance(attributes.get("custom_data", {}), dict) else {}
+    custom_data = _extract_custom_data(event)
     if custom_data.get("plan_code"):
         return str(custom_data.get("plan_code"))
     variant_name = str(attributes.get("variant_name", "") or "").strip().lower()
@@ -209,7 +220,7 @@ def _extract_plan_code(event: dict) -> str:
 def handle_billing_webhook_event(event: dict) -> dict[str, str]:
     meta = (event or {}).get("meta", {}) if isinstance((event or {}).get("meta", {}), dict) else {}
     event_type = str(meta.get("event_name", "") or (event or {}).get("type", "") or "").strip()
-    event_id = str((event or {}).get("id", "") or "").strip()
+    event_id = str(meta.get("webhook_id", "") or (event or {}).get("id", "") or "").strip()
     email = _extract_email_from_event(event)
     if not email:
         return {

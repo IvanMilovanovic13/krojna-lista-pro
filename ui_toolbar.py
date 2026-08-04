@@ -26,6 +26,7 @@ def render_toolbar_layout(
     toolbar_load_tooltip: str = "",
     toolbar_reset_tooltip: str = "",
     session_label: str = "",
+    trial_badge_label: str = "",
     account_label: str = "",
     logout_label: str = "",
     on_account_click: Callable[[], None] | None = None,
@@ -83,6 +84,14 @@ def render_toolbar_layout(
             ).props('flat no-caps dense').tooltip(toolbar_reset_tooltip):
                 ui.icon('restart_alt').classes('text-[15px]')
                 ui.label(toolbar_reset_label).classes('text-[12px] font-medium whitespace-nowrap')
+
+        if trial_badge_label:
+            with ui.element('div').classes(
+                'flex items-center px-3 border-l border-gray-200 shrink-0'
+            ).style('height:42px;'):
+                ui.label(trial_badge_label).classes(
+                    'text-[11px] font-bold text-white bg-[#f59e0b] rounded-full px-2.5 py-0.5 whitespace-nowrap'
+                )
 
         if session_label:
             with ui.element('div').classes(

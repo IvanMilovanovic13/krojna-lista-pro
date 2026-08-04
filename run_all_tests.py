@@ -222,6 +222,7 @@ def run_export_tests(verbose: bool) -> tuple[int, int]:
     from test_billing_ui_runtime_guard import run_billing_ui_runtime_guard_check
     from test_billing_state_ux import run_billing_state_ux_check
     from test_billing_webhook_idempotency import run_billing_webhook_idempotency_check
+    from test_billing_admin_protection import run_billing_admin_protection_check
     from test_cutlist_export_jobs_ui import run_cutlist_export_jobs_ui_check
     from test_checkout_return_flow import run_checkout_return_flow_check
     from test_deploy_worker_config import run_deploy_worker_config_check
@@ -605,6 +606,15 @@ def run_export_tests(verbose: bool) -> tuple[int, int]:
             _fail("billing_webhook_idempotency", msg)
     except Exception as ex:
         _fail("billing_webhook_idempotency", str(ex))
+
+    try:
+        ok, msg = run_billing_admin_protection_check()
+        if ok:
+            _ok("billing_admin_protection", msg)
+        else:
+            _fail("billing_admin_protection", msg)
+    except Exception as ex:
+        _fail("billing_admin_protection", str(ex))
 
     try:
         ok, msg = run_billing_state_ux_check()

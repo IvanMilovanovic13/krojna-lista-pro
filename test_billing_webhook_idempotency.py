@@ -42,9 +42,13 @@ def run_billing_webhook_idempotency_check() -> tuple[bool, str]:
         )
 
         event = {
-            "id": "evt_test_duplicate_001",
             "meta": {
                 "event_name": "subscription_created",
+                "webhook_id": "evt_test_duplicate_001",
+                "custom_data": {
+                    "user_email": "billing-idempotency@example.com",
+                    "plan_code": "pro_monthly",
+                },
             },
             "data": {
                 "type": "subscriptions",
@@ -54,10 +58,6 @@ def run_billing_webhook_idempotency_check() -> tuple[bool, str]:
                     "status": "active",
                     "renews_at": "2026-04-26T10:00:00+00:00",
                     "variant_name": "Monthly Access",
-                    "custom_data": {
-                        "user_email": "billing-idempotency@example.com",
-                        "plan_code": "pro_monthly",
-                    },
                 },
             },
         }
