@@ -86,17 +86,26 @@ def get_trial_days_remaining_for_email(email: str) -> int:
         trial_ts = str(sub.trial_started_at or "").strip()
         if not trial_ts:
             return -1
-        # Pokusaj parsiranja
-        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"):
-            try:
-                started = datetime.strptime(trial_ts[:19], fmt[:len(fmt)])
-                break
-            except ValueError:
-                continue
-        else:
+        # Pokusaj parsiranja — trial_ts moze doci sa ili bez timezone offseta
+        # (SQLite i Postgres backend cuvaju ga drugacije), zato prvo probamo
+        # fromisoformat (hvata i "+02:00"/"+00:00" offset), pa tek onda naivne
+        # formate kao fallback.
+        started = None
+        try:
+            started = datetime.fromisoformat(trial_ts.replace(" ", "T", 1))
+        except ValueError:
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"):
+                try:
+                    started = datetime.strptime(trial_ts[:19], fmt[:len(fmt)])
+                    break
+                except ValueError:
+                    continue
+        if started is None:
             return -1
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=timezone.utc)
         trial_end = started + timedelta(days=10)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         remaining_seconds = (trial_end - now).total_seconds()
         if remaining_seconds <= 0:
             return 0
