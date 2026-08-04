@@ -104,6 +104,41 @@ PUBLIC_PAGE_STYLE = """
 """
 
 
+_OG_TITLE = {
+    "sr": "CabinetCut PRO — krojna lista PRO",
+    "en": "CabinetCut PRO — kitchen cutlist software",
+}
+_OG_DESCRIPTION = {
+    "sr": "Napravi 2D/3D raspored kuhinje i generiši krojnu listu, plan bušenja i PDF/Excel izvoz — web alat za stolare i proizvođače nameštaja.",
+    "en": "Design your kitchen layout in 2D/3D and generate a manufacturing cutlist, drilling plan and PDF/Excel export — a web tool for cabinet makers.",
+}
+
+
+def _og_meta_html() -> str:
+    from state_logic import state as _st
+    from app_config import get_app_config
+
+    lang = str(getattr(_st, "language", "sr") or "sr").strip().lower()
+    is_sr = lang == "sr"
+    title = _OG_TITLE["sr"] if is_sr else _OG_TITLE["en"]
+    description = _OG_DESCRIPTION["sr"] if is_sr else _OG_DESCRIPTION["en"]
+    logo_file = "logo_sr_dark.png" if is_sr else "logo_en_dark.png"
+    base_url = str(get_app_config().base_url or "").rstrip("/")
+    image_url = f"{base_url}/assets/brand/{logo_file}" if base_url else f"/assets/brand/{logo_file}"
+
+    return f"""
+<meta name="description" content="{description}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{description}">
+<meta property="og:image" content="{image_url}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{description}">
+<meta name="twitter:image" content="{image_url}">
+"""
+
+
 def _public_shell() -> None:
     ensure_runtime_state_initialized(allow_local_fallback=False)
     # Obnovi jezik iz per-session storage — preživljava multi-worker routing i page reload
@@ -116,6 +151,7 @@ def _public_shell() -> None:
     except Exception:
         pass
     ui.add_head_html(PUBLIC_PAGE_STYLE)
+    ui.add_head_html(_og_meta_html())
     ui.query("body").style("margin: 0; background: #f8fafc;")
 
 

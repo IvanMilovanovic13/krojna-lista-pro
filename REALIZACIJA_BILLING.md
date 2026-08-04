@@ -98,7 +98,7 @@ Vizuelno:
 
 **Faza G — Puštanje**
 - [ ] Formalno "live" — pratiti prvih par dana (ops/health endpointi već postoje)
-- [ ] GDPR finiš (brisanje naloga / export podataka) — može i odmah posle starta ako nije hitno pravno
+- [x] GDPR finiš (brisanje naloga / export podataka) — **urađeno 05.08.2026:** `gdpr_account_tool.py` (export/delete po emailu, kaskadno + anonimizacija finansijske/bezbednosne evidencije), i ispravljena neusklađenost Terms of Service (pisalo 14 dana trial, sad tačnih 10, na svih 9 jezika). Cookie policy proverena — samo session cookie, nema trackinga, ne treba consent banner.
 
 > Napomena o realnosti: Faze B, D, F imaju korake koje radi isključivo korisnik (Lemon dashboard, banka/PayPal, prava kartica) — Claude ne može da klikne "Activate store" niti da unosi finansijske/lične podatke.
 
