@@ -66,7 +66,7 @@ Vizuelno:
 > Ovo je trenutno važeći redosled rada, dogovoren 04.08.2026. Zamenjuje raniji redosled iz sekcije 6 tamo gde se razlikuju (npr. Korak 1 "firma" — videti napomenu u sekciji 6).
 
 **Faza A — Housekeeping (kod)**
-- [ ] Commit necomitovanih izmena (popunjen QA smoke test rezultati, sitne config izmene)
+- [x] Commit necomitovanih izmena (popunjen QA smoke test rezultati, sitne config izmene) — urađeno 04.08.2026
 
 **Faza B — Zatvoriti Lemon store**
 - [x] Proveriti u Lemon dashboardu zašto piše "store not activated" — **NALAZ (04.08.2026 uveče):** Settings → General → "Store activation" nema dugme za klik; "Identity verification" status = **"In Review"**. Store se ne može aktivirati dok Lemon ne završi pregled identiteta — nije nešto što se sad klikne, čeka se njihov odgovor.
@@ -75,8 +75,14 @@ Vizuelno:
 - [ ] Kad "Identity verification" pređe iz "In Review" u odobreno → store se aktivira (proveriti da li treba dodatni klik ili je automatsko)
 
 **Faza C — Poslednji test u Test modu**
-- [ ] Test kupovina na stagingu test karticom (4242...) kroz ceo tok: checkout → webhook → unlock PRO → customer portal
-- [ ] Ponovo proveriti E1-E3 iz QA dokumenta da su PASS
+- [x] Test kupovina na stagingu test karticom kroz ceo tok — urađeno 04-05.08.2026. **Usput otkriveno i ispravljeno (5 commit-a, sve push-ovano na staging):**
+  1. Webhook je čitao `custom_data` sa pogrešnog mesta (`data.attributes` umesto pravog `meta.custom_data`) → uplata se pripisivala pogrešnom nalogu (Lemon-ovom `attributes.user_email`, ne ulogovanom app nalogu). **Ovo je bio glavni bag i sad je ispravljen.**
+  2. Billing webhook je mogao tiho da skine admin nalog na paid/trial tier — dodata zaštita.
+  3. Event ID za idempotenciju/audit log se čitao sa pogrešnog mesta (`meta.webhook_id`, ne top-level `id`) — ispravljeno.
+  4. Trial: 7 → 10 dana, aktivira se automatski (bez klika) pri prvom loginu, toast obaveštenje + odbrojavanje u toolbaru.
+  5. Bag u računanju dana triala zbog odsečenog timezone offseta (10 dana se prikazivalo kao 9 ili 11 zavisno od servera) — ispravljeno.
+  Sve potvrđeno uživo na stagingu: test kupovina ispravno otključava nalog, trial radi i pokazuje tačan broj dana.
+- [ ] Ponovo proveriti E1-E3 (customer portal) iz QA dokumenta — i dalje čeka aktivaciju Lemon store-a (Faza B)
 
 **Faza D — Test → Live u Lemonu**
 - [ ] Prebaciti Lemon store iz Test u Live mod (korisnik, u Lemon dashboardu)
