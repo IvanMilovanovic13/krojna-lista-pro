@@ -97,8 +97,13 @@ def get_trial_days_remaining_for_email(email: str) -> int:
             return -1
         trial_end = started + timedelta(days=10)
         now = datetime.utcnow()
-        remaining = (trial_end - now).days
-        return max(0, remaining)
+        remaining_seconds = (trial_end - now).total_seconds()
+        if remaining_seconds <= 0:
+            return 0
+        # Ceiling umesto floor: odmah po aktivaciji treba da pokaze punih
+        # 10 dana, ne 9 (istekli deo prvog dana se ne racuna kao ceo dan manje).
+        import math
+        return max(1, math.ceil(remaining_seconds / 86400))
     except Exception:
         return -1
 

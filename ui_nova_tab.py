@@ -405,6 +405,7 @@ def render_nova_tab(
                         timeout=7000,
                     )
                     _onboarding = get_user_onboarding_state()
+                    ui.timer(0.05, render_toolbar_refresh, once=True)
                 else:
                     ui.notify(_activate_msg, type='negative', timeout=5000)
 
