@@ -69,7 +69,7 @@ CabinetCutPro je SaaS alat za projektovanje kuhinjskog nameštaja — generisanj
 
 ### 3. Nalozi i pretplate
 - Registracija zahteva validnu email adresu
-- Trial period traje 14 dana bez kartice
+- Trial period traje 10 dana bez kartice
 - Plaćena pretplata se naplaćuje unapred (mesečno/godišnje)
 - Otkazivanje je moguće u bilo kom trenutku; pristup traje do kraja plaćenog perioda
 
@@ -156,7 +156,7 @@ CabinetCutPro is a SaaS tool for kitchen furniture design — generating cut lis
 
 ### 3. Accounts and Subscriptions
 - Registration requires a valid email address
-- Trial period is 14 days, no credit card required
+- Trial period is 10 days, no credit card required
 - Paid subscription is charged upfront (monthly/annually)
 - You can cancel at any time; access continues until the end of the paid period
 
@@ -243,7 +243,7 @@ CabinetCutPro ist ein SaaS-Tool zur Küchenplanung — Erstellung von Schnittlis
 
 ### 3. Konten und Abonnements
 - Die Registrierung erfordert eine gültige E-Mail-Adresse
-- Testzeitraum: 14 Tage ohne Kreditkarte
+- Testzeitraum: 10 Tage ohne Kreditkarte
 - Bezahlte Abonnements werden im Voraus abgerechnet (monatlich/jährlich)
 - Kündigung jederzeit möglich; Zugang gilt bis Ende des bezahlten Zeitraums
 
@@ -330,7 +330,7 @@ CabinetCutPro est un outil SaaS de conception de cuisines — génération de li
 
 ### 3. Comptes et abonnements
 - L'inscription requiert une adresse e-mail valide
-- Période d'essai : 14 jours sans carte bancaire
+- Période d'essai : 10 jours sans carte bancaire
 - L'abonnement payant est facturé d'avance (mensuel/annuel)
 - Résiliation possible à tout moment ; l'accès reste valable jusqu'à la fin de la période payée
 
@@ -417,7 +417,7 @@ CabinetCutPro es una herramienta SaaS para el diseño de cocinas — generación
 
 ### 3. Cuentas y suscripciones
 - El registro requiere una dirección de correo electrónico válida
-- Período de prueba: 14 días sin tarjeta de crédito
+- Período de prueba: 10 días sin tarjeta de crédito
 - La suscripción de pago se cobra por adelantado (mensual/anual)
 - Puede cancelar en cualquier momento; el acceso se mantiene hasta el final del período pagado
 
@@ -504,7 +504,7 @@ CabinetCutPro é uma ferramenta SaaS para design de cozinhas — geração de li
 
 ### 3. Contas e assinaturas
 - O cadastro requer um endereço de e-mail válido
-- Período de teste: 14 dias sem cartão de crédito
+- Período de teste: 10 dias sem cartão de crédito
 - A assinatura paga é cobrada antecipadamente (mensal/anual)
 - Cancelamento possível a qualquer momento; o acesso permanece até o fim do período pago
 
@@ -591,7 +591,7 @@ CabinetCutPro — SaaS-инструмент для проектирования 
 
 ### 3. Аккаунты и подписки
 - Для регистрации необходим действительный email-адрес
-- Пробный период: 14 дней без карты
+- Пробный период: 10 дней без карты
 - Платная подписка оплачивается авансом (ежемесячно/ежегодно)
 - Отменить можно в любой момент; доступ сохраняется до конца оплаченного периода
 
@@ -678,7 +678,7 @@ CabinetCutPro 是一款用于厨房设计的 SaaS 工具——可生成裁切清
 
 ### 3. 账户与订阅
 - 注册需要有效的电子邮件地址
-- 试用期：14天，无需信用卡
+- 试用期：10天，无需信用卡
 - 付费订阅按月/年预付
 - 可随时取消；访问权限延续至付费期结束
 
@@ -765,7 +765,7 @@ CabinetCutPro रसोई डिज़ाइन के लिए एक SaaS �
 
 ### 3. खाते और सदस्यताएं
 - पंजीकरण के लिए वैध ईमेल पता आवश्यक है
-- ट्रायल अवधि: 14 दिन, क्रेडिट कार्ड के बिना
+- ट्रायल अवधि: 10 दिन, क्रेडिट कार्ड के बिना
 - भुगतान सदस्यता अग्रिम में चार्ज की जाती है (मासिक/वार्षिक)
 - किसी भी समय रद्द किया जा सकता है; पहुंच भुगतान अवधि के अंत तक जारी रहती है
 
