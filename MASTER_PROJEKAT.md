@@ -3,6 +3,31 @@
 
 ---
 
+## CILJNA GRUPA I POZICIONIRANJE PROIZVODA (kljucno — ne menjati bez razloga)
+
+**Dodato:** 05.08.2026.
+
+**Primarna ciljna grupa: obican covek bez iskustva, ne profesionalac.**
+
+Aplikacija je pre svega namenjena osobi koja **zeli sama da isplanira i sklopi svoju
+kuhinju**, bez profesionalnog kuhinjskog dizajnera i bez prethodnog stolarskog
+iskustva — tako sto:
+
+1. u aplikaciji **dizajnira kuhinju** (2D/3D, raspored elemenata, dimenzije)
+2. dobija **krojnu listu** (dimenzije panela, ivicu, plan busenja) — ovo je placeni deo
+3. sa tom krojnom listom ide u bilo koju CNC/stolarsku radionicu (ili sam seče) da
+   isporuci/sklopi delove, **prateci uputstvo** koje app daje
+4. na taj nacin **stedi novac** koji bi inace platio profesionalnom dizajneru/kuhinjskoj firmi
+
+Sekundarna grupa: profesionalni stolari/manji stolarski pogoni takodje mogu da
+koriste app za brzu izradu krojne liste za svoje klijente — ali **primarni fokus
+marketinga, teksta u appu i komunikacije sa trecim stranama (npr. Lemon Squeezy)
+treba da bude DIY korisnik bez iskustva**, ne profesionalac.
+
+Ovo pozicioniranje treba da vodi buduce odluke o: marketinskom tekstu na landing
+stranici, tonu uputstava/onboarding-a u appu, i odgovorima na upite trecih strana
+o tome "za koga je proizvod".
+
 ## STATUS UPDATE - 9. april 2026.
 
 Aktuelni proizvodni dogovor ima prednost nad starijim beleškama kada postoji razlika izmedju plana i stvarnog stanja repoa.
